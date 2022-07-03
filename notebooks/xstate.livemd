@@ -607,8 +607,8 @@ defmodule MyApp.Application do
 
   def start(_type, _args) do
     children = [
-      {MyApp.LoadingMachine, [name: MyApp.Machine1]},
-      {MyApp.LoadingMachine, [name: MyApp.Machine2, handler: MyApp.AltLoadingHandler]}
+      Supervisor.child_spec(LoadingMachine, id: MyApp.Machine1),
+      Supervisor.child_spec({LoadingMachine, [handler: AltLoadingHandler]}, id: MyApp.Machine2)
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
