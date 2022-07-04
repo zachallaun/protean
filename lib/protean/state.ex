@@ -1,11 +1,15 @@
 defmodule Protean.State do
   @moduledoc false
 
-  @type t :: %{
-          value: atom() | nonempty_list(atom()),
+  alias __MODULE__
+
+  defstruct [:value, :event, :actions]
+
+  @type t() :: %State{
+          value: state_value(),
           event: {String.t(), term()},
           actions: list(term())
         }
 
-  defstruct [:value, :event, :actions]
+  @type state_value() :: atom()
 end

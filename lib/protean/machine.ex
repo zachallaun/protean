@@ -8,18 +8,33 @@ defmodule Protean.Machine do
   alias __MODULE__
   alias Protean.State
 
-  @type t :: %{
+  @enforce_keys [:config, :initial_state, :handler]
+  defstruct [:config, :initial_state, :handler]
+
+  @typedoc """
+  A full Protean machine configuration.
+  """
+  @type t() :: %Machine{
           config: list(term()),
           initial_state: atom(),
           handler: term()
         }
 
-  defstruct [:handler, :initial_state, config: []]
+  @typedoc """
+  An event name used in a machine configuration and when sending events to a
+  machine.
+  """
+  @type event_name() :: String.t()
+
+  @typedoc """
+  An event that can be sent to a machine to trigger a transition.
+  """
+  @type event() :: {event_name(), term()}
 
   def new(module) when is_atom(module) do
     with config <- module.protean_config(),
          initial when is_atom(initial) <- Keyword.get(config, :initial) do
-      %Machine{initial_state: %State{value: initial}, config: config}
+      %Machine{initial_state: %State{value: initial}, config: config, handler: nil}
     else
       _ -> raise("Need an :initial state pls")
     end
