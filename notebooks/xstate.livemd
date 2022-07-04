@@ -75,6 +75,16 @@ next_state = Protean.Machine.transition(machine, next_state, "SOME_OTHER_EVENT")
 :ok = Protean.Machine.exec_actions(next_state.actions) # and so on...
 ```
 
+Basically: `Protean.Machine` is the functional core, `Protean` is the imperative shell that wraps a `Protean.Machine` in an interface that interacts with OTP and fits into existing language abstractions.
+
+<!-- livebook:{"break_markdown":true} -->
+
+**How it relates to GenServer**
+
+Protean services will be implemented as a GenServer. You should be able to send an event both syncronously (like a `call`) and asyncronously (like a `cast`).
+
+As with XState, there should be a way to subscribe to a machine and receive a notification on transition.
+
 ## Comparisons
 
 **Example machine configuration in XState:**
