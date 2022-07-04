@@ -23,6 +23,60 @@ This Livebook contains notes on XState's implementation and decisions and how th
 
 <!-- livebook:{"break_markdown":true} -->
 
+### Misc Notes
+
+**Docs**
+
+It's [possible](https://hexdocs.pm/elixir/1.13/Task.html) (search for `the @doc annotation`) to attach the `@doc` immediately before a `use Whatever`, presumably by outputting a function definition as the first thing. This would let you "natively" document your Protean machines:
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+defmodule SomeMachine do
+  @moduledoc """
+  This is module documentation for SomeMachine.
+  """
+
+  @doc """
+  This documentation can be attached to some function definition defined by the below.
+  """
+  use Protean, machine: [
+    # ...
+  ]
+end
+```
+
+<!-- livebook:{"break_markdown":true} -->
+
+**Potential API for using machines**
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+# Starting a machine
+{:ok, pid} = Protean.start(SomeMachine)
+{:ok, pid} = Protean.start_link(SomeMachine)
+children = [
+  Supervisor.child_spec(SomeMachine, id: Machine1)
+]
+Supervisor.start_link(children, strategy: :one_for_one)
+
+# Functional usage
+machine = Protean.Machine.new(SomeMachine)
+machine = SomeMachine.new()
+machine = Protean.Machine.new(SomeMachine, %{initial: :context})
+machine = SomeMachine.new(%{initial: :context})
+machine = SomeMachine.new(%{initial: :context}, SomeCustomHandler)
+
+state = machine.initial_state
+next_state = Protean.Machine.transition(machine, state, {"SOME_EVENT", "event_data"})
+:ok = Protean.Machine.exec_actions(next_state.actions)
+next_state = Protean.Machine.transition(machine, next_state, "SOME_OTHER_EVENT")
+:ok = Protean.Machine.exec_actions(next_state.actions) # and so on...
+```
+
+## Comparisons
+
 **Example machine configuration in XState:**
 
 ```js
