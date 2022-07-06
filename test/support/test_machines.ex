@@ -5,7 +5,7 @@ defmodule TestMachines do
       initial: :state_a,
       states: [
         state_a: [
-          type: :compound,
+          type: :atomic,
           on: [
             event_a: [
               target: :state_b

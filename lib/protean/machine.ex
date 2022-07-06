@@ -6,16 +6,17 @@ defmodule Protean.Machine do
   """
 
   alias __MODULE__
-  alias Protean.State
+  alias Protean.{State, StateNode}
 
-  @enforce_keys [:config]
-  defstruct [:config]
+  @enforce_keys [:config, :root]
+  defstruct [:config, :root]
 
   @typedoc """
   A full Protean machine configuration.
   """
   @type t() :: %Machine{
-          config: list(term())
+          config: list(term()),
+          root: StateNode.t()
         }
 
   @typedoc """
@@ -30,7 +31,7 @@ defmodule Protean.Machine do
   @type event() :: {event_name(), term()}
 
   def new(config) do
-    %Machine{config: config}
+    %Machine{config: config, root: StateNode.from_config(:root, config)}
   end
 
   @doc """
@@ -45,17 +46,8 @@ defmodule Protean.Machine do
   Given a machine, a machine state, and an event, transition to the next state
   if the machine defines a transition for the given state and event.
   """
-  @spec transition(Machine.t(), State.t(), String.t()) :: State.t()
-  def transition(machine, state, event) do
-    states = Keyword.get(machine.config, :states)
-    node = Keyword.get(states, state.value)
-    transitions = Keyword.get(node, :on)
-    next = Keyword.get(transitions, event)
-
-    if is_nil(next) do
-      state
-    else
-      %State{value: next, event: event}
-    end
+  @spec transition(Machine.t(), State.t(), event()) :: State.t()
+  def transition(_machine, state, _event) do
+    state
   end
 end

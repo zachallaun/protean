@@ -2,19 +2,26 @@ defmodule Protean.Transition do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Machine, State, StateNode, Action}
+  alias Protean.{Machine, State, StateNode}
 
-  defstruct [:config, :event, :source, :actions, :type]
+  defstruct [
+    :config,
+    :event_descriptor,
+    type: :external
+  ]
 
   @type t() :: %Transition{
           config: transition_config(),
-          event: Machine.event(),
-          source: StateNode.t(),
-          actions: [Action.t()],
+          event_descriptor: event_descriptor(),
           type: :internal | :external
         }
 
   @type transition_config() :: [target: State.state_value()]
+
+  @spec from_config(event_descriptor(), transition_config()) :: Transition.t()
+  def from_config(descriptor, config) do
+    %Transition{event_descriptor: descriptor, config: config}
+  end
 
   @spec target(Transition.t()) :: State.state_value()
   def target(%Transition{config: config}), do: config[:target]
@@ -61,6 +68,13 @@ defmodule Protean.Transition do
   """
   @type event_descriptor :: atom() | String.t() | [[String.t()]]
 
+  @doc """
+  Checks whether the transition is enabled for the given event.
+  """
+  @spec enabled?(Transition.t(), Machine.event_name()) :: boolean()
+  def enabled?(transition, event_name),
+    do: event_descriptor_match?(transition.event_descriptor, event_name)
+
   @spec expand_event_descriptor(event_descriptor()) :: event_descriptor()
   def expand_event_descriptor(descriptor)
 
@@ -86,7 +100,7 @@ defmodule Protean.Transition do
   @doc """
   Checks whether an event descriptor matches an event name.
   """
-  @spec event_descriptor_match?(event_descriptor(), String.t()) :: boolean()
+  @spec event_descriptor_match?(event_descriptor(), Machine.event_name()) :: boolean()
   def event_descriptor_match?(descriptor, name) do
     name_parts = String.split(name, ".")
 
