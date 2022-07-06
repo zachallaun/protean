@@ -29,4 +29,14 @@ defmodule Protean.TransitionTest do
     descriptor = [["foo", "bar"]]
     assert Transition.expand_event_descriptor(descriptor) == descriptor
   end
+
+  test "event descriptors match relevant events" do
+    assert Transition.event_descriptor_match?(:foo, "foo") == true
+    assert Transition.event_descriptor_match?(:foo, "fooo") == false
+    assert Transition.event_descriptor_match?(:foo, "foo.bar") == true
+    assert Transition.event_descriptor_match?(:"foo.bar", "foo") == false
+    assert Transition.event_descriptor_match?(:"foo.*", "foo") == true
+    assert Transition.event_descriptor_match?(:"foo.*", "fooo") == false
+    assert Transition.event_descriptor_match?(:"foo.*", "foo.bar") == true
+  end
 end

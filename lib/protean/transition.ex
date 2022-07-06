@@ -61,9 +61,6 @@ defmodule Protean.Transition do
   """
   @type event_descriptor :: atom() | String.t() | [[String.t()]]
 
-  @doc """
-  An event descriptor
-  """
   @spec expand_event_descriptor(event_descriptor()) :: event_descriptor()
   def expand_event_descriptor(descriptor)
 
@@ -85,4 +82,26 @@ defmodule Protean.Transition do
   defp expand_descriptor_component(["" | rest]), do: expand_descriptor_component(rest)
   defp expand_descriptor_component(["*" | rest]), do: expand_descriptor_component(rest)
   defp expand_descriptor_component([part | rest]), do: [part | expand_descriptor_component(rest)]
+
+  @doc """
+  Checks whether an event descriptor matches an event name.
+  """
+  @spec event_descriptor_match?(event_descriptor(), String.t()) :: boolean()
+  def event_descriptor_match?(descriptor, name) do
+    name_parts = String.split(name, ".")
+
+    descriptor
+    |> expand_event_descriptor()
+    |> any_components_match?(name_parts)
+  end
+
+  defp any_components_match?(descriptor_components, name_parts),
+    do: Enum.any?(descriptor_components, &component_match?(&1, name_parts))
+
+  defp component_match?([], _name), do: true
+
+  defp component_match?([x | rest_components], [x | rest_name]),
+    do: component_match?(rest_components, rest_name)
+
+  defp component_match?(_components, _name), do: false
 end
