@@ -24,4 +24,9 @@ defmodule Protean.TransitionTest do
              "expected #{inspect(descriptor)} to expand to #{inspect(expanded)}"
     end
   end
+
+  test "expanded event descriptors expand to themselves" do
+    descriptor = [["foo", "bar"]]
+    assert Transition.expand_event_descriptor(descriptor) == descriptor
+  end
 end
