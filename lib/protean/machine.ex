@@ -8,16 +8,14 @@ defmodule Protean.Machine do
   alias __MODULE__
   alias Protean.State
 
-  @enforce_keys [:config, :initial_state, :handler]
-  defstruct [:config, :initial_state, :handler]
+  @enforce_keys [:config]
+  defstruct [:config]
 
   @typedoc """
   A full Protean machine configuration.
   """
   @type t() :: %Machine{
-          config: list(term()),
-          initial_state: atom(),
-          handler: term()
+          config: list(term())
         }
 
   @typedoc """
@@ -31,13 +29,16 @@ defmodule Protean.Machine do
   """
   @type event() :: {event_name(), term()}
 
-  def new(module) when is_atom(module) do
-    with config <- module.protean_config(),
-         initial when is_atom(initial) <- Keyword.get(config, :initial) do
-      %Machine{initial_state: %State{value: initial}, config: config, handler: nil}
-    else
-      _ -> raise("Need an :initial state pls")
-    end
+  def new(config) do
+    %Machine{config: config}
+  end
+
+  @doc """
+  Returns the initial `Protean.State` for a given machine.
+  """
+  @spec initial_state(Machine.t()) :: State.t()
+  def initial_state(%Machine{config: config}) do
+    %State{value: config[:initial]}
   end
 
   @doc """

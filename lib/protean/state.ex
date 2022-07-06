@@ -7,7 +7,7 @@ defmodule Protean.State do
 
   @type t() :: %State{
           value: state_value(),
-          event: {String.t(), term()},
+          event: {String.t(), term()} | nil,
           actions: list(term())
         }
 

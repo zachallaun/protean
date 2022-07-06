@@ -1,0 +1,18 @@
+# Execution Semantics
+
+## SCXML processor semantics
+
+Link: [W3C Standard for SCXML](https://www.w3.org/TR/scxml/)
+
+The goal of this notebook is to write out (in mostly plain English + some Elixir) the processing & execution semantics for Protean, as derived from the SCXML standard. The SCXML standard is used because a bunch of smart people spent 10 years working on it, understanding the edge cases, and developing a system that is deterministic and understandable. While it is not necessarily a goal for Protean machines to be importable/exportable from/to SCXML, we will nonetheless abide by SCXML semantics unless there is a particularly strong argument to deviate from it.
+
+### Definitions
+
+* **Machine**, the overall configuration and options for a state machine. The primary responsibility of a machine is to define a pure transition function that takes a machine, a current state, and an event, and returns the next state as well as a correctly-ordered list of any triggered actions that can be chosen to be executed by the caller.
+* **State Configuration**, the set of active states of the machine, including potentially many nested child states, as well as the event that caused the transition to this state, the list of actions that resulted from that transition, and the context.
+* **Context**, the "extended state" of a machine that can be updated by actions and used as input for transition guards.
+* **State Node**, a node of a machine that defines valid transitions from that state as well as possible child states. State nodes can be atomic, compound, parallel, final, or history. State nodes can additionally define entry and exit actions that should occur when the state is entered/exited.
+* **Event**, a named event sent to the machine that possibly triggers a transition based on the event descriptors present in the set of active state nodes. Events can be internal or external, which has bearing on whether certain entry and exit actions are taken.
+* **Transition**, moving from one machine state to another as a result of some event or as the result of an automatic transition.
+* **Automatic Transition**, a particular type of transition that "automatically" occurs when the machine enters a particular state configuration and a pre-defined transition is met.
+* **Action**, a description of some side effect that is to occur as the result of a transition. This can include changes to the machine's context as well as arbitrary side-effects that have no bearing on the machine.
