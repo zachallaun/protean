@@ -1,0 +1,298 @@
+# Scratchpad
+
+## Section
+
+```elixir
+# alias Protean.{Machine, StateNode, Transition}
+```
+
+Defining the state machine in terms of state nodes and transitions.
+
+I think the internal types for these should be relatively rigid and normalized by a transformation step that can occur to get from machine config to these types.
+
+```elixir
+defmodule StateNode do
+  alias __MODULE__
+
+  defstruct [
+    :id,
+    :type,
+    :initial,
+    :states,
+    :transitions
+  ]
+
+  @typedoc """
+  ID encompasses the node and all its ancestors. For example, a node `:child_a`
+  defined as a child of a node `:parent_a` might have the id `[:child_a, :parent_a]`
+  """
+  @type id :: [atom, ...]
+
+  @typedoc """
+  An atomic node is a node without child states.
+  """
+  @type atomic :: %StateNode{
+          type: :atomic,
+          id: id,
+          initial: nil,
+          states: nil,
+          transitions: [Transition.t()] | nil
+        }
+
+  @typedoc """
+  A final node is a type of atomic node that represents some form of completion,
+  and can therefore define no transitions itself. Note, however, that activating
+  a final node causes an event to be dispatched that a parent node can choose to
+  handle.
+  """
+  @type final :: %StateNode{
+          type: :final,
+          id: id,
+          initial: nil,
+          states: nil,
+          transitions: nil
+        }
+
+  @typedoc """
+  A compound node is a node that defines children, of which only one can be
+  active. It must additionally define an `:initial` attribute, the id of the
+  child state that should default to active if the compound state is entered.
+  """
+  @type compound :: %StateNode{
+          type: :compound,
+          id: id,
+          initial: id,
+          states: [StateNode.t(), ...],
+          transitions: [Transition.t()] | nil
+        }
+
+  @typedoc """
+  A StateNode is a node in a nested state machine. See the type docs for
+  individual nodes for more details.
+  """
+  @type t :: atomic | final | compound
+end
+
+defmodule Transition do
+  alias __MODULE__
+
+  defstruct [
+    :event_descriptor,
+    :targets
+  ]
+
+  @typedoc """
+  Pattern for matching events.
+  
+      "event.a.* event.b.1"
+      # parses to this event descriptor
+      [["event", "a"], ["event", "b", "1"]]
+  """
+  @type event_descriptor :: [[String.t()], ...]
+
+  @typedoc """
+  Transition defines a change in active state that may occur as the result
+  of an event. While the majority of transitions will define only a single
+  target, it is possible to transition to multiple targets if it would result
+  in a valid state configuration (for instance, the children of a `:parallel`
+  state).
+  """
+  @type t :: %Transition{
+          event_descriptor: event_descriptor,
+          targets: [StateNode.id()]
+        }
+end
+```
+
+```elixir
+defmodule MachineConfig do
+  def parse(config) do
+    parse_node(node_type(config), config)
+  end
+
+  defp node_type(config) do
+    cond do
+      type = config[:type] -> type
+      config[:states] -> :compound
+      true -> :atomic
+    end
+  end
+
+  defp parse_node(type, config, id \\ [:"#"])
+
+  defp parse_node(:atomic, config, id) do
+    forbid!(config, [:states, :initial])
+
+    %StateNode{
+      type: :atomic,
+      id: id,
+      transitions: parse_transitions(id, config[:on])
+    }
+  end
+
+  defp parse_node(:final, config, id) do
+    forbid!(config, [:states, :initial, :on])
+
+    %StateNode{
+      type: :final,
+      id: id
+    }
+  end
+
+  defp parse_node(:compound, config, id) do
+    require!(config, [:states, :initial])
+
+    children =
+      for {name, child_config} <- config[:states] do
+        child_id = [name | id]
+        child_config |> node_type() |> parse_node(child_config, child_id)
+      end
+
+    %StateNode{
+      type: :compound,
+      id: id,
+      states: children,
+      transitions: parse_transitions(id, config[:on])
+    }
+  end
+
+  defp parse_transitions(_id, nil), do: nil
+
+  defp parse_transitions(id, transitions),
+    do: Enum.map(transitions, &parse_transition(id, &1))
+
+  defp parse_transition(id, {descriptor, target}) when is_atom(target),
+    do: parse_transition(id, {descriptor, [target: target]})
+
+  defp parse_transition([_self | ancestors], {descriptor, transition}) do
+    require!(transition, [:target])
+
+    %Transition{
+      event_descriptor: descriptor,
+      targets: [resolve_target(transition[:target], ancestors)]
+    }
+  end
+
+  defp resolve_target(target, ancestors) when is_atom(target),
+    do: resolve_target(to_string(target), ancestors)
+
+  defp resolve_target("#" <> target, _ancestors) when is_binary(target) do
+    target
+    |> parse_target()
+    |> List.insert_at(-1, :"#")
+  end
+
+  defp resolve_target(target, ancestors) when is_binary(target) do
+    relative = parse_target(target)
+    relative ++ ancestors
+  end
+
+  defp parse_target(target) do
+    target
+    |> String.split(".")
+    |> Enum.map(&String.to_atom/1)
+    |> Enum.reverse()
+  end
+
+  defp require!(config, keys),
+    do: check!(config, keys, &is_nil(config[&1]), "must have keys")
+
+  defp forbid!(config, keys),
+    do: check!(config, keys, &config[&1], "cannot have keys")
+
+  defp check!(config, keys, filter_fun, message) do
+    filtered = Enum.filter(keys, filter_fun)
+
+    unless Enum.empty?(filtered) do
+      raise "#{message} #{Enum.join(filtered, ", ")}: #{inspect(config)}"
+    end
+  end
+end
+
+machine = [
+  initial: :state_a,
+  states: [
+    state_a: [
+      on: [
+        "event.b": :state_b,
+        "event.b2": :"state_b.state_b2"
+      ]
+    ],
+    state_b: [
+      initial: :state_b1,
+      states: [
+        state_b1: [
+          on: [
+            "event.b2": :state_b2
+          ]
+        ],
+        state_b2: [
+          on: [
+            "event.c": :"#state_c"
+          ]
+        ]
+      ]
+    ],
+    state_c: [
+      type: :final
+    ]
+  ]
+]
+
+MachineConfig.parse(machine)
+```
+
+```elixir
+root = %StateNode{
+  id: [:"#"],
+  type: :compound,
+  initial: [:state_a, :"#"],
+  states: [
+    %StateNode{
+      id: [:state_a, :"#"],
+      type: :atomic,
+      transitions: [
+        %Transition{
+          event_descriptor: [["event", "b"]],
+          targets: [[:state_b, :"#"]]
+        },
+        %Transition{
+          event_descriptor: [["event", "b2"]],
+          targets: [[:state_b2, :state_b, :"#"]]
+        }
+      ]
+    },
+    %StateNode{
+      id: [:state_b, :"#"],
+      type: :compound,
+      initial: [:state_b1, :state_b, :"#"],
+      states: [
+        %StateNode{
+          id: [:state_b1, :state_b, :"#"],
+          type: :atomic,
+          transitions: [
+            %Transition{
+              event_descriptor: [["event", "b2"]],
+              targets: [[:state_b2, :state_b, :"#"]]
+            }
+          ]
+        },
+        %StateNode{
+          id: [:state_b2, :state_b, :"#"],
+          type: :atomic,
+          transitions: [
+            %Transition{
+              event_descriptor: [["event", "c"]],
+              targets: [[:state_c, :"#"]]
+            }
+          ]
+        }
+      ]
+    },
+    %StateNode{
+      id: [:state_c, :"#"],
+      type: :final
+    }
+  ]
+}
+```
