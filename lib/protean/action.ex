@@ -5,5 +5,5 @@ defmodule Protean.Action do
 
   defstruct []
 
-  @type t() :: %Action{}
+  @type t :: %Action{}
 end

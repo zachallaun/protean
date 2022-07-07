@@ -187,7 +187,10 @@ defmodule MachineConfig do
     relative ++ ancestors
   end
 
-  defp parse_target(target) do
+  defp parse_target(target) when is_atom(target),
+    do: parse_target(to_string(target))
+
+  defp parse_target(target) when is_binary(target) do
     target
     |> String.split(".")
     |> Enum.map(&String.to_atom/1)

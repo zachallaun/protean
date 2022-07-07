@@ -5,11 +5,10 @@ defmodule Protean.State do
 
   defstruct [:value, :event, :actions]
 
-  @type t() :: %State{
-          value: state_value(),
-          event: {String.t(), term()} | nil,
-          actions: list(term())
+  @type t :: %State{
+          value: state_value,
+          event: {String.t(), term} | nil
         }
 
-  @type state_value() :: atom()
+  @type state_value :: [atom, ...]
 end
