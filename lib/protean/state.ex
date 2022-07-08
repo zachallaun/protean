@@ -2,13 +2,12 @@ defmodule Protean.State do
   @moduledoc false
 
   alias __MODULE__
+  alias Protean.StateNode
 
   defstruct [:value, :event, :actions]
 
   @type t :: %State{
-          value: state_value,
+          value: StateNode.id(),
           event: {String.t(), term} | nil
         }
-
-  @type state_value :: [String.t(), ...]
 end

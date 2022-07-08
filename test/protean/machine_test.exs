@@ -18,5 +18,16 @@ defmodule Protean.MachineTest do
       maybe_different = Machine.transition(machine, initial, {"UNKNOWN_EVENT", nil})
       assert maybe_different == initial
     end
+
+    test "transitions to atomic nodes", %{machine: machine, initial: initial} do
+      next = Machine.transition(machine, initial, {"event_a", nil})
+      assert next.value == ["state_b", "#"]
+    end
+  end
+
+  @tag machine: :simple_machine_2
+  test "transitions when parent responds to event", %{machine: machine, initial: initial} do
+    next = Machine.transition(machine, initial, {"event_a", nil})
+    assert next.value == ["state_b", "#"]
   end
 end

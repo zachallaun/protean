@@ -6,7 +6,7 @@ defmodule Protean.Machine do
   """
 
   alias __MODULE__
-  alias Protean.{State, StateNode, MachineConfig, Utilities}
+  alias Protean.{State, StateNode, MachineConfig, Transition, Utilities}
 
   defstruct [
     :root,
@@ -51,7 +51,7 @@ defmodule Protean.Machine do
   """
   @spec initial_state(Machine.t()) :: State.t()
   def initial_state(%Machine{root: root}) do
-    %State{value: root.id}
+    %State{value: StateNode.resolve_to_leaf(root).id}
   end
 
   @doc """
@@ -59,7 +59,41 @@ defmodule Protean.Machine do
   if the machine defines a transition for the given state and event.
   """
   @spec transition(Machine.t(), State.t(), event) :: State.t()
-  def transition(_machine, state, _event) do
-    state
+  def transition(machine, state, event) do
+    enabled_transition =
+      machine
+      |> active_nodes(state)
+      |> first_enabled_transition(event)
+
+    if enabled_transition do
+      resolved_target =
+        enabled_transition
+        |> Transition.target()
+        |> lookup_by_id(machine)
+        |> StateNode.resolve_to_leaf()
+
+      %State{value: resolved_target.id, event: event}
+    else
+      state
+    end
+  end
+
+  defp lookup_by_id(id, machine), do: machine.idmap[id]
+
+  @spec first_enabled_transition([StateNode.t()], event) :: Transition.t() | nil
+  defp first_enabled_transition([], _event), do: nil
+
+  defp first_enabled_transition([node | rest], event) do
+    case StateNode.enabled_transition(node, event) do
+      nil -> first_enabled_transition(rest, event)
+      transition -> transition
+    end
+  end
+
+  @spec active_nodes(Machine.t(), State.t()) :: [StateNode.t()]
+  defp active_nodes(%Machine{idmap: idmap}, %State{value: value}) do
+    value
+    |> StateNode.ancestor_ids()
+    |> Enum.map(&idmap[&1])
   end
 end

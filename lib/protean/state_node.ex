@@ -2,7 +2,7 @@ defmodule Protean.StateNode do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Transition}
+  alias Protean.{Machine, Transition}
 
   defstruct [
     :id,
@@ -82,5 +82,24 @@ defmodule Protean.StateNode do
         |> Enum.find(&(&1.id == node.initial))
         |> resolve_to_leaf()
     end
+  end
+
+  @doc """
+  Given a StateNode id, return a list containing that id and all of its
+  ancestors.
+  """
+  @spec ancestor_ids(StateNode.id()) :: [StateNode.id()]
+  def ancestor_ids([]), do: []
+  def ancestor_ids([_self | parent] = id), do: [id | ancestor_ids(parent)]
+
+  @doc """
+  Given a StateNode and an event, return the first transition defined by that
+  node that is enabled by the event, or `nil`.
+  """
+  @spec enabled_transition(StateNode.t(), Machine.event()) :: Transition.t() | nil
+  def enabled_transition(%StateNode{transitions: nil}, _event), do: nil
+
+  def enabled_transition(%StateNode{transitions: transitions}, {event_name, _data}) do
+    Enum.find(transitions, &Transition.enabled?(&1, event_name))
   end
 end
