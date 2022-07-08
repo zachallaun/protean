@@ -55,7 +55,7 @@ defmodule Protean.MachineConfig do
       type: :compound,
       id: id,
       states: children,
-      initial: parse_target(config[:initial]),
+      initial: parse_target(config[:initial]) ++ id,
       transitions: parse_transitions(id, config[:on])
     }
   end
