@@ -21,7 +21,7 @@ defmodule Protean.MachineConfig do
     end
   end
 
-  defp parse_node(type, config, id \\ [:"#"])
+  defp parse_node(type, config, id \\ ["#"])
 
   defp parse_node(:atomic, config, id) do
     forbid!(config, [:states, :initial])
@@ -46,7 +46,8 @@ defmodule Protean.MachineConfig do
     require!(config, [:states, :initial])
 
     children =
-      for {name, child_config} <- config[:states] do
+      for {name, child_config} <- config[:states],
+          name = to_string(name) do
         child_id = [name | id]
         child_config |> node_type() |> parse_node(child_config, child_id)
       end
@@ -97,7 +98,6 @@ defmodule Protean.MachineConfig do
   defp parse_target(target) when is_binary(target) do
     target
     |> String.split(".")
-    |> Enum.map(&String.to_atom/1)
     |> Enum.reverse()
   end
 

@@ -22,7 +22,7 @@ defmodule Protean.StateNode do
   ID encompasses the node and all its ancestors. For example, a node `:child_a`
   defined as a child of a node `:parent_a` might have the id `[:child_a, :parent_a]`
   """
-  @type id :: [atom, ...]
+  @type id :: [String.t(), ...]
 
   @typedoc """
   An atomic node is a node without child states.

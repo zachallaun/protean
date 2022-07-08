@@ -10,5 +10,5 @@ defmodule Protean.State do
           event: {String.t(), term} | nil
         }
 
-  @type state_value :: [atom, ...]
+  @type state_value :: [String.t(), ...]
 end
