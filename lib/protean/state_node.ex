@@ -19,6 +19,11 @@ defmodule Protean.StateNode do
   @type t :: atomic | final | compound
 
   @typedoc """
+  A leaf StateNode is one that cannot have child states.
+  """
+  @type leaf :: atomic | final
+
+  @typedoc """
   ID encompasses the node and all its ancestors. For example, a node `:child_a`
   defined as a child of a node `:parent_a` might have the id `[:child_a, :parent_a]`
   """
@@ -61,4 +66,21 @@ defmodule Protean.StateNode do
           states: [StateNode.t(), ...],
           transitions: [Transition.t()] | nil
         }
+
+  @doc """
+  Resolve a StateNode to a leaf (atomic or final) node by either returning the
+  given node or following the node's `:initial` attribute.
+  """
+  @spec resolve_to_leaf(StateNode.t()) :: StateNode.leaf()
+  def resolve_to_leaf(%StateNode{} = node) do
+    case node do
+      node when node.type in [:atomic, :final] ->
+        node
+
+      %{type: :compound} ->
+        node.states
+        |> Enum.find(&(&1.id == node.initial))
+        |> resolve_to_leaf()
+    end
+  end
 end

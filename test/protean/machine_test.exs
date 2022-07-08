@@ -4,18 +4,7 @@ defmodule Protean.MachineTest do
   alias Protean.Machine
 
   setup context do
-    if machine = context[:machine] do
-      machine = apply(TestMachines, machine, [])
-
-      context =
-        context
-        |> Map.put(:machine, machine)
-        |> Map.put(:initial, Machine.initial_state(machine))
-
-      {:ok, context}
-    else
-      context
-    end
+    TestMachines.with_test_machine(context)
   end
 
   describe "simple compound machine" do
