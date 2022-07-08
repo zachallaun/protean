@@ -1,9 +1,21 @@
 # Scratchpad
 
-## Section
+## TODOs
+
+* [x] Parse machine config into state node / transition representation
+* [x] keep ID map for all state nodes in machine
+* [ ] know what state nodes are active for the current state configuration
+* [ ] basic transitions, start with innermost children and transition if they or ancestor responds to event
+* [ ] ensure transitions to compound nodes automatically enter the initial node
+* [ ] implement config/parsing/data model for parallel states
+* [ ] transitions to parallel states
+* [ ] edge cases for parallel states - how to handle when one parallel child wants to exit entire parallel state but other wants to transition within itself?
+* [ ] handle transition precedence based on specificity/order/etc.
+
+## Machine Config
 
 ```elixir
-alias Protean.{MachineConfig}
+alias Protean.{Machine}
 ```
 
 Defining the state machine in terms of state nodes and transitions.
@@ -11,35 +23,38 @@ Defining the state machine in terms of state nodes and transitions.
 I think the internal types for these should be relatively rigid and normalized by a transformation step that can occur to get from machine config to these types.
 
 ```elixir
-machine = [
-  initial: :state_a,
-  states: [
-    state_a: [
-      on: [
-        "event.b": :state_b,
-        "event.b2": :"state_b.state_b2"
-      ]
-    ],
-    state_b: [
-      initial: :state_b1,
-      states: [
-        state_b1: [
-          on: [
-            "event.b2": :state_b2
-          ]
-        ],
-        state_b2: [
-          on: [
-            "event.c": :"#state_c"
+machine =
+  Machine.new(
+    initial: :state_a,
+    states: [
+      state_a: [
+        on: [
+          "event.b": :state_b,
+          "event.b2": :"state_b.state_b2"
+        ]
+      ],
+      state_b: [
+        initial: :state_b1,
+        states: [
+          state_b1: [
+            on: [
+              "event.b2": :state_b2
+            ]
+          ],
+          state_b2: [
+            on: [
+              "event.c": :"#state_c"
+            ]
           ]
         ]
+      ],
+      state_c: [
+        type: :final
       ]
-    ],
-    state_c: [
-      type: :final
     ]
-  ]
-]
+  )
+```
 
-MachineConfig.parse!(machine)
+```elixir
+Map.keys(machine.idmap)
 ```

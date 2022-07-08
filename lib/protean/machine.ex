@@ -6,16 +6,19 @@ defmodule Protean.Machine do
   """
 
   alias __MODULE__
-  alias Protean.{State, StateNode, MachineConfig}
+  alias Protean.{State, StateNode, MachineConfig, Utilities}
 
-  @enforce_keys [:root]
-  defstruct [:root]
+  defstruct [
+    :root,
+    idmap: %{}
+  ]
 
   @typedoc """
   A full Protean machine configuration.
   """
   @type t :: %Machine{
-          root: StateNode.t()
+          root: StateNode.t(),
+          idmap: %{StateNode.id() => StateNode.t()}
         }
 
   @typedoc """
@@ -30,9 +33,17 @@ defmodule Protean.Machine do
   @type event :: {event_name, term}
 
   def new(config) do
+    root = MachineConfig.parse!(config)
+    idmap = Utilities.Tree.tree_reduce(root, &idmap_reducer/2, %{})
+
     %Machine{
-      root: MachineConfig.parse!(config)
+      root: root,
+      idmap: idmap
     }
+  end
+
+  defp idmap_reducer(node, idmap) do
+    {Map.put(idmap, node.id, node), node.states}
   end
 
   @doc """
