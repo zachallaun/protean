@@ -51,7 +51,12 @@ defmodule Protean.Machine do
   """
   @spec initial_state(Machine.t()) :: State.t()
   def initial_state(%Machine{root: root}) do
-    %State{value: StateNode.resolve_to_leaf(root).id}
+    active_ids =
+      root
+      |> StateNode.resolve_to_leaves()
+      |> Enum.map(& &1.id)
+
+    %State{value: active_ids}
   end
 
   @doc """
@@ -66,13 +71,14 @@ defmodule Protean.Machine do
       |> first_enabled_transition(event)
 
     if enabled_transition do
-      resolved_target =
+      resolved_target_ids =
         enabled_transition
         |> Transition.target()
         |> lookup_by_id(machine)
-        |> StateNode.resolve_to_leaf()
+        |> StateNode.resolve_to_leaves()
+        |> Enum.map(& &1.id)
 
-      %State{value: resolved_target.id, event: event}
+      %State{value: resolved_target_ids, event: event}
     else
       state
     end
@@ -93,7 +99,8 @@ defmodule Protean.Machine do
   @spec active_nodes(Machine.t(), State.t()) :: [StateNode.t()]
   defp active_nodes(%Machine{idmap: idmap}, %State{value: value}) do
     value
-    |> StateNode.ancestor_ids()
+    |> Enum.flat_map(&StateNode.ancestor_ids/1)
+    |> Enum.uniq()
     |> Enum.map(&idmap[&1])
   end
 end

@@ -62,4 +62,14 @@ defmodule TestMachines do
       ]
     )
   end
+
+  def parallel_machine_1 do
+    Protean.Machine.new(
+      type: :parallel,
+      states: [
+        state_a: [],
+        state_b: []
+      ]
+    )
+  end
 end

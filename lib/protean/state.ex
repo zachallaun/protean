@@ -7,7 +7,7 @@ defmodule Protean.State do
   defstruct [:value, :event, :actions]
 
   @type t :: %State{
-          value: StateNode.id(),
+          value: [StateNode.id()],
           event: {String.t(), term} | nil
         }
 end

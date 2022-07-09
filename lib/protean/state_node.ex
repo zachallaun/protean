@@ -16,7 +16,7 @@ defmodule Protean.StateNode do
   A StateNode is a node in a nested state machine. See the type docs for
   individual nodes for more details.
   """
-  @type t :: atomic | final | compound
+  @type t :: atomic | final | compound | parallel
 
   @typedoc """
   A leaf StateNode is one that cannot have child states.
@@ -27,7 +27,7 @@ defmodule Protean.StateNode do
   ID encompasses the node and all its ancestors. For example, a node `:child_a`
   defined as a child of a node `:parent_a` might have the id `[:child_a, :parent_a]`
   """
-  @type id :: [String.t(), ...]
+  @opaque id :: [String.t(), ...]
 
   @typedoc """
   An atomic node is a node without child states.
@@ -67,20 +67,39 @@ defmodule Protean.StateNode do
           transitions: [Transition.t()] | nil
         }
 
-  @doc """
-  Resolve a StateNode to a leaf (atomic or final) node by either returning the
-  given node or following the node's `:initial` attribute.
+  @typedoc """
+  A parallel node defines children, all of which are entered when the parallel
+  node is entered.
   """
-  @spec resolve_to_leaf(StateNode.t()) :: StateNode.leaf()
-  def resolve_to_leaf(%StateNode{} = node) do
-    case node do
-      node when node.type in [:atomic, :final] ->
-        node
+  @type parallel :: %StateNode{
+          type: :parallel,
+          id: id,
+          initial: nil,
+          states: [StateNode.t(), ...],
+          transitions: [Transition.t()] | nil
+        }
 
-      %{type: :compound} ->
+  @doc """
+  Resolve a StateNode to its leaves (atomic or final) by either returning the
+  given node or following the node's children.
+  """
+  @spec resolve_to_leaves(StateNode.t()) :: [StateNode.leaf()]
+  def resolve_to_leaves(%StateNode{} = node) do
+    case node.type do
+      :atomic ->
+        [node]
+
+      :final ->
+        [node]
+
+      :compound ->
         node.states
         |> Enum.find(&(&1.id == node.initial))
-        |> resolve_to_leaf()
+        |> resolve_to_leaves()
+
+      :parallel ->
+        node.states
+        |> Enum.flat_map(&resolve_to_leaves/1)
     end
   end
 

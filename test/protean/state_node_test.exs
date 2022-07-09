@@ -12,17 +12,17 @@ defmodule Protean.StateNodeTest do
 
     test "atomic nodes resolve to themselves", %{machine: machine} do
       node = machine.idmap[["state_a1_child", "state_a1", "state_a", "#"]]
-      assert StateNode.resolve_to_leaf(node) == node
+      assert StateNode.resolve_to_leaves(node) == [node]
     end
 
     test "final nodes resolve to themselves", %{machine: machine} do
       node = machine.idmap[["state_b", "#"]]
-      assert StateNode.resolve_to_leaf(node) == node
+      assert StateNode.resolve_to_leaves(node) == [node]
     end
 
     test "compound nodes resolve based on their initial child", %{machine: machine} do
       node = machine.idmap[["state_a", "#"]]
-      resolved = StateNode.resolve_to_leaf(node)
+      [resolved] = StateNode.resolve_to_leaves(node)
 
       assert resolved.id == ["state_a1_child", "state_a1", "state_a", "#"]
     end

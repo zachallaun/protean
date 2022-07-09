@@ -16,7 +16,8 @@ defmodule Protean.MachineConfig do
   defp node_type(config) do
     cond do
       type = config[:type] -> type
-      config[:states] -> :compound
+      config[:initial] -> :compound
+      config[:states] -> :parallel
       true -> :atomic
     end
   end
@@ -45,20 +46,33 @@ defmodule Protean.MachineConfig do
   defp parse_node(:compound, config, id) do
     require!(config, [:states, :initial])
 
-    children =
-      for {name, child_config} <- config[:states],
-          name = to_string(name) do
-        child_id = [name | id]
-        child_config |> node_type() |> parse_node(child_config, child_id)
-      end
-
     %StateNode{
       type: :compound,
       id: id,
-      states: children,
+      states: parse_children(id, config[:states]),
       initial: parse_target(config[:initial]) ++ id,
       transitions: parse_transitions(id, config[:on])
     }
+  end
+
+  defp parse_node(:parallel, config, id) do
+    require!(config, [:states])
+    forbid!(config, [:initial])
+
+    %StateNode{
+      type: :parallel,
+      id: id,
+      states: parse_children(id, config[:states]),
+      transitions: parse_transitions(id, config[:on])
+    }
+  end
+
+  defp parse_children(id, children) do
+    for {name, child_config} <- children,
+        name = to_string(name) do
+      child_id = [name | id]
+      child_config |> node_type() |> parse_node(child_config, child_id)
+    end
   end
 
   defp parse_transitions(_id, nil), do: nil
