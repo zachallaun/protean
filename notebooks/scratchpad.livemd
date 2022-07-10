@@ -11,6 +11,9 @@
 * [ ] transitions to parallel states
 * [ ] edge cases for parallel states - how to handle when one parallel child wants to exit entire parallel state but other wants to transition within itself?
 * [ ] handle transition precedence based on specificity/order/etc.
+* [ ] conditional transitions
+* [ ] automatic transitions
+* [ ] action execution
 
 ## Machine Config
 

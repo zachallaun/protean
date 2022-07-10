@@ -68,10 +68,30 @@ defmodule Protean.Machine do
   """
   @spec transition(Machine.t(), State.t(), event) :: State.t()
   def transition(machine, state, event) do
-    active = active_nodes(machine, state)
-    enabled_transition = first_enabled_transition(active, event)
+    # active = active_nodes(machine, state)
+    # enabled_transition = first_enabled_transition(active, event)
 
-    if enabled_transition do
+    # - get enabled transition for each active state
+    # - TODO if transitions conflict, choose correct one(s)
+    # - determine which currently active nodes will exit
+    # - collect exit actions for those
+    # - determine which new nodes will enter
+    # - collect entry actions for those
+
+    enabled_transitions =
+      for id <- state.value,
+          active_node <- ancestors(id),
+          transition = StateNode.enabled_transition(active_node, event),
+          !is_nil(transition) do
+        {active_node, transition}
+      end
+
+    if Enum.empty?(enabled_transitions) do
+      state
+    else
+      # for now that transitions do not conflict
+      ids_to_exit = for id <- state.value, would_exit?(id, enabled_transitions), do: id
+
       target_ids =
         enabled_transition
         |> Transition.target()
@@ -91,8 +111,6 @@ defmodule Protean.Machine do
         event: event,
         actions: actions
       }
-    else
-      state
     end
   end
 
@@ -109,10 +127,16 @@ defmodule Protean.Machine do
   end
 
   @spec active_nodes(Machine.t(), State.t()) :: [StateNode.t()]
-  defp active_nodes(%Machine{idmap: idmap}, %State{value: value}) do
+  defp active_nodes(machine, %State{value: value}) do
     value
-    |> Enum.flat_map(&StateNode.ancestor_ids/1)
+    |> Enum.flat_map(&ancestors(machine, &1))
     |> Enum.uniq()
+  end
+
+  @spec ancestors(Machine.t(), StateNode.id()) :: [StateNode.t()]
+  defp ancestors(%Machine{idmap: idmap}, id) do
+    id
+    |> StateNode.ancestor_ids()
     |> Enum.map(&idmap[&1])
   end
 

@@ -55,4 +55,28 @@ defmodule Protean.MachineTest do
       assert state.actions == ["exit_a", "event_a_action", "entry_b"]
     end
   end
+
+  describe "parallel machine with actions" do
+    @describetag machine: :parallel_machine_with_actions_1
+
+    test "correct initial state and entry actions", %{initial: initial} do
+      assert initial.actions == ["entry_parallel_a", "entry_a1", "entry_a2"]
+
+      assert initial.value == [
+               ["state_a1", "parallel_state_a", "#"],
+               ["foo", "state_a2", "parallel_state_a", "#"]
+             ]
+    end
+
+    test "transitioning within a parallel state", %{machine: machine, initial: initial} do
+      state = Machine.transition(machine, initial, {"foo_event", nil})
+
+      assert state.value == [
+               ["state_a1", "parallel_state_a", "#"],
+               ["bar", "state_a2", "parallel_state_a", "#"]
+             ]
+
+      assert state.actions == ["entry_bar"]
+    end
+  end
 end

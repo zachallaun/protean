@@ -104,4 +104,54 @@ defmodule TestMachines do
       ]
     )
   end
+
+  def parallel_machine_with_actions_1 do
+    Protean.Machine.new(
+      initial: :parallel_state_a,
+      states: [
+        parallel_state_a: [
+          entry: ["entry_parallel_a"],
+          exit: ["exit_parallel_a"],
+          states: [
+            state_a1: [
+              entry: ["entry_a1"],
+              exit: ["exit_a1"],
+              on: [
+                goto_b: [
+                  actions: ["action_goto_b_1"],
+                  target: :"#.state_b"
+                ]
+              ]
+            ],
+            state_a2: [
+              entry: ["entry_a2"],
+              exit: ["exit_a2"],
+              initial: :foo,
+              states: [
+                foo: [
+                  exit: ["exit_foo"],
+                  on: [
+                    foo_event: :bar
+                  ]
+                ],
+                bar: [
+                  entry: ["entry_bar"],
+                  on: [
+                    goto_b: [
+                      actions: ["action_goto_b_2"],
+                      target: :"#.state_b"
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        state_b: [
+          type: :final,
+          entry: ["entry_b"]
+        ]
+      ]
+    )
+  end
 end
