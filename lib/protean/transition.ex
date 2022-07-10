@@ -2,18 +2,20 @@ defmodule Protean.Transition do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Machine, StateNode}
+  alias Protean.{Machine, StateNode, Action}
 
   defstruct [
     :targets,
     :event_descriptor,
-    type: :external
+    type: :external,
+    actions: []
   ]
 
   @type t :: %Transition{
           event_descriptor: event_descriptor,
-          targets: [StateNode.id()],
-          type: :internal | :external
+          type: :internal | :external,
+          targets: [StateNode.id()] | nil,
+          actions: [Action.t()]
         }
 
   @typedoc """

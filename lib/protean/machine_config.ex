@@ -99,6 +99,7 @@ defmodule Protean.MachineConfig do
 
     %Transition{
       event_descriptor: parse_event_descriptor(descriptor),
+      actions: parse_actions(transition[:actions]),
       targets: [resolve_target(transition[:target], ancestors)]
     }
   end

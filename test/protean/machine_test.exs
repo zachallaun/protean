@@ -52,7 +52,7 @@ defmodule Protean.MachineTest do
     } do
       state = Machine.transition(machine, initial, {"event_a", nil})
       assert state.value == [["state_b", "#"]]
-      assert state.actions == ["exit_a", "entry_b"]
+      assert state.actions == ["exit_a", "event_a_action", "entry_b"]
     end
   end
 end
