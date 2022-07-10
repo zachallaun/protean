@@ -30,7 +30,9 @@ defmodule Protean.MachineConfig do
     %StateNode{
       type: :atomic,
       id: id,
-      transitions: parse_transitions(id, config[:on])
+      transitions: parse_transitions(id, config[:on]),
+      entry: parse_actions(config[:entry]),
+      exit: parse_actions(config[:exit])
     }
   end
 
@@ -39,7 +41,9 @@ defmodule Protean.MachineConfig do
 
     %StateNode{
       type: :final,
-      id: id
+      id: id,
+      entry: parse_actions(config[:entry]),
+      exit: parse_actions(config[:exit])
     }
   end
 
@@ -51,7 +55,9 @@ defmodule Protean.MachineConfig do
       id: id,
       states: parse_children(id, config[:states]),
       initial: parse_target(config[:initial]) ++ id,
-      transitions: parse_transitions(id, config[:on])
+      transitions: parse_transitions(id, config[:on]),
+      entry: parse_actions(config[:entry]),
+      exit: parse_actions(config[:exit])
     }
   end
 
@@ -63,7 +69,9 @@ defmodule Protean.MachineConfig do
       type: :parallel,
       id: id,
       states: parse_children(id, config[:states]),
-      transitions: parse_transitions(id, config[:on])
+      transitions: parse_transitions(id, config[:on]),
+      entry: parse_actions(config[:entry]),
+      exit: parse_actions(config[:exit])
     }
   end
 
@@ -74,6 +82,9 @@ defmodule Protean.MachineConfig do
       child_config |> node_type() |> parse_node(child_config, child_id)
     end
   end
+
+  defp parse_actions(nil), do: []
+  defp parse_actions(actions), do: actions
 
   defp parse_transitions(_id, nil), do: nil
 

@@ -7,7 +7,7 @@
 * [x] know what state nodes are active for the current state configuration
 * [x] basic transitions, start with innermost children and transition if they or ancestor responds to event
 * [x] ensure transitions to compound nodes automatically enter the initial node
-* [ ] implement config/parsing/data model for parallel states
+* [x] implement config/parsing/data model for parallel states
 * [ ] transitions to parallel states
 * [ ] edge cases for parallel states - how to handle when one parallel child wants to exit entire parallel state but other wants to transition within itself?
 * [ ] handle transition precedence based on specificity/order/etc.

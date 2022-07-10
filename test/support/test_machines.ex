@@ -72,4 +72,36 @@ defmodule TestMachines do
       ]
     )
   end
+
+  def machine_with_actions_1 do
+    Protean.Machine.new(
+      initial: :state_a,
+      states: [
+        state_a: [
+          entry: ["entry_a"],
+          exit: ["exit_a"],
+          on: [
+            event_a: [
+              actions: ["event_a_action"],
+              target: :state_b
+            ]
+          ]
+        ],
+        state_b: [
+          entry: ["entry_b"],
+          exit: ["exit_b"],
+          on: [
+            event_b: [
+              actions: ["event_b_action"],
+              target: :state_c
+            ]
+          ]
+        ],
+        state_c: [
+          type: :final,
+          entry: ["entry_c"]
+        ]
+      ]
+    )
+  end
 end

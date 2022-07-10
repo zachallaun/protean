@@ -38,4 +38,21 @@ defmodule Protean.MachineTest do
       assert Machine.initial_state(machine).value == [["state_a", "#"], ["state_b", "#"]]
     end
   end
+
+  describe "machine with basic actions" do
+    @describetag machine: :machine_with_actions_1
+
+    test "entry actions are collected in initial state", %{initial: initial} do
+      assert initial.actions == ["entry_a"]
+    end
+
+    test "exit and entry actions are collected on transition", %{
+      machine: machine,
+      initial: initial
+    } do
+      state = Machine.transition(machine, initial, {"event_a", nil})
+      assert state.value == [["state_b", "#"]]
+      assert state.actions == ["exit_a", "entry_b"]
+    end
+  end
 end

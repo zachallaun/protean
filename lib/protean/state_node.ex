@@ -2,14 +2,18 @@ defmodule Protean.StateNode do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Machine, Transition}
+  alias Protean.{Machine, Transition, Action}
+
+  @enforce_keys [:id, :type]
 
   defstruct [
     :id,
     :type,
+    :initial,
     :transitions,
     :states,
-    :initial
+    entry: [],
+    exit: []
   ]
 
   @typedoc """
@@ -37,7 +41,9 @@ defmodule Protean.StateNode do
           id: id,
           initial: nil,
           states: nil,
-          transitions: [Transition.t()] | nil
+          transitions: [Transition.t()] | nil,
+          entry: [Action.t()],
+          exit: [Action.t()]
         }
 
   @typedoc """
@@ -51,7 +57,9 @@ defmodule Protean.StateNode do
           id: id,
           initial: nil,
           states: nil,
-          transitions: nil
+          transitions: nil,
+          entry: [Action.t()],
+          exit: [Action.t()]
         }
 
   @typedoc """
@@ -64,7 +72,9 @@ defmodule Protean.StateNode do
           id: id,
           initial: id,
           states: [StateNode.t(), ...],
-          transitions: [Transition.t()] | nil
+          transitions: [Transition.t()] | nil,
+          entry: [Action.t()],
+          exit: [Action.t()]
         }
 
   @typedoc """
@@ -76,7 +86,9 @@ defmodule Protean.StateNode do
           id: id,
           initial: nil,
           states: [StateNode.t(), ...],
-          transitions: [Transition.t()] | nil
+          transitions: [Transition.t()] | nil,
+          entry: [Action.t()],
+          exit: [Action.t()]
         }
 
   @doc """
