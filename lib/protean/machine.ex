@@ -82,7 +82,7 @@ defmodule Protean.Machine do
       actions =
         Enum.concat([
           exit_actions(machine, state.value),
-          enabled_transition.actions,
+          List.wrap(enabled_transition.actions),
           entry_actions(machine, target_ids)
         ])
 
