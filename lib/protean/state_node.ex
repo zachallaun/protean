@@ -12,6 +12,7 @@ defmodule Protean.StateNode do
     :initial,
     :transitions,
     :states,
+    :order,
     entry: [],
     exit: []
   ]
@@ -43,7 +44,8 @@ defmodule Protean.StateNode do
           states: nil,
           transitions: [Transition.t()] | nil,
           entry: [Action.t()],
-          exit: [Action.t()]
+          exit: [Action.t()],
+          order: non_neg_integer | nil
         }
 
   @typedoc """
@@ -59,7 +61,8 @@ defmodule Protean.StateNode do
           states: nil,
           transitions: nil,
           entry: [Action.t()],
-          exit: [Action.t()]
+          exit: [Action.t()],
+          order: non_neg_integer | nil
         }
 
   @typedoc """
@@ -74,7 +77,8 @@ defmodule Protean.StateNode do
           states: [StateNode.t(), ...],
           transitions: [Transition.t()] | nil,
           entry: [Action.t()],
-          exit: [Action.t()]
+          exit: [Action.t()],
+          order: non_neg_integer | nil
         }
 
   @typedoc """
@@ -88,7 +92,8 @@ defmodule Protean.StateNode do
           states: [StateNode.t(), ...],
           transitions: [Transition.t()] | nil,
           entry: [Action.t()],
-          exit: [Action.t()]
+          exit: [Action.t()],
+          order: non_neg_integer | nil
         }
 
   @doc """
@@ -133,4 +138,15 @@ defmodule Protean.StateNode do
   def enabled_transition(%StateNode{transitions: transitions}, {event_name, _data}) do
     Enum.find(transitions, &Transition.enabled?(&1, event_name))
   end
+
+  @doc """
+  Returns true if `node1` is a descendant of `node2`. Note: Returns false if the
+  nodes are the same.
+  """
+  @spec descendant?(StateNode.t(), StateNode.t()) :: boolean
+  def descendant?(node1, node2), do: is_prefix?(Enum.reverse(node2.id), Enum.reverse(node1.id))
+
+  defp is_prefix?([x | xs], [x | ys]), do: is_prefix?(xs, ys)
+  defp is_prefix?([_x | _xs], [_y | _ys]), do: false
+  defp is_prefix?([], _any), do: true
 end

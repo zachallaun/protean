@@ -68,8 +68,15 @@ defmodule Protean.Machine do
   """
   @spec transition(Machine.t(), State.t(), event) :: State.t()
   def transition(machine, state, event) do
-    # active = active_nodes(machine, state)
-    # enabled_transition = first_enabled_transition(active, event)
+    # - get enabled transition for each active state
+    # - TODO if transitions conflict, choose correct one(s)
+    # - determine which currently active nodes will exit
+    # - collect exit actions for those
+    # - determine which new nodes will enter
+    # - collect entry actions for those
+
+    active = active_nodes(machine, state)
+    enabled_transition = first_enabled_transition(active, event)
 
     # - get enabled transition for each active state
     # - TODO if transitions conflict, choose correct one(s)
@@ -78,20 +85,15 @@ defmodule Protean.Machine do
     # - determine which new nodes will enter
     # - collect entry actions for those
 
-    enabled_transitions =
-      for id <- state.value,
-          active_node <- ancestors(id),
-          transition = StateNode.enabled_transition(active_node, event),
-          !is_nil(transition) do
-        {active_node, transition}
-      end
+    # enabled_transitions =
+    #   for id <- state.value,
+    #       active_node <- ancestors(id),
+    #       transition = StateNode.enabled_transition(active_node, event),
+    #       !is_nil(transition) do
+    #     {active_node, transition}
+    #   end
 
-    if Enum.empty?(enabled_transitions) do
-      state
-    else
-      # for now that transitions do not conflict
-      ids_to_exit = for id <- state.value, would_exit?(id, enabled_transitions), do: id
-
+    if enabled_transition do
       target_ids =
         enabled_transition
         |> Transition.target()
@@ -111,6 +113,8 @@ defmodule Protean.Machine do
         event: event,
         actions: actions
       }
+    else
+      state
     end
   end
 

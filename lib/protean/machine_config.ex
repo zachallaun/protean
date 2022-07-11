@@ -10,7 +10,27 @@ defmodule Protean.MachineConfig do
   Parses semi-structured machine config into a `StateNode`.
   """
   def parse!(config) do
-    parse_node(node_type(config), config)
+    {root, _order} =
+      config
+      |> node_type()
+      |> parse_node(config)
+      |> set_order()
+
+    root
+  end
+
+  defp set_order(node, order \\ 0)
+
+  defp set_order(%{states: nil} = node, order),
+    do: {%StateNode{node | order: order}, order + 1}
+
+  defp set_order(%{states: []} = node, order),
+    do: {%StateNode{node | order: order}, order + 1}
+
+  defp set_order(%{states: [child | rest]} = node, order) do
+    node = %StateNode{node | order: order}
+    {children, order} = Enum.reduce(rest, &set_order/2, {child, order + 1})
+    {%StateNode{node | states: children}, order}
   end
 
   defp node_type(config) do
