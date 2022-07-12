@@ -229,20 +229,18 @@ def Protean.Action do
 
   @type unresolved :: action_name | function | Action.t()
 
-  # no-op, keep same context
-  @callback pure(action_name, Context.t(), Event.t(), Protean.metadata()) ::
-              nil
-              # assign new context
-              | Context.t()
-              # same
-              | {Context.t(), nil}
-              # assign new context and inject action
-              | {Context.t(), Action.unresolved()}
-              # same
-              | {Context.t(), [Action.unresolved()]}
-              # return action directly?
-              | Action.unresolved()
-              | [Action.unresolved()]
+  @type pure_value ::
+          nil
+          # assign new context
+          | Context.t()
+          # same
+          | {Context.t(), nil}
+          # assign new context and inject action
+          | {Context.t(), Action.unresolved()}
+          # same
+          | {Context.t(), [Action.unresolved()]}
+
+  @callback pure(action_name, Context.t(), Event.t(), Protean.metadata()) :: pure_value
 end
 ```
 
@@ -258,4 +256,120 @@ Action.send(pid, "event")
 Action.send_parent("event")
 Action.assign(foo: Action.spawn_link(SomeOtherMachine))
 # etc.
+```
+
+```elixir
+defmodule Protean do
+  defmodule Unimplemented, do: defstruct([])
+end
+
+defmodule Protean.Action do
+  alias __MODULE__
+  alias Protean.{Machine, Context, State, Event, Unimplemented}
+
+  # This might all belong in the interpreter because it needs to define various
+  # actions like spawning new machines, etc.
+  defprotocol Executable do
+    @spec exec(executable, Context.t(), Event.t(), Protean.metadata()) :: :ok
+    def exec(executable, context, event, metadata)
+  end
+
+  defimpl Executable, for: Function do
+    def exec(fun, context, event, metadata) do
+      fun.(context, event, metadata)
+      :ok
+    end
+  end
+
+  defimpl Executable, for(Action) do
+    def exec(action, _context, _event, _metadata) do
+      %Action{
+        handler: module,
+        name: name,
+        context: context,
+        metadata: metadata
+      } = action
+
+      apply(module, :effect, [name, context, metadata.event, metadata])
+
+      :ok
+    end
+  end
+
+  # ...maybe?
+  @typedoc "Resolved actions implement the `Executable` protocol"
+  @type resolved :: any
+
+  @doc """
+  Resolves the actions associated with a state to a new state and a list of
+  side-effecting actions that can be executed by an interpreter.
+  """
+  @spec resolve_actions(State.t(), Module.t()) :: {State.t(), [Action.resolved()]}
+  def resolve_actions(%State{} = state, handler) do
+    %State{
+      value: value,
+      context: context,
+      actions: actions,
+      event: event
+    } = state
+
+    metadata = %{state: %{value: value, event: event}}
+
+    resolve_actions(actions, context, handler, meta)
+  end
+
+  defp resolve_actions([action | rest], context, handler, meta) do
+    {context, r1} = resolve_action(action, context, handler, meta)
+    {context, r2} = resolve_actions(rest, context, handler, meta)
+    {context, r1 ++ r2}
+  end
+
+  defp resolve_actions([], context, _handler, _meta),
+    do: {context, []}
+
+  @spec resolve_action(Action.unresolved(), Context.t(), Module.t(), Protean.metadata()) ::
+          {Context.t(), [Action.resolved()]}
+  defp resolve_action(action, context, handler, meta)
+
+  defp resolve_action(action, context, handler, meta) when is_binary(action) do
+    {context, resolved} = resolve_pure(action, context, handler, meta)
+
+    action = %Action{
+      handler: handler,
+      name: name,
+      context: context,
+      metadata: meta
+    }
+
+    {state, [action | resolved]}
+  end
+
+  defp resolve_pure(action_name, context, handler, meta) do
+    args = [action_name, context, meta.event, meta]
+
+    handler
+    |> apply(:pure, args)
+    |> resolve_pure_value(context, handler, meta)
+  end
+
+  # Normalizes the return value of the call to `handler.pure/4`
+  defp resolve_pure_value(value, context, handler, meta)
+
+  defp resolve_pure_value(nil, context, _handler, _meta),
+    do: {context, []}
+
+  defp resolve_pure_value(%{} = new_context, _context, _handler, _meta),
+    do: {new_context, []}
+
+  defp resolve_pure_value({new_context, nil}, _context, _handler, _meta),
+    do: {new_context, []}
+
+  defp resolve_pure_value({new_context, unresolved}, context, handler, meta)
+       when not is_list(unresolved),
+       do: resolve_pure_value({new_context, [unresolved]}, context, handler, meta)
+
+  defp resolve_pure_value({new_context, unresolved}, _context, handler, meta)
+       when is_list(unresolved),
+       do: resolve_actions(unresolved, new_context, handler, meta)
+end
 ```
