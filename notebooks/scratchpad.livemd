@@ -61,3 +61,201 @@ machine =
 ```elixir
 Map.keys(machine.idmap)
 ```
+
+## Actions
+
+My early sketches for Protean assumed that actions would be handled by "Handler" modules that could just pattern match on strings, e.g. `def handle_action("some_action_name", context, event)`. This isn't enough though: we need actions to be mapped to some kind of data type that allows the interpreter to infer whether it can be executed/resolved without side effects (like `assign`, `pure`, `send`, etc.) or whether it needs to be executed later.
+
+The question then becomes: how do we specify these sorts of action types in an Elixir-idiomatic way? (Since having a bunch of anonymous functions is kinda gnarly in Elixir).
+
+```elixir
+defmodule MyMachine do
+  use Protean,
+    machine: [
+      initial: :foo,
+      context: %{
+        places_ive_been: []
+      },
+      states: [
+        foo: [
+          enter: "add_to_places_ive_been",
+          on: [
+            goto_bar: :bar
+          ]
+        ],
+        bar: [
+          enter: ["add_to_places_ive_been", "log_places_ive_been"],
+          type: :final
+        ]
+      ]
+    ]
+
+  @protean :assign
+  def handle_action("add_to_places_ive_been", context, _event, %{state: s}) do
+    update_in(context.places_ive_been, &[s.value | &1])
+  end
+
+  @protean :effect
+  def handle_action("log_places_ive_been", %{places_ive_been: places}, _event) do
+    IO.inspect(places, label: "Places I've been")
+  end
+end
+```
+
+```elixir
+defmodule MyMachine do
+  use Protean,
+    machine: [
+      initial: :foo,
+      context: %{
+        places_ive_been: []
+      },
+      states: [
+        foo: [
+          enter: "add_to_places_ive_been",
+          on: [
+            goto_bar: :bar
+          ]
+        ],
+        bar: [
+          enter: ["add_to_places_ive_been", "log_places_ive_been"],
+          type: :final
+        ]
+      ]
+    ],
+    actions: [
+      add_to_places_ive_been:
+        Protean.Actions.assign(fn context, _event, %{state: s} ->
+          update_in(context.places_ive_been, &[s.value | &1])
+        end),
+      log_places_ive_been: fn context, _event ->
+        IO.inspect(places, label: "Places I've been")
+      end
+    ]
+end
+```
+
+```elixir
+defmodule MyMachine do
+  use Protean,
+    machine: [
+      initial: :foo,
+      context: %{
+        places_ive_been: []
+      },
+      states: [
+        foo: [
+          enter: "add_to_places_ive_been",
+          on: [
+            goto_bar: :bar
+          ]
+        ],
+        bar: [
+          enter: ["add_to_places_ive_been", "log_places_ive_been"],
+          type: :final
+        ]
+      ]
+    ]
+
+  @impl Protean
+  def pure("add_to_places_ive_been", context, _event, %{state: s}) do
+    update_in(context.places_ive_been, &[s.value | &1])
+  end
+
+  @impl Protean
+  def effect("log_places_ive_been", %{places_ive_been: places}, _event, _meta) do
+    IO.inspect(places, label: "Places I've been")
+  end
+end
+```
+
+^ This seems pretty promising. Basically each action is broken down into two major handler types, `pure` and `effect`. Default catch-all implementations can be defined for both. `Machine.transition` can basically call all the `pure` handlers, and the interpreter could then call all the `effect` handlers.
+
+With different return "shapes", `pure` could be a catch-all action creator/context assigner. For instance:
+
+```elixir
+defmodule MyMachine do
+  use Protean,
+    machine: [
+      # ...
+    ]
+
+  alias Protean.Action
+
+  @impl Action
+  def pure("assign some stuff", context, {_, data}, _meta) do
+    update_in(context.some_list, &[data.value | &1])
+  end
+
+  @impl Action
+  def pure("same as above", context, {_, data}, _meta) do
+    context = update_in(context.some_list, &[data.value | &1])
+    # or {context, []}
+    {context, nil}
+  end
+
+  @impl Action
+  def pure("assign and send", context, {_, data}, _meta) do
+    context = update_in(context.some_list, &[data.value | &1])
+    {context, Action.send("some_event")}
+  end
+
+  @impl Action
+  def pure("assign and send more", context, {_, data}, _meta) do
+    context = update_in(context.some_list, &[data.value | &1])
+    {context, [Action.send("some_event"), Action.send(context.some_ref, "some_event")]}
+  end
+
+  @impl Action
+  def pure("getting crazy", context, _event, _meta) do
+    {context, ["some effectful action"]}
+  end
+
+  @impl Action
+  def effect("some effectful action", _context, _event, _meta) do
+    IO.puts("Woo!")
+  end
+end
+```
+
+```elixir
+def Protean.Action do
+  alias __MODULE__
+  alias Protean.{Context, Event}
+
+  @type t :: %Action{}
+
+  @type action_name :: String.t()
+
+  @type unresolved :: action_name | function | Action.t()
+
+  # no-op, keep same context
+  @callback pure(action_name, Context.t(), Event.t(), Protean.metadata()) ::
+              nil
+              # assign new context
+              | Context.t()
+              # same
+              | {Context.t(), nil}
+              # assign new context and inject action
+              | {Context.t(), Action.unresolved()}
+              # same
+              | {Context.t(), [Action.unresolved()]}
+              # return action directly?
+              | Action.unresolved()
+              | [Action.unresolved()]
+end
+```
+
+This is seeming pretty good. There can be a number of `Action` creators as well in case people want to use them in the way they do in XState.
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+Action.pure(fn -> ... end)
+Action.send("event")
+Action.send({"event", "event data"})
+Action.send(pid, "event")
+Action.send_parent("event")
+Action.assign(foo: Action.spawn_link(SomeOtherMachine))
+# etc.
+```
