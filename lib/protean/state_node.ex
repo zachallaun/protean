@@ -29,6 +29,16 @@ defmodule Protean.StateNode do
   @type leaf :: atomic | final
 
   @typedoc """
+  A simple `StateNode` is one that cannot have child nodes.
+  """
+  @type simple :: atomic | final
+
+  @typedoc """
+  A complex `StateNode` is one that has child nodes.
+  """
+  @type complex :: compound | parallel
+
+  @typedoc """
   ID encompasses the node and all its ancestors. For example, a node `:child_a`
   defined as a child of a node `:parent_a` might have the id `[:child_a, :parent_a]`
   """

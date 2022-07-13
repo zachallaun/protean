@@ -447,7 +447,7 @@ defmodule Protean.Interpreter do
   The `Protean.Interpreter` is a `GenServer` process primarily responsible for interpreting
   and executing a `Protean.Machine`. This includes accepting incoming events, executing
   transitions and actions, spawning child machines/processes, etc.
-  
+
   This module is usually not invoked used directly, but instead defines the behavior that
   is used by modules that `use Protean`. See `Protean` for client API.
   """
@@ -462,10 +462,10 @@ defmodule Protean.Interpreter do
   defstruct [:machine, :state, :handler]
 
   @type t :: %Interpreter{
-          machine: Machine.t(),
-          state: State.t(),
-          handler: Module.t()
-        }
+    machine: Machine.t(),
+    state: State.t(),
+    handler: Module.t()
+  }
 
   @impl true
   def init(machine, opts \\ []) do
@@ -491,13 +491,13 @@ defmodule Protean.Interpreter do
   @impl true
   def handle_continue({@protean_event, event, from, opts \\ []}, interpreter) do
     %Interpreter{
-      machine: machine,
-      state: state
+      machine: machine
+      state: state,
     } = interpreter
 
     state = Machine.transition(machine, state, event)
-    interpreter = execute!(%Interpreter{interpreter | state: state})
-
+    interpreter = execute(%{interpreter | state: state})
+    
     if reply_to = opts[:reply_to] do
       GenServer.reply(reply_to, interpreter.state)
     end
@@ -505,7 +505,7 @@ defmodule Protean.Interpreter do
     {:noreply, interpreter}
   end
 
-  defp execute!(interpreter) do
+  defp execute(interpreter) do
     %Interpreter{
       state: state,
       handler: handler
@@ -515,14 +515,15 @@ defmodule Protean.Interpreter do
       actions: actions,
       context: context
     } = state
-
-    bound_actions = Action.resolve_actions(actions, context, handler, Protean.metadata(state))
+    
+    bound_actions =
+      Action.resolve_actions(actions, context, handler, Protean.metadata(state))
 
     Enum.reduce(bound_actions, interpreter, &Executable.exec!/2)
   end
 
   defprotocol Executable do
-    @spec exec!({Action.resolved(), Context.t()}, Interpreter.t()) :: Interpreter.t()
+    @spec exec({Action.resolved(), Context.t()}, Interpreter.t()) :: Interpreter.t()
     def exec(action, interpreter)
   end
 
@@ -546,5 +547,187 @@ defmodule Protean.Interpreter do
       interpreter
     end
   end
+end
+```
+
+Thinking through the main even loop ([SCXML link](https://www.w3.org/TR/scxml/#AlgorithmforSCXMLInterpretation)) as it applies to Elixir. And what state the Interpreter is likely to need.
+
+```elixir
+defmodule Interpreter do
+  defstruct [
+    :machine,
+    :state,
+    :handler,
+    running: true,
+    internal_queue: :queue.new()
+  ]
+
+  # SCXML main event loop:
+  #
+  # 0. if running, continue, otherwise exit interpreter
+  # 1. handle automatic transitions
+  #   - if any exit, microstep and go to 1
+  # 2. handle internal queue
+  #   - if event, select transitions, microstep, and go to 1
+  # 3. handle invokes
+  #   - if states to invoke, invoke them
+  #   - if invoking added event to internal queue, go to 1
+  # 4. wait for external event
+  #   - if termination event received, exit interpreter
+  #   - if regular event received, select transitions, microstep, and go to 0
+
+  @doc """
+  Entrypoint for the interpreter, ensuring that any automatic transitions are run,
+  internal events handled, invokes invoked, etc. before waiting for an external event.
+  """
+  def run_interpreter(%Interpreter{running: true} = interpreter),
+    do: run_automatic_transitions(interpreter)
+
+  def run_interpreter(%Interpreter{running: false} = interpreter),
+    do: exit_interpreter(interpreter)
+
+  @doc """
+  Handler for external event with "run-to-completion" semantics: ensures that the
+  interpreter is either ready to receive the next event or is no longer running.
+  """
+  def handle_event(interpreter, event)
+
+  def handle_event(interpreter, @protean_terminate),
+    do: exit_interpreter(interpreter)
+
+  def handle_event(interpreter, {@protean_event, event}) do
+    interpreter
+    |> autoforward_event(event)
+    |> process_event(event)
+  end
+
+  def run_automatic_transitions(interpreter) do
+    case select_automatic_transitions(interpreter) do
+      [] ->
+        process_internal_queue(interpreter)
+
+      transitions ->
+        transitions
+        |> microstep(interpreter)
+        |> run_interpreter()
+    end
+  end
+
+  def process_internal_queue(%Interpreter{internal_queue: queue} = interpreter) do
+    case :queue.out(queue) do
+      {:empty, _} ->
+        process_invokes(interpreter)
+
+      {{:value, event}, queue} ->
+        %{interpreter | internal_queue: queue}
+        |> process_event(event)
+    end
+  end
+
+  def process_event(interpreter, event) do
+    interpreter
+    |> select_transitions(event)
+    |> microstep(interpreter)
+    |> run_interpreter()
+  end
+
+  def process_invokes(interpreter) do
+    case select_invokes(interpreter) do
+      [] ->
+        interpreter
+
+      invokes ->
+        interpreter
+        |> invoke(invokes)
+        |> loop_if_internal_event()
+    end
+  end
+
+  def loop_if_internal_event(%Interpreter{internal_queue: queue} = interpreter) do
+    if :queue.is_empty(queue) do
+      interpreter
+    else
+      run_interpreter(interpreter)
+    end
+  end
+
+  def autoforward_event(%Interpreter{invokes: invokes} = interpreter, event) do
+    invokes
+    |> Enum.filter(&autoforward?/1)
+    |> Enum.reduce(interpreter, &autoforward_to(&1, event, &2))
+  end
+
+  def autoforward?(%{autoforward: true}), do: true
+  def autoforward?(_invoke), do: false
+
+  def autofoward_to(%{pid: pid}, event, interpreter) do
+    # TODO: do we need to handle failures here? can add to internal queue
+    # if errors occur.
+    send_event_async(pid, event)
+    interpreter
+  end
+
+  @doc """
+  A `microstep` processes a single set of transitions, updating the state configuration
+  and executing the resulting actions.
+  """
+  def microstep(transitions, interpreter)
+
+  def microstep([], interpreter), do: interpreter
+
+  def microstep(transitions, interpreter) do
+    %Interpreter{
+      machine: machine,
+      state: state
+    } = interpreter
+
+    state = Machine.take_transitions(machine, state, transitions)
+    execute(%Interpreter{interpreter | state: state})
+  end
+end
+```
+
+```elixir
+defmodule StateNode do
+  @doc """
+  Returns true if the given complex node is in a final state given a list of
+  currently active simple nodes.
+  """
+  @spec in_final?(StateNode.complex(), [StateNode.simple(), ...]) :: boolean
+  def in_final?(node, active)
+
+  def in_final?(%StateNode{type: :compound} = node, active) do
+    # compound node is in final state if any of its children
+    # are final states and are members of the active set
+    Enum.any?(node.states, fn child ->
+      is_final?(child) && is_active?(child, active)
+    end)
+  end
+
+  def in_final?(%StateNode{type: :parallel} = node, active) do
+    # parallel node is in final state if all of its children
+    # are in final states
+    Enum.all?(node.states, fn child ->
+      in_final?(child, active)
+    end)
+  end
+
+  @doc """
+  Returns true if the given node is active given a list of currently active
+  simple nodes.
+  """
+  @spec is_active?(StateNode.t(), [StateNode.simple(), ...]) :: boolean
+  def is_active?(node, active) do
+    active
+    |> Enum.flat_map(&ancestor_ids)
+    |> Enum.any?(&(&1 == node.id))
+  end
+
+  @doc """
+  Returns true if the given `StateNode` represents a final state.
+  """
+  @spec is_final?(StateNode.t()) :: boolean
+  def is_final?(%StateNode{type: :final}), do: true
+  def is_final?(%StateNode{}), do: false
 end
 ```
