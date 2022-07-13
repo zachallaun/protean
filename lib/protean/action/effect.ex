@@ -11,7 +11,7 @@ defimpl Protean.Action.Resolvable, for: Protean.Action.Effect do
 end
 
 defimpl Protean.Action.Executable, for: Protean.Action.Effect do
-  def exec({effect, context}, interpreter) do
+  def exec(effect, context, interpreter) do
     %Protean.Action.Effect{
       action_name: action_name,
       handler: handler,

@@ -11,7 +11,7 @@ defmodule Interpreter do
   use GenServer
 
   alias __MODULE__
-  alias Protean.{Machine, Action, State}
+  alias Protean.{Machine, State, Action, Action.Executable}
 
   @protean_event :"$protean.event"
   @protean_terminate :"$protean.terminate"
@@ -185,17 +185,33 @@ defmodule Interpreter do
   def microstep(transitions, interpreter) do
     %Interpreter{
       machine: machine,
-      state: state
+      state: state,
+      handler: handler
     } = interpreter
 
-    state = Machine.take_transitions(machine, state, transitions)
-    execute(%Interpreter{interpreter | state: state})
+    %State{
+      value: value,
+      event: event,
+      actions: actions,
+      context: context
+    } = state = Machine.take_transition(machine, state, transitions)
+
+    interpreter = %{interpreter | state: state}
+
+    meta = %{
+      state: %{value: value},
+      event: event
+    }
+
+    bound_actions = Action.resolve_actions(actions, context, handler, meta)
+
+    Enum.reduce(bound_actions, interpreter, fn
+      {action, context}, interpreter ->
+        Executable.exec(action, context, interpreter)
+    end)
   end
 
   def exit_interpreter(interpreter),
-    do: interpreter
-
-  def execute(interpreter),
     do: interpreter
 
   # Client
