@@ -313,7 +313,7 @@ defmodule Protean.Action do
       event: event
     } = state
 
-    metadata = %{state: %{value: value, event: event}}
+    metadata = %{state: %{value: value}, event: event}
 
     resolve_actions(actions, context, handler, meta)
   end
@@ -393,6 +393,9 @@ defmodule Protean.Action do
     end)
   end
 
+  def resolve_actions(nil, _context, _handler, _meta), do: []
+  def resolve_actions([], _context, _handler, _meta), do: []
+
   def resolve_next_action({context, _resolved, [action | rest]}, handler, meta) do
     case resolve_action(action, context, handler, meta) do
       {action, context, unresolved} -> {action, context, List.wrap(unresolved) ++ rest}
@@ -434,6 +437,114 @@ defmodule Protean.Action do
 
   def resolve_action(%SomeOtherThing{} = action, context, handler, meta) do
     # ...
+  end
+end
+```
+
+```elixir
+defmodule Protean.Interpreter do
+  @moduledoc """
+  The `Protean.Interpreter` is a `GenServer` process primarily responsible for interpreting
+  and executing a `Protean.Machine`. This includes accepting incoming events, executing
+  transitions and actions, spawning child machines/processes, etc.
+  
+  This module is usually not invoked used directly, but instead defines the behavior that
+  is used by modules that `use Protean`. See `Protean` for client API.
+  """
+
+  use GenServer
+
+  alias __MODULE__
+  alias Protean.{Machine, Action, State, Context}
+
+  @protean_event :"$protean.event"
+
+  defstruct [:machine, :state, :handler]
+
+  @type t :: %Interpreter{
+          machine: Machine.t(),
+          state: State.t(),
+          handler: Module.t()
+        }
+
+  @impl true
+  def init(machine, opts \\ []) do
+    interpreter = %Interpreter{
+      machine: machine,
+      state: Machine.initial_state(machine),
+      handler: Keyword.fetch!(opts, :handler)
+    }
+
+    {:ok, interpreter}
+  end
+
+  @impl true
+  def handle_call({@protean_event, event}, from, interpreter) do
+    {:noreply, interpreter, {:continue, {@protean_event, event, from, [reply_to: from]}}}
+  end
+
+  @impl true
+  def handle_cast({@protean_event, event}, from, interpreter) do
+    {:noreply, interpreter, {:continue, {@protean_event, event, from}}}
+  end
+
+  @impl true
+  def handle_continue({@protean_event, event, from, opts \\ []}, interpreter) do
+    %Interpreter{
+      machine: machine,
+      state: state
+    } = interpreter
+
+    state = Machine.transition(machine, state, event)
+    interpreter = execute!(%Interpreter{interpreter | state: state})
+
+    if reply_to = opts[:reply_to] do
+      GenServer.reply(reply_to, interpreter.state)
+    end
+
+    {:noreply, interpreter}
+  end
+
+  defp execute!(interpreter) do
+    %Interpreter{
+      state: state,
+      handler: handler
+    } = interpreter
+
+    %State{
+      actions: actions,
+      context: context
+    } = state
+
+    bound_actions = Action.resolve_actions(actions, context, handler, Protean.metadata(state))
+
+    Enum.reduce(bound_actions, interpreter, &Executable.exec!/2)
+  end
+
+  defprotocol Executable do
+    @spec exec!({Action.resolved(), Context.t()}, Interpreter.t()) :: Interpreter.t()
+    def exec(action, interpreter)
+  end
+
+  defimpl Executable, for: Function do
+    def exec({fun, context}, %{state: state} = interpreter) do
+      fun.(context, state.event, Protean.metadata(state))
+      interpreter
+    end
+  end
+
+  defimpl Executable, for: Action.Effect do
+    def exec({action_name, context}, %{state: state, handler: handler} = interpreter) do
+      apply(handler, :effect, [action_name, context, state.event, Protean.metadata(state)])
+      interpreter
+    end
+  end
+
+  defimpl Executable, for: Action.Assign do
+    def exec({assign, context}, %{state: state} = interpreter) do
+      # potentially handle spawns/etc.
+      interpreter
+    end
   end
 end
 ```
