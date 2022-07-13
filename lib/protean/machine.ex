@@ -32,6 +32,11 @@ defmodule Protean.Machine do
   """
   @type event :: {event_name, term}
 
+  @typedoc """
+  The extended state defined for a machine.
+  """
+  @type context :: %{any => any}
+
   def new(config) do
     root = MachineConfig.parse!(config)
     idmap = Utilities.Tree.tree_reduce(root, &idmap_reducer/2, %{})

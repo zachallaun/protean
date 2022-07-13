@@ -44,6 +44,11 @@ defmodule Interpreter do
   @type options :: [option]
   @type option :: {:handler, Module.t()}
 
+  @type metadata :: %{
+          state: %{value: State.value()},
+          event: Machine.event()
+        }
+
   # SCXML main event loop:
   #
   # 0. if running, continue, otherwise exit interpreter
