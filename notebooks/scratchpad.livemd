@@ -373,3 +373,67 @@ defmodule Protean.Action do
        do: resolve_actions(unresolved, new_context, handler, meta)
 end
 ```
+
+I was thinking that instead of the above -- where I sort of string the updated context through each action, "binding" it (by storing it in `Action` structs) to actions that can be executed later -- I could just create `assign` actions that basically just say "set the context to this" and then do all the actual context updating in the `execute` function that the interpreter runs.
+
+I actually wonder though if all of this would be simplified with `Stream.unfold`. Unfold takes an acc and a function and basically the stream finishes when the function returns nil. So the acc would be something like `{context, actions}` and it would return nil when we run out of actions.
+
+```elixir
+defmodule Protean.Action do
+  @doc """
+  Resolves actions to `{action, context}` pairs that can be executed later by
+  an interpreter.
+  """
+  def resolve_actions(actions, context, handler, meta) do
+    {nil, context, actions}
+    |> Stream.unfold(&resolve_next_action(&1, handler, meta))
+    |> Enum.flat_map(fn
+      {nil, _, _} -> []
+      {action, context, _} -> [{action, context}]
+    end)
+  end
+
+  def resolve_next_action({context, _resolved, [action | rest]}, handler, meta) do
+    case resolve_action(action, context, handler, meta) do
+      {action, context, unresolved} -> {action, context, List.wrap(unresolved) ++ rest}
+      {action, context} -> {action, context, rest}
+    end
+  end
+
+  def resolve_next_action({_resolved, _context, []}, _handler, _meta), do: nil
+
+  @spec resolve_action(Action.unresolved(), Context.t(), Module.t(), Protean.metadata()) ::
+          {Action.resolved() | nil, Context.t(), [Action.unresolved()]}
+          | {Action.resolved() | nil, Context.t()}
+  def resolve_action(action, context, handler, meta)
+
+  def resolve_action(action, context, handler, meta) when is_binary(action) do
+    {context, unresolved} = resolve_pure(action, context, handler, meta)
+
+    effect_action = %Action{
+      handler: handler,
+      name: action,
+      context: context,
+      metadata: meta
+    }
+
+    {effect_action, context, unresolved}
+  end
+
+  def resolve_action(action, context, handler, meta) when is_function(action) do
+    {context, action}
+  end
+
+  def resolve_action(%Assign{} = action, context, handler, meta) do
+    # ...
+  end
+
+  def resolve_action(%Send{} = action, context, handler, meta) do
+    # ...
+  end
+
+  def resolve_action(%SomeOtherThing{} = action, context, handler, meta) do
+    # ...
+  end
+end
+```
