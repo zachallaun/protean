@@ -56,10 +56,94 @@ defmodule Protean.Machine do
       |> StateNode.resolve_to_leaves()
       |> Enum.map(& &1.id)
 
+    entry_ids =
+      active_ids
+      |> Enum.flat_map(&StateNode.ancestor_ids/1)
+      |> Enum.uniq()
+
     %State{
       value: active_ids,
-      actions: entry_actions(machine, active_ids)
+      actions: entry_actions(machine, entry_ids)
     }
+  end
+
+  @spec take_transitions(Machine.t(), State.t(), [Transition.t()]) :: State.t()
+  def take_transitions(machine, state, transitions)
+
+  def take_transitions(_machine, state, []), do: state
+
+  def take_transitions(machine, state, transitions) do
+    Enum.reduce(transitions, state, fn transition, state ->
+      take_transition(machine, state, transition)
+    end)
+  end
+
+  def take_transition(machine, state, transition) do
+    %State{
+      value: value,
+      actions: actions
+    } = state
+
+    exit_ids =
+      Enum.flat_map(value, fn id ->
+        id
+        |> StateNode.ancestor_ids()
+        |> Enum.filter(&will_exit?(machine, &1, transition))
+      end)
+      |> Enum.uniq()
+
+    # TODO: this is wrong, it needs to be the full set of states that will
+    # be entered and not just leaves
+    entry_ids =
+      transition
+      |> Transition.target()
+      |> lookup_by_id(machine)
+      |> StateNode.resolve_to_leaves()
+      |> Enum.map(& &1.id)
+
+    new_actions =
+      Enum.concat([
+        exit_actions(machine, exit_ids),
+        List.wrap(transition.actions),
+        entry_actions(machine, entry_ids)
+      ])
+
+    value =
+      (value -- exit_ids)
+      |> Enum.concat(entry_ids)
+      |> Enum.uniq()
+
+    %{state | value: value, actions: List.wrap(actions) ++ new_actions}
+  end
+
+  @spec will_exit?(Machine.t(), StateNode.id(), Transition.t()) :: boolean
+  def will_exit?(machine, id, transition) do
+    Enum.any?(transition.targets, fn target_id ->
+      target_is_descendant? = StateNode.descendant?(target_id, id)
+      parallel_ancestor? = common_ancestor(machine, id, target_id).type == :parallel
+
+      !target_is_descendant? && !parallel_ancestor?
+    end)
+  end
+
+  defp common_ancestor(%Machine{idmap: idmap}, id1, id2) do
+    ancestor_id = StateNode.common_ancestor_id(id1, id2)
+    Map.fetch!(idmap, ancestor_id)
+  end
+
+  @spec select_automatic_transitions(Machine.t(), State.t()) :: [Transition.t()]
+  def select_automatic_transitions(_machine, _state) do
+    # TODO
+    []
+  end
+
+  @spec select_transitions(Machine.t(), State.t(), event) :: [Transition.t()]
+  def select_transitions(machine, state, event) do
+    # TODO: Handle conflicting transitions
+    machine
+    |> active_nodes(state)
+    |> first_enabled_transition(event)
+    |> List.wrap()
   end
 
   @doc """
@@ -68,54 +152,8 @@ defmodule Protean.Machine do
   """
   @spec transition(Machine.t(), State.t(), event) :: State.t()
   def transition(machine, state, event) do
-    # - get enabled transition for each active state
-    # - TODO if transitions conflict, choose correct one(s)
-    # - determine which currently active nodes will exit
-    # - collect exit actions for those
-    # - determine which new nodes will enter
-    # - collect entry actions for those
-
-    active = active_nodes(machine, state)
-    enabled_transition = first_enabled_transition(active, event)
-
-    # - get enabled transition for each active state
-    # - TODO if transitions conflict, choose correct one(s)
-    # - determine which currently active nodes will exit
-    # - collect exit actions for those
-    # - determine which new nodes will enter
-    # - collect entry actions for those
-
-    # enabled_transitions =
-    #   for id <- state.value,
-    #       active_node <- ancestors(id),
-    #       transition = StateNode.enabled_transition(active_node, event),
-    #       !is_nil(transition) do
-    #     {active_node, transition}
-    #   end
-
-    if enabled_transition do
-      target_ids =
-        enabled_transition
-        |> Transition.target()
-        |> lookup_by_id(machine)
-        |> StateNode.resolve_to_leaves()
-        |> Enum.map(& &1.id)
-
-      actions =
-        Enum.concat([
-          exit_actions(machine, state.value),
-          List.wrap(enabled_transition.actions),
-          entry_actions(machine, target_ids)
-        ])
-
-      %State{
-        value: target_ids,
-        event: event,
-        actions: actions
-      }
-    else
-      state
-    end
+    transitions = select_transitions(machine, state, event)
+    take_transitions(machine, state, transitions)
   end
 
   defp lookup_by_id(id, machine), do: machine.idmap[id]
@@ -144,32 +182,32 @@ defmodule Protean.Machine do
     |> Enum.map(&idmap[&1])
   end
 
-  @spec entry_order(Machine.t(), [StateNode.id()]) :: [StateNode.t()]
-  defp entry_order(machine, ids) do
-    ids
-    |> Enum.flat_map(&ordered_nodes(machine, &1, :desc))
-    |> Enum.uniq()
-  end
+  # @spec entry_order(Machine.t(), [StateNode.id()]) :: [StateNode.t()]
+  # defp entry_order(machine, ids) do
+  #   ids
+  #   |> Enum.flat_map(&ordered_nodes(machine, &1, :desc))
+  #   |> Enum.uniq()
+  # end
 
-  @spec exit_order(Machine.t(), [StateNode.id()]) :: [StateNode.t()]
-  defp exit_order(machine, ids) do
-    ids
-    |> Enum.flat_map(&ordered_nodes(machine, &1, :asc))
-    |> Enum.uniq()
-  end
+  # @spec exit_order(Machine.t(), [StateNode.id()]) :: [StateNode.t()]
+  # defp exit_order(machine, ids) do
+  #   ids
+  #   |> Enum.flat_map(&ordered_nodes(machine, &1, :asc))
+  #   |> Enum.uniq()
+  # end
 
-  @spec ordered_nodes(Machine.t(), StateNode.id(), :asc | :desc) :: [StateNode.t()]
-  defp ordered_nodes(machine, id, order)
+  # @spec ordered_nodes(Machine.t(), StateNode.id(), :asc | :desc) :: [StateNode.t()]
+  # defp ordered_nodes(machine, id, order)
 
-  defp ordered_nodes(machine, id, :desc) do
-    ordered_nodes(machine, id, :asc) |> Enum.reverse()
-  end
+  # defp ordered_nodes(machine, id, :desc) do
+  #   ordered_nodes(machine, id, :asc) |> Enum.reverse()
+  # end
 
-  defp ordered_nodes(machine, [_ | parent] = id, :asc) do
-    [machine.idmap[id] | ordered_nodes(machine, parent, :asc)]
-  end
+  # defp ordered_nodes(machine, [_ | parent] = id, :asc) do
+  #   [machine.idmap[id] | ordered_nodes(machine, parent, :asc)]
+  # end
 
-  defp ordered_nodes(_machine, [], :asc), do: []
+  # defp ordered_nodes(_machine, [], :asc), do: []
 
   @spec entry_actions(Machine.t(), [StateNode.id()]) :: [Action.t()]
   defp entry_actions(machine, ids) do
@@ -183,5 +221,19 @@ defmodule Protean.Machine do
     machine
     |> exit_order(ids)
     |> Enum.flat_map(& &1.exit)
+  end
+
+  defp entry_order(machine, ids), do: document_order(machine, ids)
+
+  defp exit_order(machine, ids), do: document_order(machine, ids, :desc)
+
+  defp document_order(machine, ids, sorter \\ :asc) do
+    machine
+    |> lookup_nodes(ids)
+    |> Enum.sort_by(& &1.order, sorter)
+  end
+
+  defp lookup_nodes(machine, ids) do
+    Enum.map(ids, fn id -> machine.idmap[id] end)
   end
 end

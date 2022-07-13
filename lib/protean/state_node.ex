@@ -150,13 +150,24 @@ defmodule Protean.StateNode do
   end
 
   @doc """
-  Returns true if `node1` is a descendant of `node2`. Note: Returns false if the
-  nodes are the same.
+  Tests whether `descendant_id` is in fact a descendant of `ancestor_id`.
+  Returns false if they are the same node.
   """
-  @spec descendant?(StateNode.t(), StateNode.t()) :: boolean
-  def descendant?(node1, node2), do: is_prefix?(Enum.reverse(node2.id), Enum.reverse(node1.id))
+  @spec descendant?(StateNode.id(), StateNode.id()) :: boolean
+  def descendant?(descendant_id, ancestor_id) do
+    descendant_id != ancestor_id && common_ancestor_id(descendant_id, ancestor_id) == ancestor_id
+  end
 
-  defp is_prefix?([x | xs], [x | ys]), do: is_prefix?(xs, ys)
-  defp is_prefix?([_x | _xs], [_y | _ys]), do: false
-  defp is_prefix?([], _any), do: true
+  @spec common_ancestor_id(StateNode.id(), StateNode.id()) :: StateNode.id()
+  def common_ancestor_id(id1, id2) do
+    [id1, id2]
+    |> Enum.map(&Enum.reverse/1)
+    |> then(fn [rev1, rev2] -> get_prefix(rev1, rev2) end)
+    |> Enum.reverse()
+  end
+
+  defp get_prefix([], _), do: []
+  defp get_prefix(_, []), do: []
+  defp get_prefix([x | xs], [x | ys]), do: [x | get_prefix(xs, ys)]
+  defp get_prefix([_x | _xs], [_y | _ys]), do: []
 end
