@@ -27,10 +27,16 @@ defmodule Protean.MachineConfig do
   defp set_order(%{states: []} = node, order),
     do: {%StateNode{node | order: order}, order + 1}
 
-  defp set_order(%{states: [child | rest]} = node, order) do
+  defp set_order(%{states: children} = node, order) do
     node = %StateNode{node | order: order}
-    {children, order} = Enum.reduce(rest, &set_order/2, {child, order + 1})
-    {%StateNode{node | states: children}, order}
+
+    {children, order} =
+      Enum.reduce(children, {[], order + 1}, fn child, {already_set, order} ->
+        {child, order} = set_order(child, order)
+        {[child | already_set], order}
+      end)
+
+    {%StateNode{node | states: Enum.reverse(children)}, order}
   end
 
   defp node_type(config) do
