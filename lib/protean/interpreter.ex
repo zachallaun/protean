@@ -1,4 +1,4 @@
-defmodule Interpreter do
+defmodule Protean.Interpreter do
   @moduledoc """
   The `Protean.Interpreter` is a `GenServer` process primarily responsible for interpreting
   and executing a `Protean.Machine`. This includes accepting incoming events, executing
@@ -107,10 +107,17 @@ defmodule Interpreter do
   end
 
   def process_event(interpreter, event) do
+    interpreter = set_event(interpreter, event)
+
     interpreter
     |> select_transitions(event)
     |> microstep(interpreter)
     |> run_interpreter()
+  end
+
+  defp set_event(%Interpreter{state: state} = interpreter, event) do
+    state = %{state | event: event}
+    %{interpreter | state: state}
   end
 
   def process_invokes(interpreter) do
@@ -194,7 +201,7 @@ defmodule Interpreter do
       event: event,
       actions: actions,
       context: context
-    } = state = Machine.take_transition(machine, state, transitions)
+    } = state = Machine.take_transitions(machine, state, transitions)
 
     interpreter = %{interpreter | state: state}
 
@@ -250,11 +257,13 @@ defmodule Interpreter do
 
   @impl GenServer
   def init({machine, opts}) do
-    interpreter = %Interpreter{
-      machine: machine,
-      state: Machine.initial_state(machine),
-      handler: Keyword.fetch!(opts, :handler)
-    }
+    interpreter =
+      %Interpreter{
+        machine: machine,
+        state: Machine.initial_state(machine),
+        handler: Keyword.fetch!(opts, :handler)
+      }
+      |> run_interpreter()
 
     {:ok, interpreter}
   end

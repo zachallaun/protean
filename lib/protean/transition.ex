@@ -68,10 +68,12 @@ defmodule Protean.Transition do
     do: event_descriptor_match?(transition.event_descriptor, event_name)
 
   @doc """
-  Gets the target state node ID for the given transition.
+  Gets the target state node IDs for the given transition.
   """
-  @spec target(Transition.t()) :: StateNode.id()
-  def target(%Transition{targets: [target | _ignored_for_now]}), do: target
+  @spec targets(Transition.t()) :: StateNode.id()
+  def targets(%Transition{targets: targets}), do: targets
+
+  def target(%Transition{targets: [target | _]}), do: target
 
   @doc """
   Checks whether an event descriptor matches an event name.

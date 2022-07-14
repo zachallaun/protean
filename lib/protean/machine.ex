@@ -83,19 +83,16 @@ defmodule Protean.Machine do
     end)
   end
 
-  def take_transition(machine, state, transition) do
+  defp take_transition(machine, state, transition) do
     %State{
       value: value,
       actions: actions
     } = state
 
     exit_ids =
-      Enum.flat_map(value, fn id ->
-        id
-        |> StateNode.ancestor_ids()
-        |> Enum.filter(&will_exit?(machine, &1, transition))
-      end)
+      Enum.flat_map(value, &StateNode.ancestor_ids/1)
       |> Enum.uniq()
+      |> Enum.filter(&will_exit?(machine, &1, transition))
 
     # TODO: this is wrong, it needs to be the full set of states that will
     # be entered and not just leaves
@@ -123,7 +120,9 @@ defmodule Protean.Machine do
 
   @spec will_exit?(Machine.t(), StateNode.id(), Transition.t()) :: boolean
   def will_exit?(machine, id, transition) do
-    Enum.any?(transition.targets, fn target_id ->
+    transition
+    |> Transition.targets()
+    |> Enum.any?(fn target_id ->
       target_is_descendant? = StateNode.descendant?(target_id, id)
       parallel_ancestor? = common_ancestor(machine, id, target_id).type == :parallel
 
@@ -145,10 +144,13 @@ defmodule Protean.Machine do
   @spec select_transitions(Machine.t(), State.t(), event) :: [Transition.t()]
   def select_transitions(machine, state, event) do
     # TODO: Handle conflicting transitions
-    machine
-    |> active_nodes(state)
-    |> first_enabled_transition(event)
-    |> List.wrap()
+    # TODO: order nodes correctly (specificity + document order)
+    nodes = active_nodes(machine, state)
+
+    case first_enabled_transition(nodes, event) do
+      nil -> []
+      transition -> [transition]
+    end
   end
 
   @doc """
