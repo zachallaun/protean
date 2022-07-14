@@ -65,6 +65,8 @@ defmodule Protean do
       %Protean.State{value: [["red", "#"]], ...}
   """
 
+  alias Protean.Interpreter
+
   @doc false
   defmacro __using__(opts) do
     config = Keyword.fetch!(opts, :machine)
@@ -107,6 +109,7 @@ defmodule Protean do
     end
   end
 
+  @doc false
   defmacro __before_compile__(_env) do
     quote do
       @impl Protean.Action.Pure
@@ -116,4 +119,8 @@ defmodule Protean do
       def effect(_, _, _, _), do: nil
     end
   end
+
+  defdelegate send(pid, event), to: Interpreter
+  defdelegate send_async(pid, event), to: Interpreter
+  defdelegate current(pid), to: Interpreter
 end

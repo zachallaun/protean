@@ -38,13 +38,9 @@ children = [
 ```
 
 ```elixir
-alias Protean.Interpreter
+Protean.current(SimpleMachine)
 ```
 
 ```elixir
-Interpreter.current(SimpleMachine)
-```
-
-```elixir
-Interpreter.send(SimpleMachine, "goto_bar")
+Protean.send(SimpleMachine, "goto_bar")
 ```
