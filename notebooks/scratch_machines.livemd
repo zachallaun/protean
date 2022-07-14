@@ -1,0 +1,50 @@
+# Scratch Machines
+
+## Simple Machine
+
+```elixir
+defmodule SimpleMachine do
+  use Protean,
+    machine: [
+      initial: :foo,
+      states: [
+        foo: [
+          entry: ["foo_entry"],
+          exit: ["foo_exit"],
+          on: [goto_bar: :bar]
+        ],
+        bar: [
+          entry: ["bar_entry"],
+          exit: ["bar_exit"],
+          on: [goto_foo: :foo]
+        ]
+      ]
+    ]
+
+  def pure(_, _, _, _), do: nil
+
+  def effect("foo_entry", _, _, _), do: IO.puts("entering foo!")
+  def effect("bar_entry", _, _, _), do: IO.puts("entering bar!")
+  def effect("foo_exit", _, _, _), do: IO.puts("exiting foo!")
+  def effect("bar_exit", _, _, _), do: IO.puts("exiting bar!")
+  def effect(other, _, _, _), do: IO.puts("got other: #{inspect(other)}")
+end
+
+children = [
+  SimpleMachine
+]
+
+{:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+```elixir
+alias Protean.Interpreter
+```
+
+```elixir
+Interpreter.current(SimpleMachine)
+```
+
+```elixir
+Interpreter.send(SimpleMachine, "goto_bar")
+```

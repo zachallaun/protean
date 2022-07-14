@@ -1,5 +1,7 @@
 defmodule Protean.Action do
-  @moduledoc false
+  @moduledoc """
+  TODO
+  """
 
   alias __MODULE__
   alias Protean.{Machine, Interpreter, Action.Resolvable}
@@ -21,7 +23,7 @@ defmodule Protean.Action do
   @type unresolved :: any
 
   @typedoc "The string name of an action used to pattern match in a handler."
-  @type action_name :: String.t()
+  @type name :: String.t()
 
   @doc """
   Resolves actions to `t:bound_resolved`, which are `{resolved_action, context}`

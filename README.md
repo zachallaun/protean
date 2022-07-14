@@ -2,7 +2,7 @@ Caveat emptor: Protean is currently a library for personal learning and explorat
 
 # Protean
 
-Protean is a library for modeling behaviour and managing side-effects through the use of finite state machines and statecharts. It is heavily inspired by [XState](https://xstate.js.org/docs/), a JavaScript/TypeScript project that I heavily recommend looking into if you work in those languages.
+Protean is a library for modeling state and managing side-effects through the use of finite state machines and statecharts. It is heavily inspired by [XState](https://xstate.js.org/docs/), a JavaScript/TypeScript project that I heavily recommend looking into if you work in those languages.
 
 Statecharts are an extension to finite state machines that both allow you to model complex behaviour declaratively and are easily visualized. To learn more about statecharts, I recommend [statecharts.dev](https://statecharts.dev/).
 

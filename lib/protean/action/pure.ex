@@ -1,5 +1,16 @@
 defmodule Protean.Action.Pure do
-  @moduledoc false
+  @moduledoc """
+  Behaviour for an action without side-effects that can optionally update
+  machine context or create additional actions.
+  """
+
+  alias Protean.{Action, Machine, Interpreter}
+
+  @doc "Invoked to handle pure actions."
+  @callback pure(Action.name(), Machine.context(), Machine.event(), Interpreter.metadata()) ::
+              nil
+              | Machine.context()
+              | {Machine.context(), [Action.unresolved()]}
 
   defstruct [:action_name]
 end

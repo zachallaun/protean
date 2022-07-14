@@ -43,12 +43,17 @@ defmodule Protean.Interpreter do
         }
 
   @type options :: [option]
-  @type option :: {:handler, Module.t()}
+  @type option ::
+          {:machine, Machine.t()}
+          | {:handler, Module.t()}
+          | {:gen_server, GenServer.options()}
 
   @type metadata :: %{
           state: %{value: State.value()},
           event: Machine.event()
         }
+
+  @type sendable :: Machine.event() | Machine.event_name()
 
   # SCXML main event loop:
   #
@@ -225,47 +230,54 @@ defmodule Protean.Interpreter do
     %{interpreter | internal_queue: :queue.in(event, queue)}
   end
 
+  @spec to_event(sendable) :: Machine.event()
+  defp to_event({_, _} = event), do: event
+  defp to_event(event_name) when is_binary(event_name), do: {event_name, nil}
+
   # Client
 
-  @spec start_link(Machine.t(), Interpreter.options(), GenServer.options()) ::
-          GenServer.on_start()
-  def start_link(machine, interpreter_opts, server_opts \\ []) do
-    GenServer.start_link(__MODULE__, {machine, interpreter_opts}, server_opts)
+  @spec start_link(Interpreter.options()) :: GenServer.on_start()
+  def start_link(opts) do
+    {gen_server_opts, interpreter_opts} = Keyword.pop(opts, :gen_server, [])
+    GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
   end
 
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send(GenServer.server(), Machine.event()) :: State.t()
+  @spec send(GenServer.server(), sendable) :: State.t()
   def send(pid, event) do
-    GenServer.call(pid, {@protean_event, event})
+    GenServer.call(pid, {@protean_event, to_event(event)})
   end
 
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_async(GenServer.server(), Machine.event()) :: :ok
+  @spec send_async(GenServer.server(), sendable) :: :ok
   def send_async(pid, event) do
-    GenServer.cast(pid, {@protean_event, event})
+    GenServer.cast(pid, {@protean_event, to_event(event)})
   end
 
   @doc """
-  Get a snapshot of the current machine state.
+  Get the current machine state.
   """
-  @spec snapshot(GenServer.server()) :: State.t()
-  def snapshot(pid) do
+  @spec current(GenServer.server()) :: State.t()
+  def current(pid) do
     GenServer.call(pid, @protean_snapshot)
   end
 
   # Server (callbacks)
 
   @impl GenServer
-  def init({machine, opts}) do
+  def init(opts) do
+    machine = Keyword.fetch!(opts, :machine)
+    handler = Keyword.fetch!(opts, :handler)
+
     interpreter =
       %Interpreter{
         machine: machine,
         state: Machine.initial_state(machine),
-        handler: Keyword.fetch!(opts, :handler)
+        handler: handler
       }
       |> add_internal({@protean_init, nil})
       |> run_interpreter()
