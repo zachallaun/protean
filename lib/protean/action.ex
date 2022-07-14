@@ -30,27 +30,29 @@ defmodule Protean.Action do
   @spec resolve_actions([unresolved], Machine.context(), Module.t(), Interpreter.metadata()) ::
           [bound_resolved]
   def resolve_actions(actions, context, handler, meta) do
-    {nil, context, List.wrap(actions)}
+    {context, List.wrap(actions)}
     |> Stream.unfold(&resolve_action(&1, handler, meta))
-    |> Enum.flat_map(fn
-      {nil, _, _} -> []
-      {action, context, _} -> [{action, context}]
-    end)
+    |> Enum.filter(&elem(&1, 0))
   end
 
-  def resolve_action({_resolved, context, [action | rest]}, handler, meta) do
+  def resolve_action({context, [action | rest]}, handler, meta) do
     case Resolvable.resolve(action, context, handler, meta) do
-      {resolved, context, unresolved} -> {resolved, context, List.wrap(unresolved) ++ rest}
-      {resolved, context} -> {resolved, context, rest}
+      {resolved, context, unresolved} ->
+        {{resolved, context}, {context, List.wrap(unresolved) ++ rest}}
+
+      {resolved, context} ->
+        {{resolved, context}, {context, rest}}
     end
   end
 
-  def resolve_action({_resolved, _context, []}, _handler, _meta), do: nil
+  def resolve_action({_context, []}, _handler, _meta), do: nil
 
   defimpl Resolvable, for: BitString do
     def resolve(action_name, context, _handler, _meta) do
-      {nil, context,
-       [%Action.Pure{action_name: action_name}, %Action.Effect{action_name: action_name}]}
+      pure = %Action.Pure{action_name: action_name}
+      effect = %Action.Effect{action_name: action_name}
+
+      {nil, context, [pure, effect]}
     end
   end
 end

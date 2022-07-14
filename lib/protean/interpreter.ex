@@ -13,9 +13,10 @@ defmodule Protean.Interpreter do
   alias __MODULE__
   alias Protean.{Machine, State, Action, Action.Executable}
 
-  @protean_event :"$protean.event"
-  @protean_terminate :"$protean.terminate"
-  @protean_snapshot :"$protean.snapshot"
+  @protean_init "$protean.init"
+  @protean_event "$protean.event"
+  @protean_snapshot "$protean.snapshot"
+  @protean_terminate "$protean.terminate"
 
   defstruct [
     :machine,
@@ -185,10 +186,6 @@ defmodule Protean.Interpreter do
   A `microstep` processes a single set of transitions, updating the state configuration
   and executing the resulting actions.
   """
-  def microstep(transitions, interpreter)
-
-  def microstep([], interpreter), do: interpreter
-
   def microstep(transitions, interpreter) do
     %Interpreter{
       machine: machine,
@@ -212,14 +209,21 @@ defmodule Protean.Interpreter do
 
     bound_actions = Action.resolve_actions(actions, context, handler, meta)
 
-    Enum.reduce(bound_actions, interpreter, fn
-      {action, context}, interpreter ->
-        Executable.exec(action, context, interpreter)
-    end)
+    interpreter =
+      Enum.reduce(bound_actions, interpreter, fn
+        {action, context}, interpreter ->
+          Executable.exec(action, context, interpreter)
+      end)
+
+    %{interpreter | state: %{interpreter.state | actions: []}}
   end
 
   def exit_interpreter(interpreter),
     do: interpreter
+
+  defp add_internal(%Interpreter{internal_queue: queue} = interpreter, event) do
+    %{interpreter | internal_queue: :queue.in(event, queue)}
+  end
 
   # Client
 
@@ -263,6 +267,7 @@ defmodule Protean.Interpreter do
         state: Machine.initial_state(machine),
         handler: Keyword.fetch!(opts, :handler)
       }
+      |> add_internal({@protean_init, nil})
       |> run_interpreter()
 
     {:ok, interpreter}
