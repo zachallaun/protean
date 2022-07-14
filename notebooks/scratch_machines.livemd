@@ -44,3 +44,208 @@ Protean.current(SimpleMachine)
 ```elixir
 Protean.send(SimpleMachine, "goto_bar")
 ```
+
+## More complex example
+
+Let's code out a "backend" for the [TodoMVC Example](https://codesandbox.io/s/xstate-todomvc-33wr94qv1?from-embed=&file=/todoMachine.js) from the XState docs. This will be a good example for dealing with many spawned machines, since the example uses a machine to handle the behavior of each individual todo.
+
+```elixir
+defmodule TodosMachine do
+  use Protean,
+    machine: [
+      context: %{
+        # new todo
+        todo: "",
+        todos: [],
+        # :all | :active | :completed
+        filter: :all
+      },
+      initial: :loading,
+      states: [
+        loading: [
+          entry: ["spawn_todos"],
+          always: :ready
+        ],
+        ready: []
+      ],
+      on: [
+        "NEWTODO.CHANGE": [
+          actions: ["update_new_todo"]
+        ],
+        "NEWTODO.COMMIT": [
+          actions: ["create_new_todo"],
+          cond: fn _, event -> String.trim(event.value) != "" end
+        ],
+        "TODO.COMMIT": [
+          actions: ["update_todo"]
+        ],
+        "TODO.DELETE": [
+          actions: ["delete_todo"]
+        ],
+        SHOW: [
+          actions: ["set_filter"]
+        ],
+        "ALL.COMPLETED": [
+          actions: ["send_all_completed"]
+        ],
+        "ALL.ACTIVE": [
+          actions: ["send_all_active"]
+        ],
+        CLEAR_COMPLETED: [
+          actions: ["stop_completed", "remove_completed"]
+        ]
+      ]
+    ]
+
+  alias Protean.Action
+
+  def pure("spawn_todos", %{todos: todos} = context, _, _) do
+    todos =
+      todos
+      |> Enum.map(&Map.put(&1, :pid, spawn_todo_machine(&1)))
+
+    {context, Action.assign(todos: todos)}
+  end
+
+  def pure("update_new_todo", context, %{value: value}, _) do
+    %{context | todo: value}
+  end
+
+  def pure("create_new_todo", context, _, _) do
+    %{todo: todo, todos: todos} = context
+    new_todo = %{id: uuid(), title: todo, completed: false}
+    new_todo = Map.put(new_todo, :ref, spawn_todo_machine(&1))
+
+    {%{context | todo: ""}, Action.assign(todos: [new_todo | todos])}
+  end
+
+  def pure("update_todo", %{todos: todos} = context, %{todo: todo}, _) do
+    todos =
+      Enum.map(todos, fn
+        %{id: ^todo.id} = t -> Map.merge(t, todo)
+        t -> t
+      end)
+
+    %{context | todos: todos}
+  end
+
+  def pure("delete_todo", %{todos: todos} = context, %{todo: todo}, _) do
+    todos = Enum.filter(todos, &(&1.id !== todo.id))
+    %{context | todos: todos}
+  end
+
+  def pure("set_filter", context, %{filter: filter}, _) do
+    %{context | filter: filter}
+  end
+
+  def pure("send_all_completed", %{todos: todos} = context, _, _) do
+    pids = Enum.map(todos, & &1.pid)
+    {context, &Action.send(pids, "SET_COMPLETED")}
+  end
+
+  def pure("send_all_active", %{todos: todos} = context, _, _) do
+    pids = Enum.map(todos, & &1.pid)
+    {context, &Action.send(pids, "SET_ACTIVE")}
+  end
+
+  defp spawn_todo_machine(todo) do
+    Action.spawn({TodoMachine.new(todo), TodoMachine})
+  end
+end
+```
+
+```elixir
+defmodule TodoMachine do
+  use Protean, machine: &new/1
+
+  alias Protean.Action
+
+  def new(%{id: id, title: title, completed: completed}) do
+    Protean.Machine.new(
+      context: %{
+        id: id,
+        title: title,
+        prev_title: title,
+        completed: completed
+      },
+      initial: :reading,
+      on: [
+        TOGGLE_COMPLETE: [
+          actions: [
+            Actions.assign(completed: true),
+            "commit"
+          ]
+        ],
+        DELETE: :deleted
+      ],
+      states: [
+        reading: [
+          on: [
+            SET_COMPLETED: [
+              actions: [
+                Action.assign(completed: true),
+                "commit"
+              ]
+            ],
+            TOGGLE_COMPLETE: [
+              actions: [
+                Action.assign(completed: fn ctx, _ -> !ctx.completed end),
+                "commit"
+              ]
+            ],
+            SET_ACTIVE: [
+              actions: [
+                Action.assign(completed: false),
+                "commit"
+              ]
+            ],
+            EDIT: [
+              target: :editing,
+              actions: "focus_input"
+            ]
+          ]
+        ],
+        editing: [
+          entry: Action.assign(prev_title: fn ctx, _ -> ctx.title end),
+          on: [
+            CHANGE: [
+              actions: Action.assign(title: fn _, e -> e.value end)
+            ],
+            COMMIT: [
+              [
+                target: :reading,
+                cond: fn ctx, _ -> String.trim(ctx.title) != "" end,
+                actions: "commit"
+              ],
+              [
+                target: :deleted
+              ]
+            ],
+            BLUR: [
+              target: :reading,
+              actions: "commit"
+            ],
+            CANCEL: [
+              target: :reading,
+              actions: Action.assign(title: fn ctx, _ -> ctx.prev_title end)
+            ]
+          ]
+        ],
+        deleted: [
+          entry: Action.send_parent(fn ctx, _ -> {"TODO.DELETE", ctx} end)
+        ]
+      ]
+    )
+  end
+
+  @impl true
+  def pure("commit", context, _event, _meta) do
+    {context, Action.send_parent({"TODO.COMMIT", context})}
+  end
+
+  @impl true
+  def effect("focus_input", _context, _event, _meta) do
+    # ...
+  end
+end
+```
