@@ -73,6 +73,11 @@ defmodule Protean.Interpreter do
     }
   end
 
+  @doc "Whether the interpreter has been started and can accept events."
+  @spec running?(Interpreter.t()) :: boolean
+  def running?(%Interpreter{running: true}), do: true
+  def running?(%Interpreter{running: false}), do: false
+
   @doc """
   Entrypoint for the interpreter that must be called before the interpreter will be in a state
   where it can handle external events. This is necessary in order to handle any initializing
