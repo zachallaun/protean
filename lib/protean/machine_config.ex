@@ -10,13 +10,15 @@ defmodule Protean.MachineConfig do
   Parses semi-structured machine config into a `StateNode`.
   """
   def parse!(config) do
+    context = Keyword.get(config, :context, %{})
+
     {root, _order} =
       config
       |> node_type()
       |> parse_node(config)
       |> set_order()
 
-    root
+    {root, context}
   end
 
   defp set_order(node, order \\ 0)

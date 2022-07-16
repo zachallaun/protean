@@ -10,7 +10,8 @@ defmodule Protean.Machine do
 
   defstruct [
     :root,
-    idmap: %{}
+    idmap: %{},
+    initial_context: %{}
   ]
 
   @typedoc """
@@ -18,7 +19,8 @@ defmodule Protean.Machine do
   """
   @type t :: %Machine{
           root: StateNode.t(),
-          idmap: %{StateNode.id() => StateNode.t()}
+          idmap: %{StateNode.id() => StateNode.t()},
+          initial_context: context
         }
 
   @typedoc """
@@ -38,12 +40,13 @@ defmodule Protean.Machine do
   @type context :: %{any => any}
 
   def new(config) do
-    root = MachineConfig.parse!(config)
+    {root, context} = MachineConfig.parse!(config)
     idmap = Utilities.Tree.tree_reduce(root, &idmap_reducer/2, %{})
 
     %Machine{
       root: root,
-      idmap: idmap
+      idmap: idmap,
+      initial_context: context
     }
   end
 
@@ -55,7 +58,7 @@ defmodule Protean.Machine do
   Returns the initial `Protean.State` for a given machine.
   """
   @spec initial_state(Machine.t()) :: State.t()
-  def initial_state(%Machine{root: root} = machine) do
+  def initial_state(%Machine{root: root, initial_context: context} = machine) do
     active_ids =
       root
       |> StateNode.resolve_to_leaves()
@@ -68,7 +71,8 @@ defmodule Protean.Machine do
 
     %State{
       value: active_ids,
-      actions: entry_actions(machine, entry_ids)
+      actions: entry_actions(machine, entry_ids),
+      context: context
     }
   end
 
