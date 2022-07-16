@@ -102,7 +102,7 @@ defmodule Protean do
       defoverridable child_spec: 1
 
       def protean_machine do
-        Protean.Machine.new(unquote(config))
+        Protean.Machine.new(unquote(Macro.escape(config)))
       end
 
       @before_compile Protean
