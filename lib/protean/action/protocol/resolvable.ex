@@ -1,4 +1,4 @@
-defprotocol Protean.Action.Resolvable do
+defprotocol Protean.Action.Protocol.Resolvable do
   @moduledoc """
   The `Resolvable` protocol defines `resolve/4`, which resolves an unresolved
   action without side-effects, returning the resolved action, the context

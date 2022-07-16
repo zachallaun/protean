@@ -1,4 +1,4 @@
-defprotocol Protean.Action.Executable do
+defprotocol Protean.Action.Protocol.Executable do
   @moduledoc """
   The `Executable` protocol defines `exec/2`, which is used to execute a
   resolved action that has been bound to a specific context and potentially

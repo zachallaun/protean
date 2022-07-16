@@ -1,10 +1,17 @@
 defmodule Protean.Action do
   @moduledoc """
-  TODO
+  Protean manages state, processes, and side-effects through the execution of _actions_, which
+  are data descriptors of things that should happen in response to state machine transitions.
+
+  ### Pure and Effect
+  TODO explain pure/4 and effect/4 callbacks
+
+  ### Resolution and Execution
+  TODO explain protocols
   """
 
   alias __MODULE__
-  alias Protean.{Machine, Interpreter, Action.Resolvable}
+  alias Protean.{Machine, Interpreter}
 
   @typedoc """
   A resolved action is anything that implements the `Executable` protocol.
@@ -50,7 +57,7 @@ defmodule Protean.Action do
   end
 
   def resolve_action({context, [action | rest]}, handler, meta) do
-    case Resolvable.resolve(action, context, handler, meta) do
+    case Action.Protocol.Resolvable.resolve(action, context, handler, meta) do
       {resolved, context, unresolved} ->
         {{resolved, context}, {context, List.wrap(unresolved) ++ rest}}
 
@@ -61,7 +68,7 @@ defmodule Protean.Action do
 
   def resolve_action({_context, []}, _handler, _meta), do: nil
 
-  defimpl Resolvable, for: BitString do
+  defimpl Action.Protocol.Resolvable, for: BitString do
     def resolve(action_name, context, _handler, _meta) do
       {nil, context, [Action.pure(action_name), Action.effect(action_name)]}
     end

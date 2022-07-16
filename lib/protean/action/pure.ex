@@ -5,7 +5,7 @@ defmodule Protean.Action.Pure do
   """
 
   alias __MODULE__
-  alias Protean.{Action, Machine, Interpreter, Action.Resolvable}
+  alias Protean.{Action, Machine, Interpreter}
 
   @doc "Invoked to handle pure actions."
   @callback pure(Action.name(), Machine.context(), Machine.event(), Interpreter.metadata()) ::
@@ -15,7 +15,7 @@ defmodule Protean.Action.Pure do
 
   defstruct [:action_name]
 
-  defimpl Resolvable, for: Pure do
+  defimpl Action.Protocol.Resolvable, for: Pure do
     def resolve(%{action_name: action_name}, context, handler, meta) do
       args = [action_name, context, meta.event, meta]
 
