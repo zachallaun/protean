@@ -1,11 +1,21 @@
 defmodule TestMachines do
+  alias Protean.Machine
+
   def with_test_machine(%{machine: machine} = context) do
     machine = apply(TestMachines, machine, [])
 
     context =
-      context
-      |> Map.put(:machine, machine)
-      |> Map.put(:initial, Protean.Machine.initial_state(machine))
+      case machine do
+        %Machine{} = machine ->
+          Map.merge(context, %{machine: machine, initial: Machine.initial_state(machine)})
+
+        {machine, handler} ->
+          Map.merge(context, %{
+            machine: machine,
+            handler: handler,
+            initial: Machine.initial_state(machine)
+          })
+      end
 
     {:ok, context}
   end
@@ -153,5 +163,52 @@ defmodule TestMachines do
         ]
       ]
     )
+  end
+
+  defmodule PureMachine1 do
+    use Protean,
+      machine: [
+        initial: :a,
+        context: %{
+          acc: []
+        },
+        on: [
+          goto_a: :a
+        ],
+        states: [
+          a: [
+            initial: :a1,
+            entry: ["entering_a"],
+            exit: ["exiting_a"],
+            on: [
+              goto_b: :b
+            ],
+            states: [
+              a1: [
+                on: [
+                  goto_a2: :a2
+                ]
+              ],
+              a2: [
+                a2_goto_b: :"#b"
+              ]
+            ]
+          ],
+          b: []
+        ]
+      ]
+
+    @impl true
+    def pure("entering_a", context, _event, _meta) do
+      %{context | acc: ["entering_a" | context.acc]}
+    end
+
+    def pure("exiting_a", context, _event, _meta) do
+      %{context | acc: ["exiting_a" | context.acc]}
+    end
+  end
+
+  def pure_machine_1 do
+    {PureMachine1.protean_machine(), PureMachine1}
   end
 end
