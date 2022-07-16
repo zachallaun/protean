@@ -55,6 +55,8 @@ defmodule Protean.Interpreter do
 
   @type sendable :: Machine.event() | Machine.event_name()
 
+  @type server :: GenServer.server()
+
   # SCXML main event loop:
   #
   # 0. if running, continue, otherwise exit interpreter
@@ -245,7 +247,7 @@ defmodule Protean.Interpreter do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send(GenServer.server(), sendable) :: State.t()
+  @spec send(server(), sendable) :: State.t()
   def send(pid, event) do
     GenServer.call(pid, {@protean_event, to_event(event)})
   end
@@ -253,7 +255,7 @@ defmodule Protean.Interpreter do
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_async(GenServer.server(), sendable) :: :ok
+  @spec send_async(server(), sendable) :: :ok
   def send_async(pid, event) do
     GenServer.cast(pid, {@protean_event, to_event(event)})
   end
@@ -261,14 +263,22 @@ defmodule Protean.Interpreter do
   @doc """
   Get the current machine state.
   """
-  @spec current(GenServer.server()) :: State.t()
+  @spec current(server()) :: State.t()
   def current(pid) do
     GenServer.call(pid, @protean_snapshot)
   end
 
+  @doc """
+  Stop the service, terminating the process.
+  """
+  @spec stop(server()) :: :ok
+  def stop(pid) do
+    GenServer.cast(pid, @protean_terminate)
+  end
+
   # Server (callbacks)
 
-  @impl GenServer
+  @impl true
   def init(opts) do
     machine = Keyword.fetch!(opts, :machine)
     handler = Keyword.fetch!(opts, :handler)
@@ -285,24 +295,32 @@ defmodule Protean.Interpreter do
     {:ok, interpreter}
   end
 
-  @impl GenServer
+  @impl true
   def handle_call(@protean_snapshot, _from, interpreter) do
     {:reply, interpreter.state, interpreter}
   end
 
-  @impl GenServer
   def handle_call({@protean_event, event}, _from, interpreter) do
     interpreter = handle_event(interpreter, event)
     {:reply, interpreter.state, interpreter}
   end
 
-  @impl GenServer
+  @impl true
   def handle_cast({@protean_event, event}, interpreter) do
     {:noreply, interpreter, {:continue, {@protean_event, event}}}
   end
 
-  @impl GenServer
+  def handle_cast(@protean_terminate, interpreter) do
+    {:stop, :normal, %{interpreter | running: false}}
+  end
+
+  @impl true
   def handle_continue({@protean_event, event}, interpreter) do
     {:noreply, handle_event(interpreter, event)}
+  end
+
+  @impl true
+  def terminate(:normal, _interpreter) do
+    # TODO: stop children processes? send anything to parent?
   end
 end
