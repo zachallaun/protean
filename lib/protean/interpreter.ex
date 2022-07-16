@@ -117,6 +117,23 @@ defmodule Protean.Interpreter do
 
   def send_event(interpreter, _event), do: interpreter
 
+  @doc """
+  Sets the context of the current state.
+  """
+  @spec with_context(Interpreter.t(), Machine.context()) :: Interpreter.t()
+  def with_context(%Interpreter{} = interpreter, context) do
+    put_in(interpreter.state.context, context)
+  end
+
+  @doc """
+  Updates the context of the current state.
+  """
+  @spec update_context(Interpreter.t(), (Machine.context() -> Machine.context())) ::
+          Interpreter.t()
+  def update_context(%Interpreter{} = interpreter, fun) do
+    update_in(interpreter.state.context, fun)
+  end
+
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
   # internal events are processed before awaiting an external event.
   defp run_interpreter(%Interpreter{running: true} = interpreter),
@@ -157,9 +174,8 @@ defmodule Protean.Interpreter do
     |> run_interpreter()
   end
 
-  defp set_event(%Interpreter{state: state} = interpreter, event) do
-    state = %{state | event: event}
-    %{interpreter | state: state}
+  defp set_event(interpreter, event) do
+    put_in(interpreter.state.event, event)
   end
 
   defp process_invokes(interpreter) do
@@ -239,8 +255,6 @@ defmodule Protean.Interpreter do
       context: context
     } = state = Machine.take_transitions(machine, state, transitions)
 
-    interpreter = %{interpreter | state: state}
-
     meta = %{
       state: %{value: value},
       event: event
@@ -248,16 +262,20 @@ defmodule Protean.Interpreter do
 
     bound_actions = Action.resolve_actions(actions, context, handler, meta)
 
-    interpreter =
-      Enum.reduce(bound_actions, interpreter, fn
-        {action, context}, interpreter ->
-          Executable.exec(action, context, interpreter)
-      end)
-
-    %{interpreter | state: %{interpreter.state | actions: []}}
+    interpreter
+    |> put_in([Access.key(:state)], state)
+    |> exec_all(bound_actions)
+    |> put_in([Access.key(:state), Access.key(:actions)], [])
   end
 
-  defp add_internal(%Interpreter{internal_queue: queue} = interpreter, event) do
-    %{interpreter | internal_queue: :queue.in(event, queue)}
+  defp exec_all(interpreter, bound_actions) do
+    Enum.reduce(bound_actions, interpreter, &exec_bound_action/2)
+  end
+
+  defp exec_bound_action({action, context}, interpreter),
+    do: Executable.exec(action, context, interpreter)
+
+  defp add_internal(interpreter, event) do
+    update_in(interpreter.internal_queue, &:queue.in(event, &1))
   end
 end

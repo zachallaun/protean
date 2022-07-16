@@ -4,7 +4,8 @@ defmodule Protean.Action.Pure do
   machine context or create additional actions.
   """
 
-  alias Protean.{Action, Machine, Interpreter}
+  alias __MODULE__
+  alias Protean.{Action, Machine, Interpreter, Action.Resolvable}
 
   @doc "Invoked to handle pure actions."
   @callback pure(Action.name(), Machine.context(), Machine.event(), Interpreter.metadata()) ::
@@ -13,18 +14,20 @@ defmodule Protean.Action.Pure do
               | {Machine.context(), [Action.unresolved()]}
 
   defstruct [:action_name]
-end
 
-defimpl Protean.Action.Resolvable, for: Protean.Action.Pure do
-  def resolve(%{action_name: action_name}, context, handler, meta) do
-    args = [action_name, context, meta.event, meta]
+  defimpl Resolvable, for: Pure do
+    def resolve(%{action_name: action_name}, context, handler, meta) do
+      args = [action_name, context, meta.event, meta]
 
-    apply(handler, :pure, args)
-    |> normalize(context)
+      apply(handler, :pure, args)
+      |> normalize(context)
+    end
+
+    defp normalize(nil, context), do: {nil, context}
+    defp normalize(%{} = context, _), do: {Action.assign(context), context}
+    defp normalize({context, nil}, _), do: {Action.assign(context), context}
+
+    defp normalize({context, actions}, _),
+      do: {Action.assign(context), context, List.wrap(actions)}
   end
-
-  defp normalize(nil, context), do: {nil, context}
-  defp normalize(%{} = context, _), do: {nil, context}
-  defp normalize({context, nil}, _), do: {nil, context}
-  defp normalize({context, actions}, _), do: {nil, context, List.wrap(actions)}
 end

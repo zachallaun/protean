@@ -25,6 +25,18 @@ defmodule Protean.Action do
   @typedoc "The string name of an action used to pattern match in a handler."
   @type name :: String.t()
 
+  def pure(action_name) when is_binary(action_name) do
+    %Action.Pure{action_name: action_name}
+  end
+
+  def effect(action_name) when is_binary(action_name) do
+    %Action.Effect{action_name: action_name}
+  end
+
+  def assign(assigns) when is_map(assigns) do
+    %Action.Assign{merge: assigns}
+  end
+
   @doc """
   Resolves actions to `t:bound_resolved`, which are `{resolved_action, context}`
   pairs that can be executed later by an interpreter.
@@ -51,10 +63,7 @@ defmodule Protean.Action do
 
   defimpl Resolvable, for: BitString do
     def resolve(action_name, context, _handler, _meta) do
-      pure = %Action.Pure{action_name: action_name}
-      effect = %Action.Effect{action_name: action_name}
-
-      {nil, context, [pure, effect]}
+      {nil, context, [Action.pure(action_name), Action.effect(action_name)]}
     end
   end
 end

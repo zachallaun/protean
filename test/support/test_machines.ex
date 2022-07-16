@@ -1,5 +1,5 @@
 defmodule TestMachines do
-  alias Protean.Machine
+  alias Protean.{Machine, Interpreter}
 
   def with_test_machine(%{machine: machine} = context) do
     machine = apply(TestMachines, machine, [])
@@ -13,7 +13,8 @@ defmodule TestMachines do
           Map.merge(context, %{
             machine: machine,
             handler: handler,
-            initial: Machine.initial_state(machine)
+            initial: Machine.initial_state(machine),
+            interpreter: Interpreter.new(machine, handler)
           })
       end
 
