@@ -7,9 +7,8 @@ defmodule Protean.Interpreter.Server do
 
   use GenServer
 
-  alias Protean.{Interpreter, Machine}
+  alias Protean.{Interpreter}
 
-  @protean_init "$protean.init"
   @protean_event "$protean.event"
   @protean_snapshot "$protean.snapshot"
   @protean_terminate "$protean.terminate"
@@ -76,13 +75,8 @@ defmodule Protean.Interpreter.Server do
     handler = Keyword.fetch!(opts, :handler)
 
     interpreter =
-      %Interpreter{
-        machine: machine,
-        state: Machine.initial_state(machine),
-        handler: handler
-      }
-      |> Interpreter.add_internal({@protean_init, nil})
-      |> Interpreter.run_interpreter()
+      Interpreter.new(machine, handler)
+      |> Interpreter.start()
 
     {:ok, interpreter}
   end
@@ -93,7 +87,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_call({@protean_event, event}, _from, interpreter) do
-    interpreter = Interpreter.handle_event(interpreter, event)
+    interpreter = Interpreter.send_event(interpreter, event)
     {:reply, interpreter.state, interpreter}
   end
 
@@ -103,16 +97,17 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_cast(@protean_terminate, interpreter) do
-    {:stop, :normal, %{interpreter | running: false}}
+    {:stop, :normal, interpreter}
   end
 
   @impl true
   def handle_continue({@protean_event, event}, interpreter) do
-    {:noreply, Interpreter.handle_event(interpreter, event)}
+    {:noreply, Interpreter.send_event(interpreter, event)}
   end
 
   @impl true
-  def terminate(:normal, _interpreter) do
-    # TODO: stop children processes? send anything to parent?
+  def terminate(:normal, interpreter) do
+    Interpreter.stop(interpreter)
+    :ok
   end
 end

@@ -12,10 +12,12 @@ defmodule Protean.Interpreter do
     :machine,
     :state,
     :handler,
-    running: true,
+    running: false,
     internal_queue: :queue.new(),
     invoked: %{}
   ]
+
+  @protean_init "$protean_init"
 
   @type t :: %Interpreter{
           machine: Machine.t(),
@@ -59,30 +61,66 @@ defmodule Protean.Interpreter do
   #   - if regular event received, select transitions, microstep, and go to 0
 
   @doc """
-  Entrypoint for the interpreter, ensuring that any automatic transitions are run,
-  internal events handled, invokes invoked, etc. before waiting for an external event.
+  Create a new `Interpreter` from a `Machine` and handler module. The returned interpreter will
+  still need to be started; see `start/1`.
   """
-  def run_interpreter(%Interpreter{running: true} = interpreter),
-    do: run_automatic_transitions(interpreter)
-
-  def run_interpreter(%Interpreter{running: false} = interpreter),
-    do: exit_interpreter(interpreter)
+  @spec new(Machine.t(), Module.t()) :: Interpreter.t()
+  def new(machine, handler) do
+    %Interpreter{
+      machine: machine,
+      state: Machine.initial_state(machine),
+      handler: handler
+    }
+  end
 
   @doc """
-  Handler for external event with "run-to-completion" semantics: ensures that the
-  interpreter is either ready to receive the next event or is no longer running.
-  """
-  @spec handle_event(Interpreter.t(), sendable) :: Interpreter.t()
-  def handle_event(interpreter, event) when is_binary(event),
-    do: handle_event(interpreter, {event, nil})
+  Entrypoint for the interpreter that must be called before the interpreter will be in a state
+  where it can handle external events. This is necessary in order to handle any initializing
+  actions, invokes, or automatic transitions.
 
-  def handle_event(interpreter, event) do
+  Calling `start/1` on an already-running interpreter is a no-op.
+  """
+  @spec start(Interpreter.t()) :: Interpreter.t()
+  def start(%Interpreter{running: false} = interpreter) do
+    %{interpreter | running: true}
+    |> add_internal({@protean_init, nil})
+    |> run_interpreter()
+  end
+
+  def start(interpreter), do: interpreter
+
+  @doc """
+  Stop an interpreter, preventing further event processing.
+  """
+  @spec stop(Interpreter.t()) :: Interpreter.t()
+  def stop(%Interpreter{} = interpreter),
+    do: %{interpreter | running: false}
+
+  @doc """
+  Send an event to a running interpreter. This will execute any transitions, actions, and side-
+  effects associated with the current machine state and this event.
+  """
+  @spec send_event(Interpreter.t(), sendable) :: Interpreter.t()
+  def send_event(%Interpreter{running: true} = interpreter, event) when is_binary(event),
+    do: send_event(interpreter, {event, nil})
+
+  def send_event(%Interpreter{running: true} = interpreter, event) do
     interpreter
     |> autoforward_event(event)
     |> process_event(event)
   end
 
-  def run_automatic_transitions(interpreter) do
+  def send_event(interpreter, _event), do: interpreter
+
+  # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
+  # internal events are processed before awaiting an external event.
+  defp run_interpreter(%Interpreter{running: true} = interpreter),
+    do: run_automatic_transitions(interpreter)
+
+  defp run_interpreter(%Interpreter{running: false} = interpreter),
+    do: interpreter
+
+  defp run_automatic_transitions(interpreter) do
     case select_automatic_transitions(interpreter) do
       [] ->
         process_internal_queue(interpreter)
@@ -94,7 +132,7 @@ defmodule Protean.Interpreter do
     end
   end
 
-  def process_internal_queue(%Interpreter{internal_queue: queue} = interpreter) do
+  defp process_internal_queue(%Interpreter{internal_queue: queue} = interpreter) do
     case :queue.out(queue) do
       {:empty, _} ->
         process_invokes(interpreter)
@@ -105,7 +143,7 @@ defmodule Protean.Interpreter do
     end
   end
 
-  def process_event(interpreter, event) do
+  defp process_event(interpreter, event) do
     interpreter = set_event(interpreter, event)
 
     interpreter
@@ -119,7 +157,7 @@ defmodule Protean.Interpreter do
     %{interpreter | state: state}
   end
 
-  def process_invokes(interpreter) do
+  defp process_invokes(interpreter) do
     case select_invokes(interpreter) do
       [] ->
         interpreter
@@ -131,7 +169,7 @@ defmodule Protean.Interpreter do
     end
   end
 
-  def loop_if_internal_event(%{internal_queue: queue} = interpreter) do
+  defp loop_if_internal_event(%{internal_queue: queue} = interpreter) do
     if :queue.is_empty(queue) do
       interpreter
     else
@@ -140,28 +178,28 @@ defmodule Protean.Interpreter do
   end
 
   @spec select_automatic_transitions(Interpreter.t()) :: [Transition.t()]
-  def select_automatic_transitions(%{machine: machine, state: state}) do
+  defp select_automatic_transitions(%{machine: machine, state: state}) do
     Machine.select_automatic_transitions(machine, state)
   end
 
   @spec select_transitions(Interpreter.t(), Machine.event()) :: [Transition.t()]
-  def select_transitions(%{machine: machine, state: state}, event) do
+  defp select_transitions(%{machine: machine, state: state}, event) do
     Machine.select_transitions(machine, state, event)
   end
 
   @spec autoforward_event(Interpreter.t(), Machine.event()) :: Interpreter.t()
-  def autoforward_event(%Interpreter{invoked: invoked} = interpreter, event) do
+  defp autoforward_event(%Interpreter{invoked: invoked} = interpreter, event) do
     invoked
     |> Enum.filter(&autoforward?/1)
     |> Enum.reduce(interpreter, &autoforward_to(&1, event, &2))
   end
 
   @spec autoforward?(invoked_service) :: boolean
-  def autoforward?(%{autoforward: true}), do: true
-  def autoforward?(_invoke), do: false
+  defp autoforward?(%{autoforward: true}), do: true
+  defp autoforward?(_invoke), do: false
 
   @spec autoforward_to(invoked_service, Machine.event(), Interpreter.t()) :: Interpreter.t()
-  def autoforward_to(%{pid: pid}, event, interpreter) do
+  defp autoforward_to(%{pid: pid}, event, interpreter) do
     # TODO: do we need to handle failures here? can add to internal queue
     # if errors occur.
     Interpreter.Server.send_async(pid, event)
@@ -169,22 +207,20 @@ defmodule Protean.Interpreter do
   end
 
   @spec select_invokes(Interpreter.t()) :: [any]
-  def select_invokes(_interpreter) do
+  defp select_invokes(_interpreter) do
     # TODO
     []
   end
 
   @spec invoke(Interpreter.t(), [any]) :: Interpreter.t()
-  def invoke(interpreter, _to_invoke) do
+  defp invoke(interpreter, _to_invoke) do
     # TODO
     interpreter
   end
 
-  @doc """
-  A `microstep` processes a single set of transitions, updating the state configuration
-  and executing the resulting actions.
-  """
-  def microstep(transitions, interpreter) do
+  # A microstep fully processes a set of transitions, updating the state configuration and
+  # executing any resulting actions.
+  defp microstep(transitions, interpreter) do
     %Interpreter{
       machine: machine,
       state: state,
@@ -216,10 +252,7 @@ defmodule Protean.Interpreter do
     %{interpreter | state: %{interpreter.state | actions: []}}
   end
 
-  def exit_interpreter(interpreter),
-    do: interpreter
-
-  def add_internal(%Interpreter{internal_queue: queue} = interpreter, event) do
+  defp add_internal(%Interpreter{internal_queue: queue} = interpreter, event) do
     %{interpreter | internal_queue: :queue.in(event, queue)}
   end
 end
