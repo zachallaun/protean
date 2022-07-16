@@ -1,22 +1,12 @@
 defmodule Protean.Interpreter do
   @moduledoc """
-  The `Protean.Interpreter` is a `GenServer` process primarily responsible for interpreting
-  and executing a `Protean.Machine`. This includes accepting incoming events, executing
-  transitions and actions, spawning child machines/processes, etc.
-
-  This module is usually not invoked used directly, but instead defines the behavior that
-  is used by modules that `use Protean`. See `Protean` for client API.
+  The `Protean.Interpreter` implements the full execution logic for a `Protean.Machine`,
+  including handling external events, transitioning state, executing actions, spawning children,
+  etc.
   """
-
-  use GenServer
 
   alias __MODULE__
   alias Protean.{Machine, State, Action, Action.Executable}
-
-  @protean_init "$protean.init"
-  @protean_event "$protean.event"
-  @protean_snapshot "$protean.snapshot"
-  @protean_terminate "$protean.terminate"
 
   defstruct [
     :machine,
@@ -46,7 +36,6 @@ defmodule Protean.Interpreter do
   @type option ::
           {:machine, Machine.t()}
           | {:handler, Module.t()}
-          | {:gen_server, GenServer.options()}
 
   @type metadata :: %{
           state: %{value: State.value()},
@@ -54,8 +43,6 @@ defmodule Protean.Interpreter do
         }
 
   @type sendable :: Machine.event() | Machine.event_name()
-
-  @type server :: GenServer.server()
 
   # SCXML main event loop:
   #
@@ -85,6 +72,10 @@ defmodule Protean.Interpreter do
   Handler for external event with "run-to-completion" semantics: ensures that the
   interpreter is either ready to receive the next event or is no longer running.
   """
+  @spec handle_event(Interpreter.t(), sendable) :: Interpreter.t()
+  def handle_event(interpreter, event) when is_binary(event),
+    do: handle_event(interpreter, {event, nil})
+
   def handle_event(interpreter, event) do
     interpreter
     |> autoforward_event(event)
@@ -173,7 +164,7 @@ defmodule Protean.Interpreter do
   def autoforward_to(%{pid: pid}, event, interpreter) do
     # TODO: do we need to handle failures here? can add to internal queue
     # if errors occur.
-    send_async(pid, event)
+    Interpreter.Server.send_async(pid, event)
     interpreter
   end
 
@@ -228,99 +219,7 @@ defmodule Protean.Interpreter do
   def exit_interpreter(interpreter),
     do: interpreter
 
-  defp add_internal(%Interpreter{internal_queue: queue} = interpreter, event) do
+  def add_internal(%Interpreter{internal_queue: queue} = interpreter, event) do
     %{interpreter | internal_queue: :queue.in(event, queue)}
-  end
-
-  @spec to_event(sendable) :: Machine.event()
-  defp to_event({_, _} = event), do: event
-  defp to_event(event_name) when is_binary(event_name), do: {event_name, nil}
-
-  # Client
-
-  @spec start_link(Interpreter.options()) :: GenServer.on_start()
-  def start_link(opts) do
-    {gen_server_opts, interpreter_opts} = Keyword.pop(opts, :gen_server, [])
-    GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
-  end
-
-  @doc """
-  Send an event to the interpreter and wait for the next state.
-  """
-  @spec send(server(), sendable) :: State.t()
-  def send(pid, event) do
-    GenServer.call(pid, {@protean_event, to_event(event)})
-  end
-
-  @doc """
-  Send an event to the interpreter asyncronously.
-  """
-  @spec send_async(server(), sendable) :: :ok
-  def send_async(pid, event) do
-    GenServer.cast(pid, {@protean_event, to_event(event)})
-  end
-
-  @doc """
-  Get the current machine state.
-  """
-  @spec current(server()) :: State.t()
-  def current(pid) do
-    GenServer.call(pid, @protean_snapshot)
-  end
-
-  @doc """
-  Stop the service, terminating the process.
-  """
-  @spec stop(server()) :: :ok
-  def stop(pid) do
-    GenServer.cast(pid, @protean_terminate)
-  end
-
-  # Server (callbacks)
-
-  @impl true
-  def init(opts) do
-    machine = Keyword.fetch!(opts, :machine)
-    handler = Keyword.fetch!(opts, :handler)
-
-    interpreter =
-      %Interpreter{
-        machine: machine,
-        state: Machine.initial_state(machine),
-        handler: handler
-      }
-      |> add_internal({@protean_init, nil})
-      |> run_interpreter()
-
-    {:ok, interpreter}
-  end
-
-  @impl true
-  def handle_call(@protean_snapshot, _from, interpreter) do
-    {:reply, interpreter.state, interpreter}
-  end
-
-  def handle_call({@protean_event, event}, _from, interpreter) do
-    interpreter = handle_event(interpreter, event)
-    {:reply, interpreter.state, interpreter}
-  end
-
-  @impl true
-  def handle_cast({@protean_event, event}, interpreter) do
-    {:noreply, interpreter, {:continue, {@protean_event, event}}}
-  end
-
-  def handle_cast(@protean_terminate, interpreter) do
-    {:stop, :normal, %{interpreter | running: false}}
-  end
-
-  @impl true
-  def handle_continue({@protean_event, event}, interpreter) do
-    {:noreply, handle_event(interpreter, event)}
-  end
-
-  @impl true
-  def terminate(:normal, _interpreter) do
-    # TODO: stop children processes? send anything to parent?
   end
 end

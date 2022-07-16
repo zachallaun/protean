@@ -65,7 +65,7 @@ defmodule Protean do
       %Protean.State{value: [["red", "#"]], ...}
   """
 
-  alias Protean.Interpreter
+  alias Protean.Interpreter.Server
 
   @doc false
   defmacro __using__(opts) do
@@ -93,7 +93,7 @@ defmodule Protean do
 
         spec = %{
           id: id,
-          start: {Protean.Interpreter, :start_link, [Keyword.merge(defaults, opts)]}
+          start: {Protean.Interpreter.Server, :start_link, [Keyword.merge(defaults, opts)]}
         }
 
         Supervisor.child_spec(spec, [])
@@ -120,7 +120,8 @@ defmodule Protean do
     end
   end
 
-  defdelegate send(pid, event), to: Interpreter
-  defdelegate send_async(pid, event), to: Interpreter
-  defdelegate current(pid), to: Interpreter
+  defdelegate send(pid, event), to: Server
+  defdelegate send_async(pid, event), to: Server
+  defdelegate current(pid), to: Server
+  defdelegate stop(pid), to: Server
 end
