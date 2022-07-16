@@ -114,7 +114,7 @@ defmodule Protean.MachineConfig do
   defp parse_actions(nil), do: []
   defp parse_actions(actions), do: actions
 
-  defp parse_transitions(_id, nil), do: nil
+  defp parse_transitions(_id, nil), do: []
 
   defp parse_transitions(id, transitions),
     do: Enum.map(transitions, &parse_transition(id, &1))
@@ -122,15 +122,22 @@ defmodule Protean.MachineConfig do
   defp parse_transition(id, {descriptor, target}) when is_atom(target),
     do: parse_transition(id, {descriptor, [target: target]})
 
-  defp parse_transition([_self | ancestors], {descriptor, transition}) do
-    require!(transition, [:target])
-
+  defp parse_transition(id, {descriptor, transition}) do
     %Transition{
       event_descriptor: parse_event_descriptor(descriptor),
       actions: parse_actions(transition[:actions]),
-      targets: [resolve_target(transition[:target], ancestors)]
+      targets: resolve_targets(transition[:target], id),
+      guard: transition[:when]
     }
   end
+
+  defp resolve_targets(nil, _id), do: []
+
+  defp resolve_targets(targets, _id) when is_list(targets),
+    do: raise("Multiple targets not yet implemented")
+
+  defp resolve_targets(target, [_self | ancestors]),
+    do: [resolve_target(target, ancestors)]
 
   defp resolve_target(target, ancestors) when is_atom(target),
     do: resolve_target(to_string(target), ancestors)
@@ -138,7 +145,7 @@ defmodule Protean.MachineConfig do
   defp resolve_target("#" <> target, _ancestors) when is_binary(target) do
     target
     |> parse_target()
-    |> List.insert_at(-1, :"#")
+    |> List.insert_at(-1, "#")
   end
 
   defp resolve_target(target, ancestors) when is_binary(target) do

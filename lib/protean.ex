@@ -74,6 +74,7 @@ defmodule Protean do
     quote location: :keep, bind_quoted: [config: config] do
       @behaviour Protean.Action.Pure
       @behaviour Protean.Action.Effect
+      @behaviour Protean.Transition.Guard
 
       unless Module.has_attribute?(__MODULE__, :doc) do
         @doc """
@@ -102,7 +103,7 @@ defmodule Protean do
       defoverridable child_spec: 1
 
       def protean_machine do
-        Protean.Machine.new(unquote(Macro.escape(config)))
+        Protean.Machine.new(unquote(Macro.escape(config)), handler: __MODULE__)
       end
 
       @before_compile Protean
@@ -117,6 +118,9 @@ defmodule Protean do
 
       @impl Protean.Action.Effect
       def effect(_, _, _, _), do: nil
+
+      @impl Protean.Transition.Guard
+      def condition(_, _, _, _), do: false
     end
   end
 

@@ -11,6 +11,7 @@ defprotocol Protean.Action.Protocol.Resolvable do
   @type resolved_return ::
           {Action.resolved() | nil, Machine.context(), [Action.unresolved()]}
           | {Action.resolved() | nil, Machine.context()}
+          | Action.resolved()
 
   @spec resolve(Action.unresolved(), Machine.context(), Module.t(), Interpreter.metadata()) ::
           resolved_return

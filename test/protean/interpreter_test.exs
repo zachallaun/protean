@@ -25,4 +25,22 @@ defmodule Protean.InterpreterTest do
       end
     end
   end
+
+  describe "machine with basic guards" do
+    @describetag machine: :silly_direction_machine
+
+    test "transitions based on guard conditions", %{interpreter: interpreter} do
+      with interpreter <- Interpreter.start(interpreter) do
+        interpreter = Interpreter.send_event(interpreter, "go")
+        assert Interpreter.state(interpreter).value == [["straight", "#"]]
+
+        interpreter =
+          interpreter
+          |> Interpreter.send_event("set_left")
+          |> Interpreter.send_event("go")
+
+        assert Interpreter.state(interpreter).value == [["left", "#"]]
+      end
+    end
+  end
 end

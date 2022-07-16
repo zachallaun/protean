@@ -1,5 +1,5 @@
 defmodule TestMachines do
-  alias Protean.{Machine, Interpreter}
+  alias Protean.{Machine, Interpreter, Action}
 
   def with_test_machine(%{machine: machine} = context) do
     machine = apply(TestMachines, machine, [])
@@ -164,6 +164,54 @@ defmodule TestMachines do
         ]
       ]
     )
+  end
+
+  defmodule SillyDirectionMachine do
+    use Protean,
+      machine: [
+        context: %{
+          direction: :straight
+        },
+        initial: :straight,
+        states: [
+          straight: [],
+          left: [],
+          right: []
+        ],
+        on: [
+          # go: [
+          #   [target: :straight, when: "direction_straight?"],
+          #   [target: :left, when: "direction_left?"],
+          #   [target: :right, when: "direction_right?"]
+          # ],
+          go: [target: "#straight", when: "direction_straight?"],
+          go: [target: "#left", when: "direction_left?"],
+          go: [target: "#right", when: "direction_right?"],
+          set_straight: [
+            actions: [Action.assign(direction: :straight)]
+          ],
+          set_left: [
+            actions: [Action.assign(direction: :left)]
+          ],
+          set_right: [
+            actions: [Action.assign(direction: :right)]
+          ]
+        ]
+      ]
+
+    @impl true
+    def condition("direction_straight?", %{direction: :straight}, _, _), do: true
+    def condition("direction_straight?", _, _, _), do: false
+
+    def condition("direction_left?", %{direction: :left}, _, _), do: true
+    def condition("direction_left?", _, _, _), do: false
+
+    def condition("direction_right?", %{direction: :right}, _, _), do: true
+    def condition("direction_right?", _, _, _), do: false
+  end
+
+  def silly_direction_machine do
+    {SillyDirectionMachine.protean_machine(), SillyDirectionMachine}
   end
 
   defmodule PureMachine1 do

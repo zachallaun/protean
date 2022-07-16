@@ -83,7 +83,7 @@ defmodule Protean.Interpreter.Server do
 
   @impl true
   def handle_call(@protean_snapshot, _from, interpreter) do
-    {:reply, interpreter.state, interpreter}
+    {:reply, Interpreter.state(interpreter), interpreter}
   end
 
   def handle_call({@protean_event, event}, _from, interpreter) do

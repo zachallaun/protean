@@ -2,7 +2,7 @@ defmodule Protean.StateNode do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Machine, Transition, Action}
+  alias Protean.{Transition, Action}
 
   @enforce_keys [:id, :type]
 
@@ -10,9 +10,9 @@ defmodule Protean.StateNode do
     :id,
     :type,
     :initial,
-    :transitions,
     :states,
     :order,
+    transitions: [],
     entry: [],
     exit: []
   ]
@@ -52,7 +52,7 @@ defmodule Protean.StateNode do
           id: id,
           initial: nil,
           states: nil,
-          transitions: [Transition.t()] | nil,
+          transitions: [Transition.t()],
           entry: [Action.t()],
           exit: [Action.t()],
           order: non_neg_integer | nil
@@ -69,7 +69,7 @@ defmodule Protean.StateNode do
           id: id,
           initial: nil,
           states: nil,
-          transitions: nil,
+          transitions: [],
           entry: [Action.t()],
           exit: [Action.t()],
           order: non_neg_integer | nil
@@ -85,7 +85,7 @@ defmodule Protean.StateNode do
           id: id,
           initial: id,
           states: [StateNode.t(), ...],
-          transitions: [Transition.t()] | nil,
+          transitions: [Transition.t()],
           entry: [Action.t()],
           exit: [Action.t()],
           order: non_neg_integer | nil
@@ -100,7 +100,7 @@ defmodule Protean.StateNode do
           id: id,
           initial: nil,
           states: [StateNode.t(), ...],
-          transitions: [Transition.t()] | nil,
+          transitions: [Transition.t()],
           entry: [Action.t()],
           exit: [Action.t()],
           order: non_neg_integer | nil
@@ -137,17 +137,6 @@ defmodule Protean.StateNode do
   @spec ancestor_ids(StateNode.id()) :: [StateNode.id()]
   def ancestor_ids([]), do: []
   def ancestor_ids([_self | parent] = id), do: [id | ancestor_ids(parent)]
-
-  @doc """
-  Given a StateNode and an event, return the first transition defined by that
-  node that is enabled by the event, or `nil`.
-  """
-  @spec enabled_transition(StateNode.t(), Machine.event()) :: Transition.t() | nil
-  def enabled_transition(%StateNode{transitions: nil}, _event), do: nil
-
-  def enabled_transition(%StateNode{transitions: transitions}, {event_name, _data}) do
-    Enum.find(transitions, &Transition.enabled?(&1, event_name))
-  end
 
   @doc """
   Tests whether `descendant_id` is in fact a descendant of `ancestor_id`.

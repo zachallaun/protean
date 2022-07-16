@@ -10,6 +10,7 @@ defmodule Protean.Machine do
 
   defstruct [
     :root,
+    :handler,
     idmap: %{},
     initial_context: %{}
   ]
@@ -19,6 +20,7 @@ defmodule Protean.Machine do
   """
   @type t :: %Machine{
           root: StateNode.t(),
+          handler: Module.t(),
           idmap: %{StateNode.id() => StateNode.t()},
           initial_context: context
         }
@@ -39,14 +41,15 @@ defmodule Protean.Machine do
   """
   @type context :: %{any => any}
 
-  def new(config) do
+  def new(config, opts \\ []) do
     {root, context} = MachineConfig.parse!(config)
     idmap = Utilities.Tree.tree_reduce(root, &idmap_reducer/2, %{})
 
     %Machine{
       root: root,
       idmap: idmap,
-      initial_context: context
+      initial_context: context,
+      handler: Keyword.get(opts, :handler)
     }
   end
 
@@ -101,11 +104,16 @@ defmodule Protean.Machine do
     # TODO: this is wrong, it needs to be the full set of states that will
     # be entered and not just leaves
     entry_ids =
-      transition
-      |> Transition.target()
-      |> lookup_by_id(machine)
-      |> StateNode.resolve_to_leaves()
-      |> Enum.map(& &1.id)
+      case Transition.target(transition) do
+        nil ->
+          []
+
+        target ->
+          target
+          |> lookup_by_id(machine)
+          |> StateNode.resolve_to_leaves()
+          |> Enum.map(& &1.id)
+      end
 
     new_actions =
       Enum.concat([
@@ -151,7 +159,7 @@ defmodule Protean.Machine do
     # TODO: order nodes correctly (specificity + document order)
     nodes = active_nodes(machine, state)
 
-    case first_enabled_transition(nodes, event) do
+    case first_enabled_transition(nodes, machine, state, event) do
       nil -> []
       transition -> [transition]
     end
@@ -169,12 +177,15 @@ defmodule Protean.Machine do
 
   defp lookup_by_id(id, machine), do: machine.idmap[id]
 
-  @spec first_enabled_transition([StateNode.t()], event) :: Transition.t() | nil
-  defp first_enabled_transition([], _event), do: nil
+  defp first_enabled_transition([], _machine, _state, _event), do: nil
 
-  defp first_enabled_transition([node | rest], event) do
-    case StateNode.enabled_transition(node, event) do
-      nil -> first_enabled_transition(rest, event)
+  defp first_enabled_transition([node | rest], machine, state, event) do
+    node.transitions
+    |> Enum.find(fn transition ->
+      Transition.enabled?(transition, event, state, machine.handler)
+    end)
+    |> case do
+      nil -> first_enabled_transition(rest, machine, state, event)
       transition -> transition
     end
   end

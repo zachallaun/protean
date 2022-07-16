@@ -2,11 +2,12 @@ defmodule Protean.Transition do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Machine, StateNode, Action}
+  alias Protean.{Machine, State, StateNode, Action}
 
   defstruct [
     :targets,
     :event_descriptor,
+    :guard,
     type: :external,
     actions: []
   ]
@@ -63,8 +64,16 @@ defmodule Protean.Transition do
   @doc """
   Checks whether the transition is enabled for the given event.
   """
-  @spec enabled?(Transition.t(), Machine.event_name()) :: boolean
-  def enabled?(transition, event_name),
+  @spec enabled?(Transition.t(), Machine.event(), State.t(), handler :: Module.t()) :: boolean
+  def enabled?(transition, {event_name, _} = event, state, handler) do
+    responds_to?(transition, event_name) && guard_allows?(transition, event, state, handler)
+  end
+
+  @doc """
+  Checks whether the transition responds to this particular event.
+  """
+  @spec responds_to?(Transition.t(), Machine.event_name()) :: boolean
+  def responds_to?(transition, event_name),
     do: event_descriptor_match?(transition.event_descriptor, event_name)
 
   @doc """
@@ -74,6 +83,7 @@ defmodule Protean.Transition do
   def targets(%Transition{targets: targets}), do: targets
 
   def target(%Transition{targets: [target | _]}), do: target
+  def target(%Transition{targets: []}), do: nil
 
   @doc """
   Checks whether an event descriptor matches an event name.
@@ -82,6 +92,12 @@ defmodule Protean.Transition do
   def event_descriptor_match?(descriptor, name) do
     name_parts = String.split(name, ".")
     any_components_match?(descriptor, name_parts)
+  end
+
+  defp guard_allows?(%Transition{guard: nil}, _, _, _), do: true
+
+  defp guard_allows?(%Transition{guard: guard}, event, state, handler) do
+    Transition.Guard.allows?(guard, event, state, handler)
   end
 
   defp any_components_match?(descriptor, name_parts),

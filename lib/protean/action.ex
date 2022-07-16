@@ -32,16 +32,25 @@ defmodule Protean.Action do
   @typedoc "The string name of an action used to pattern match in a handler."
   @type name :: String.t()
 
+  @doc "TODO"
   def pure(action_name) when is_binary(action_name) do
     %Action.Pure{action_name: action_name}
   end
 
+  @doc "TODO"
   def effect(action_name) when is_binary(action_name) do
     %Action.Effect{action_name: action_name}
   end
 
+  @doc "TODO"
   def assign(assigns) when is_map(assigns) do
     %Action.Assign{merge: assigns}
+  end
+
+  def assign(assigns) when is_list(assigns) do
+    assigns
+    |> Enum.into(%{})
+    |> assign()
   end
 
   @doc """
@@ -62,6 +71,9 @@ defmodule Protean.Action do
         {{resolved, context}, {context, List.wrap(unresolved) ++ rest}}
 
       {resolved, context} ->
+        {{resolved, context}, {context, rest}}
+
+      resolved ->
         {{resolved, context}, {context, rest}}
     end
   end

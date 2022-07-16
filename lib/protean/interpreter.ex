@@ -134,6 +134,12 @@ defmodule Protean.Interpreter do
     update_in(interpreter.state.context, fun)
   end
 
+  @doc """
+  Return the current machine state.
+  """
+  @spec state(Interpreter.t()) :: State.t()
+  def state(%Interpreter{state: state}), do: state
+
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
   # internal events are processed before awaiting an external event.
   defp run_interpreter(%Interpreter{running: true} = interpreter),
