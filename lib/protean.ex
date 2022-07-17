@@ -65,6 +65,8 @@ defmodule Protean do
       %Protean.State{value: [["red", "#"]], ...}
   """
 
+  alias Protean.{State, Interpreter, Interpreter.Server}
+
   @doc false
   defmacro __using__(opts) do
     config = Keyword.fetch!(opts, :machine)
@@ -123,20 +125,31 @@ defmodule Protean do
   end
 
   @doc "TODO"
-  defdelegate send(pid, event), to: Protean.Interpreter.Server
+  defdelegate send(pid, event), to: Server
 
   @doc "TODO"
-  defdelegate send_async(pid, event), to: Protean.Interpreter.Server
+  defdelegate send_async(pid, event), to: Server
 
   @doc "TODO"
-  defdelegate send_after(pid, event, time), to: Protean.Interpreter.Server
+  defdelegate send_after(pid, event, time), to: Server
 
   @doc "TODO"
-  defdelegate current(pid), to: Protean.Interpreter.Server
+  defdelegate current(pid), to: Server
 
   @doc "TODO"
-  defdelegate stop(pid, reason), to: Protean.Interpreter.Server
+  defdelegate stop(pid, reason), to: Server
 
   @doc "TODO"
-  defdelegate matches?(state, value), to: Protean.State
+  @spec matches?(Interpreter.t() | State.t(), match_query :: term()) :: boolean
+  def matches?(interpreter_or_state, value)
+
+  def matches?(%Interpreter{} = interpreter, value) do
+    interpreter
+    |> Interpreter.state()
+    |> State.matches?(value)
+  end
+
+  def matches?(%State{} = state, value) do
+    State.matches?(state, value)
+  end
 end

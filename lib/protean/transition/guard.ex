@@ -32,5 +32,23 @@ defmodule Protean.Transition.Guard do
     end
   end
 
+  defimpl Guards, for: Tuple do
+    def allows?({:and, guards}, event, state, handler) when is_list(guards) do
+      Enum.all?(guards, &Guards.allows?(&1, event, state, handler))
+    end
+
+    def allows?({:or, guards}, event, state, handler) when is_list(guards) do
+      Enum.any?(guards, &Guards.allows?(&1, event, state, handler))
+    end
+
+    def allows?({:not, guard}, event, state, handler) do
+      !Guards.allows?(guard, event, state, handler)
+    end
+
+    def allows?({:in, match_query}, _event, state, _handler) do
+      State.matches?(state, match_query)
+    end
+  end
+
   defdelegate allows?(guard, event, state, handler), to: Guards
 end
