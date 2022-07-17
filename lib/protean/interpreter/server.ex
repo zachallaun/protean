@@ -119,7 +119,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def terminate(:normal, interpreter) do
+  def terminate(_reason, interpreter) do
     Interpreter.stop(interpreter)
     :ok
   end
