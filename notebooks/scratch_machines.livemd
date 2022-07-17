@@ -42,7 +42,7 @@ Protean.current(SimpleMachine)
 ```
 
 ```elixir
-Protean.send(SimpleMachine, "goto_bar")
+Protean.send(SimpleMachine, {:event, "goto_bar", nil})
 ```
 
 ```elixir

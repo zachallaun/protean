@@ -34,7 +34,7 @@ defmodule Protean.Machine do
   @typedoc """
   An event that can be sent to a machine to trigger a transition.
   """
-  @type event :: {event_name, term}
+  @type event :: {name :: event_name, data :: term}
 
   @typedoc """
   The extended state defined for a machine.

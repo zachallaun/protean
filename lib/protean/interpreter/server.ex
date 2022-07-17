@@ -7,9 +7,8 @@ defmodule Protean.Interpreter.Server do
 
   use GenServer
 
-  alias Protean.{Interpreter}
+  alias Protean.{Interpreter, Machine}
 
-  @protean_event "$protean.event"
   @protean_snapshot "$protean.snapshot"
   @protean_terminate "$protean.terminate"
 
@@ -18,6 +17,11 @@ defmodule Protean.Interpreter.Server do
   @type server_options :: [Interpreter.option() | gen_server_options]
 
   @type gen_server_options :: {:gen_server, GenServer.options()}
+
+  @type server_event ::
+          {:event, name :: Machine.event_name(), data :: term}
+          | {name :: Machine.event_name(), data :: term}
+          | Machine.event_name()
 
   # Client API
 
@@ -38,17 +42,17 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send(server(), Interpreter.sendable()) :: State.t()
+  @spec send(server(), server_event()) :: State.t()
   def send(pid, event) do
-    GenServer.call(pid, {@protean_event, event})
+    GenServer.call(pid, normalize_event(event))
   end
 
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_async(server(), Interpreter.sendable()) :: :ok
+  @spec send_async(server(), server_event()) :: :ok
   def send_async(pid, event) do
-    GenServer.cast(pid, {@protean_event, event})
+    GenServer.cast(pid, normalize_event(event))
   end
 
   @doc """
@@ -66,6 +70,10 @@ defmodule Protean.Interpreter.Server do
   def stop(pid) do
     GenServer.cast(pid, @protean_terminate)
   end
+
+  defp normalize_event({:event, _name, _data} = event), do: event
+  defp normalize_event({name, data}), do: {:event, name, data}
+  defp normalize_event(name) when is_binary(name), do: {:event, name, nil}
 
   # GenServer callbacks
 
@@ -86,14 +94,14 @@ defmodule Protean.Interpreter.Server do
     {:reply, Interpreter.state(interpreter), interpreter}
   end
 
-  def handle_call({@protean_event, event}, _from, interpreter) do
-    interpreter = Interpreter.send_event(interpreter, event)
+  def handle_call({:event, name, data}, _from, interpreter) do
+    interpreter = Interpreter.send_event(interpreter, {name, data})
     {:reply, interpreter.state, interpreter}
   end
 
   @impl true
-  def handle_cast({@protean_event, event}, interpreter) do
-    {:noreply, interpreter, {:continue, {@protean_event, event}}}
+  def handle_cast({:event, _name, _data} = event, interpreter) do
+    {:noreply, interpreter, {:continue, event}}
   end
 
   def handle_cast(@protean_terminate, interpreter) do
@@ -101,8 +109,8 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_continue({@protean_event, event}, interpreter) do
-    {:noreply, Interpreter.send_event(interpreter, event)}
+  def handle_continue({:event, name, data}, interpreter) do
+    {:noreply, Interpreter.send_event(interpreter, {name, data})}
   end
 
   @impl true
