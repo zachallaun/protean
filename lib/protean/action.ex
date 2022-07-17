@@ -55,7 +55,7 @@ defmodule Protean.Action do
 
   @doc "TODO"
   def send_event(event, opts \\ []) do
-    %Action.SendEvent{event: event, to: opts[:to]}
+    %Action.SendEvent{event: event, to: opts[:to], delay: opts[:delay]}
   end
 
   @doc """

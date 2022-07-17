@@ -19,10 +19,9 @@ defmodule SimpleMachine do
           entry: ["bar_entry"],
           exit: ["bar_exit"],
           on: [
-            goto_foo: :foo,
             goto_baz: [
               target: :baz,
-              actions: [Action.send_event("goto_foo")]
+              actions: [Action.send_event("goto_foo", delay: 2000)]
             ]
           ]
         ],
@@ -30,7 +29,8 @@ defmodule SimpleMachine do
           entry: ["baz_entry"],
           exit: ["baz_exit"],
           on: [
-            goto_foo: :foo
+            goto_foo: :foo,
+            goto_bar: :bar
           ]
         ]
       ]
@@ -53,7 +53,13 @@ Protean.current(SimpleMachine)
 ```
 
 ```elixir
-ref = Protean.send(SimpleMachine, {:event, "goto_baz", nil})
+Protean.send(SimpleMachine, "goto_bar")
+```
+
+```elixir
+Protean.send(SimpleMachine, {:event, "goto_baz", nil})
+:timer.sleep(500)
+Protean.send(SimpleMachine, "goto_bar")
 ```
 
 ```elixir

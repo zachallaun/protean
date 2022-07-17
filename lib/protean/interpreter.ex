@@ -167,11 +167,13 @@ defmodule Protean.Interpreter do
   end
 
   defp process_event(interpreter, event) do
-    interpreter = set_event(interpreter, event)
+    interpreter_with_event = set_event(interpreter, event)
+    transitions = select_transitions(interpreter_with_event, event)
 
-    interpreter
-    |> select_transitions(event)
-    |> microstep(interpreter)
+    case transitions do
+      [] -> microstep([], interpreter)
+      transitions -> microstep(transitions, interpreter_with_event)
+    end
     |> run_interpreter()
   end
 
