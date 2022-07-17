@@ -1,6 +1,6 @@
 # Scratch Machines
 
-## Simple Machine
+## Simple machine
 
 ```elixir
 defmodule SimpleMachine do
@@ -305,6 +305,46 @@ defmodule TodoMachine do
   @impl true
   def effect("focus_input", _context, _event, _meta) do
     # ...
+  end
+end
+```
+
+## Playing with API
+
+Right now I have a sort of "special" API built on top of GenServer that is using private module attributes to pattern match on the correct messages. This means that any code interacting with a machine would need to be able to use the Protean API, aka `Protean.send` in order to make sure that the correct `{@protean_event, event}` message is sent.
+
+What if we instead just defined a public convention for sending messages to the running server? That way you don't actually have to know about Protean at all, you can just use `GenServer` as usually. Does this buy us anything useful?
+
+```elixir
+Protean.send(MyMachine, "some_event")
+
+GenServer.call(MyMachine, {:event, "some_event"})
+GenServer.call(MyMachine, {:event, "some_event", %{data: [1, 2, 3]}})
+```
+
+One thing this may get us is better `invoke` semantics for handling invoked processes. Instead of having to differentiate between machines and other OTP services, it can just be whatever service we want that responds to the `{:event, event_name, event_data}` format. This would be especially useful for autoforwarding -- imagine we just want to log/keep all incoming events from our machine, we could set up a really simple GenServer that just handles the event message instead of having to match on `@protean_event` or whatever.
+
+This definitely seems like the way to go!
+
+```elixir
+defmodule EventLogger do
+  use GenServer
+
+  def init(_) do
+    {:ok, nil}
+  end
+
+  def handle_call({:event, event_name, event_data}, from, state) do
+    {:reply, :ok, state, {:continue, {:log_event, event_name, event_data, from}}}
+  end
+
+  def handle_continue({:log_event, event_name, event_data, from}, state) do
+    log_event(event_name, event_data, from)
+    {:noreply, state}
+  end
+
+  def log_event(name, data, from) do
+    Logger.info("Event #{inspect(name)} from #{inspect(from)} with data: #{inspect(data)}")
   end
 end
 ```
