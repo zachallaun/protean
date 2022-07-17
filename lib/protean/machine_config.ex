@@ -118,12 +118,15 @@ defmodule Protean.MachineConfig do
   defp parse_transitions(transitions, id),
     do: Enum.map(transitions, &parse_transition(&1, id))
 
-  defp parse_transition({descriptor, target}, id) when is_atom(target),
-    do: parse_transition({descriptor, [target: target]}, id)
+  defp parse_transition({descriptor, target}, id) when not is_list(target),
+    do: parse_transition([target: target, on: descriptor], id)
 
-  defp parse_transition({descriptor, transition}, id) do
+  defp parse_transition({descriptor, transition}, id) when is_list(transition),
+    do: parse_transition([on: descriptor] ++ transition, id)
+
+  defp parse_transition(transition, id) when is_list(transition) do
     %Transition{
-      event_descriptor: parse_event_descriptor(descriptor),
+      event_descriptor: parse_event_descriptor(transition[:on]),
       actions: parse_actions(transition[:actions]),
       targets: resolve_targets(transition[:target], id),
       guard: parse_guard(transition[:when])
@@ -188,6 +191,8 @@ defmodule Protean.MachineConfig do
     |> String.split(".")
     |> Enum.reverse()
   end
+
+  defp parse_event_descriptor(nil), do: nil
 
   defp parse_event_descriptor(descriptor) when is_atom(descriptor),
     do: parse_event_descriptor(to_string(descriptor))
