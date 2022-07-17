@@ -17,8 +17,6 @@ defmodule Protean.Interpreter do
     invoked: %{}
   ]
 
-  @protean_init "$protean_init"
-
   @type t :: %Interpreter{
           machine: Machine.t(),
           state: State.t(),
@@ -86,7 +84,7 @@ defmodule Protean.Interpreter do
   @spec start(Interpreter.t()) :: Interpreter.t()
   def start(%Interpreter{running: false} = interpreter) do
     %{interpreter | running: true}
-    |> add_internal({:event, @protean_init, nil})
+    |> add_internal({:event, "$protean.init", nil})
     |> run_interpreter()
   end
 
