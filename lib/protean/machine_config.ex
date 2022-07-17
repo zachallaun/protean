@@ -57,7 +57,7 @@ defmodule Protean.MachineConfig do
     %StateNode{
       type: :atomic,
       id: id,
-      transitions: parse_transitions(id, config[:on]),
+      transitions: parse_transitions(config[:on], id),
       entry: parse_actions(config[:entry]),
       exit: parse_actions(config[:exit])
     }
@@ -80,9 +80,9 @@ defmodule Protean.MachineConfig do
     %StateNode{
       type: :compound,
       id: id,
-      states: parse_children(id, config[:states]),
+      states: parse_children(config[:states], id),
       initial: parse_target(config[:initial]) ++ id,
-      transitions: parse_transitions(id, config[:on]),
+      transitions: parse_transitions(config[:on], id),
       entry: parse_actions(config[:entry]),
       exit: parse_actions(config[:exit])
     }
@@ -95,14 +95,14 @@ defmodule Protean.MachineConfig do
     %StateNode{
       type: :parallel,
       id: id,
-      states: parse_children(id, config[:states]),
-      transitions: parse_transitions(id, config[:on]),
+      states: parse_children(config[:states], id),
+      transitions: parse_transitions(config[:on], id),
       entry: parse_actions(config[:entry]),
       exit: parse_actions(config[:exit])
     }
   end
 
-  defp parse_children(id, children) do
+  defp parse_children(children, id) do
     for {name, child_config} <- children,
         name = to_string(name) do
       child_id = [name | id]
@@ -113,15 +113,15 @@ defmodule Protean.MachineConfig do
   defp parse_actions(nil), do: []
   defp parse_actions(actions), do: actions
 
-  defp parse_transitions(_id, nil), do: []
+  defp parse_transitions(nil, _id), do: []
 
-  defp parse_transitions(id, transitions),
-    do: Enum.map(transitions, &parse_transition(id, &1))
+  defp parse_transitions(transitions, id),
+    do: Enum.map(transitions, &parse_transition(&1, id))
 
-  defp parse_transition(id, {descriptor, target}) when is_atom(target),
-    do: parse_transition(id, {descriptor, [target: target]})
+  defp parse_transition({descriptor, target}, id) when is_atom(target),
+    do: parse_transition({descriptor, [target: target]}, id)
 
-  defp parse_transition(id, {descriptor, transition}) do
+  defp parse_transition({descriptor, transition}, id) do
     %Transition{
       event_descriptor: parse_event_descriptor(descriptor),
       actions: parse_actions(transition[:actions]),
