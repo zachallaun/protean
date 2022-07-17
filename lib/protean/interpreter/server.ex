@@ -110,6 +110,11 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
+  def handle_info({:event, _name, _data} = event, interpreter) do
+    {:noreply, Interpreter.send_event(interpreter, event)}
+  end
+
+  @impl true
   def terminate(:normal, interpreter) do
     Interpreter.stop(interpreter)
     :ok
