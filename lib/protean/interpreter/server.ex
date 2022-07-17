@@ -9,9 +9,6 @@ defmodule Protean.Interpreter.Server do
 
   alias Protean.{Interpreter, Machine}
 
-  @protean_snapshot "$protean.snapshot"
-  @protean_terminate "$protean.terminate"
-
   @type server :: GenServer.server()
 
   @type server_options :: [Interpreter.option() | gen_server_options]
@@ -56,15 +53,15 @@ defmodule Protean.Interpreter.Server do
   """
   @spec current(server()) :: State.t()
   def current(pid) do
-    GenServer.call(pid, @protean_snapshot)
+    GenServer.call(pid, :current_state)
   end
 
   @doc """
   Stop the service, terminating the process.
   """
-  @spec stop(server()) :: :ok
-  def stop(pid) do
-    GenServer.cast(pid, @protean_terminate)
+  @spec stop(server(), reason :: term()) :: :ok
+  def stop(pid, reason \\ :normal) do
+    GenServer.stop(pid, reason)
     :ok
   end
 
@@ -85,7 +82,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_call(@protean_snapshot, _from, interpreter) do
+  def handle_call(:current_state, _from, interpreter) do
     reply_with_state(interpreter)
   end
 
@@ -102,10 +99,6 @@ defmodule Protean.Interpreter.Server do
   @impl true
   def handle_cast({:event, _name, _data} = event, interpreter) do
     {:noreply, interpreter, {:continue, event}}
-  end
-
-  def handle_cast(@protean_terminate, interpreter) do
-    {:stop, :normal, interpreter}
   end
 
   @impl true
