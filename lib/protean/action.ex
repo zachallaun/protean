@@ -53,6 +53,11 @@ defmodule Protean.Action do
     |> assign()
   end
 
+  @doc "TODO"
+  def send_event(event, opts \\ []) do
+    %Action.SendEvent{event: event, to: opts[:to]}
+  end
+
   @doc """
   Resolves actions to `t:bound_resolved`, which are `{resolved_action, context}`
   pairs that can be executed later by an interpreter.

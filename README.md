@@ -28,7 +28,7 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Autoforward events
   - [ ] Tasks
 - [ ] Actions
-  - [ ] Send event to self
+  - [x] Send event to self
   - [ ] Send event to service
   - [ ] Send event to parent
   - [ ] Delayed sends for all the above
@@ -40,7 +40,7 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Choose action / conditional actions
 - [ ] Transitions
   - [x] Automatic transitions
-  - [ ] Delayed transitions
+  - [ ] Delayed transitions (implemented as delayed sends to auto transition states)
   - [ ] Internal vs. external transitions
     - External = exit/entry actions will be re-triggered
     - Internal = exit/entry actions will not be re-triggered, only transition actions

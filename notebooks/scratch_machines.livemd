@@ -4,6 +4,8 @@
 
 ```elixir
 defmodule SimpleMachine do
+  alias Protean.Action
+
   use Protean,
     machine: [
       initial: :foo,
@@ -16,18 +18,27 @@ defmodule SimpleMachine do
         bar: [
           entry: ["bar_entry"],
           exit: ["bar_exit"],
-          on: [goto_foo: :foo]
+          on: [
+            goto_foo: :foo,
+            goto_baz: [
+              target: :baz,
+              actions: [Action.send_event("goto_foo")]
+            ]
+          ]
+        ],
+        baz: [
+          entry: ["baz_entry"],
+          exit: ["baz_exit"],
+          on: [
+            goto_foo: :foo
+          ]
         ]
       ]
     ]
 
   def pure(_, _, _, _), do: nil
 
-  def effect("foo_entry", _, _, _), do: IO.puts("entering foo!")
-  def effect("bar_entry", _, _, _), do: IO.puts("entering bar!")
-  def effect("foo_exit", _, _, _), do: IO.puts("exiting foo!")
-  def effect("bar_exit", _, _, _), do: IO.puts("exiting bar!")
-  def effect(other, _, _, _), do: IO.puts("got other: #{inspect(other)}")
+  def effect(effect, _, _, _), do: IO.puts("effect: #{effect}")
 end
 
 children = [
@@ -42,7 +53,7 @@ Protean.current(SimpleMachine)
 ```
 
 ```elixir
-ref = Protean.send_after(SimpleMachine, {:event, "goto_bar", nil}, 2000)
+ref = Protean.send(SimpleMachine, {:event, "goto_baz", nil})
 ```
 
 ```elixir
