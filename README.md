@@ -33,12 +33,20 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Send event to parent
   - [ ] Delayed sends for all the above
   - [ ] Spawn in assigns
+  - [ ] Raise action (queues event in internal queue)
+  - [ ] Respond action
+  - [ ] Forward action
+  - [ ] Escalate action
+  - [ ] Choose action / conditional actions
 - [ ] Transitions
   - [ ] Automatic transitions (:initial should be implemented as an automatic transition)
   - [ ] Delayed transitions
   - [ ] Internal vs. external transitions
+    - External = exit/entry actions will be re-triggered
+    - Internal = exit/entry actions will not be re-triggered, only transition actions
 - [ ] Parallel states
   - [ ] Correct transition conflict handling
+- [ ] History states
 
 ## Installation (Not currently published)
 
