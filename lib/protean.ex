@@ -129,10 +129,13 @@ defmodule Protean do
   defdelegate send_async(pid, event), to: Protean.Interpreter.Server
 
   @doc "TODO"
+  defdelegate send_after(pid, event, time), to: Protean.Interpreter.Server
+
+  @doc "TODO"
   defdelegate current(pid), to: Protean.Interpreter.Server
 
   @doc "TODO"
-  defdelegate stop(pid), to: Protean.Interpreter.Server
+  defdelegate stop(pid, reason), to: Protean.Interpreter.Server
 
   @doc "TODO"
   defdelegate matches?(state, value), to: Protean.State

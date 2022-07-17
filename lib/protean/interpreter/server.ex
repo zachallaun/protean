@@ -49,6 +49,17 @@ defmodule Protean.Interpreter.Server do
   end
 
   @doc """
+  Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
+  reference that can be canceled with `Process.cancel_timer/1`.
+  """
+  @spec send_after(server(), Machine.event(), non_neg_integer()) :: reference
+  def send_after(pid, event, time) do
+    pid
+    |> GenServer.whereis()
+    |> Process.send_after(Machine.normalize_event(event), time)
+  end
+
+  @doc """
   Get the current machine state.
   """
   @spec current(server()) :: State.t()
