@@ -337,4 +337,21 @@ defmodule TestMachines do
   def higher_order_guard_machine_2 do
     {HigherOrderGuardMachine2.protean_machine(), HigherOrderGuardMachine2}
   end
+
+  defmodule AutoTransitionMachine1 do
+    use Protean,
+      machine: [
+        initial: :a,
+        states: [
+          a: [
+            always: :b
+          ],
+          b: []
+        ]
+      ]
+  end
+
+  def auto_transition_machine_1 do
+    {AutoTransitionMachine1.protean_machine(), AutoTransitionMachine1}
+  end
 end

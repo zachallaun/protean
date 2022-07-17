@@ -58,13 +58,14 @@ defmodule Protean.MachineConfig do
       type: :atomic,
       id: id,
       transitions: parse_transitions(config[:on], id),
+      automatic_transitions: parse_automatic_transitions(config[:always], id),
       entry: parse_actions(config[:entry]),
       exit: parse_actions(config[:exit])
     }
   end
 
   defp parse_node(:final, config, id) do
-    forbid!(config, [:states, :initial, :on])
+    forbid!(config, [:states, :initial, :on, :always])
 
     %StateNode{
       type: :final,
@@ -82,6 +83,7 @@ defmodule Protean.MachineConfig do
       id: id,
       states: parse_children(config[:states], id),
       initial: parse_target(config[:initial]) ++ id,
+      automatic_transitions: parse_automatic_transitions(config[:always], id),
       transitions: parse_transitions(config[:on], id),
       entry: parse_actions(config[:entry]),
       exit: parse_actions(config[:exit])
@@ -96,6 +98,7 @@ defmodule Protean.MachineConfig do
       type: :parallel,
       id: id,
       states: parse_children(config[:states], id),
+      automatic_transitions: parse_automatic_transitions(config[:always], id),
       transitions: parse_transitions(config[:on], id),
       entry: parse_actions(config[:entry]),
       exit: parse_actions(config[:exit])
@@ -113,16 +116,32 @@ defmodule Protean.MachineConfig do
   defp parse_actions(nil), do: []
   defp parse_actions(actions), do: actions
 
+  defp parse_automatic_transitions(nil, _id), do: []
+
+  defp parse_automatic_transitions(target, id) when is_atom(target) or is_binary(target),
+    do: [parse_transition(target, id)]
+
+  defp parse_automatic_transitions(transitions, id) when is_list(transitions) do
+    if Keyword.keyword?(transitions) do
+      [parse_transition(transitions, id)]
+    else
+      parse_transitions(transitions, id)
+    end
+  end
+
   defp parse_transitions(nil, _id), do: []
 
   defp parse_transitions(transitions, id),
     do: Enum.map(transitions, &parse_transition(&1, id))
 
-  defp parse_transition({descriptor, target}, id) when not is_list(target),
+  defp parse_transition({descriptor, target}, id) when is_atom(target) or is_binary(target),
     do: parse_transition([target: target, on: descriptor], id)
 
   defp parse_transition({descriptor, transition}, id) when is_list(transition),
     do: parse_transition([on: descriptor] ++ transition, id)
+
+  defp parse_transition(target, id) when is_atom(target) or is_binary(target),
+    do: parse_transition([target: target], id)
 
   defp parse_transition(transition, id) when is_list(transition) do
     %Transition{

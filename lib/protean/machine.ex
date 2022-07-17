@@ -147,9 +147,13 @@ defmodule Protean.Machine do
   end
 
   @spec select_automatic_transitions(Machine.t(), State.t()) :: [Transition.t()]
-  def select_automatic_transitions(_machine, _state) do
-    # TODO
-    []
+  def select_automatic_transitions(machine, state) do
+    nodes = active_nodes(machine, state)
+
+    case first_enabled_transition(nodes, machine, state, state.event, :automatic_transitions) do
+      nil -> []
+      transition -> [transition]
+    end
   end
 
   @spec select_transitions(Machine.t(), State.t(), event()) :: [Transition.t()]
@@ -187,17 +191,16 @@ defmodule Protean.Machine do
 
   defp lookup_by_id(id, machine), do: machine.idmap[id]
 
-  defp first_enabled_transition([], _machine, _state, _event), do: nil
+  defp first_enabled_transition(nodes, machine, state, event, attribute \\ :transitions) do
+    nodes
+    |> Enum.flat_map(&Map.get(&1, attribute))
+    |> find_enabled_transition(machine, state, event)
+  end
 
-  defp first_enabled_transition([node | rest], machine, state, event) do
-    node.transitions
-    |> Enum.find(fn transition ->
+  defp find_enabled_transition(transitions, machine, state, event) do
+    Enum.find(transitions, fn transition ->
       Transition.enabled?(transition, event, state, machine.handler)
     end)
-    |> case do
-      nil -> first_enabled_transition(rest, machine, state, event)
-      transition -> transition
-    end
   end
 
   @spec active_nodes(Machine.t(), State.t()) :: [StateNode.t()]

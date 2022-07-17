@@ -64,13 +64,15 @@ defmodule Protean.Transition do
   @doc """
   Checks whether the transition is enabled for the given event.
   """
-  @spec enabled?(Transition.t(), Machine.event(), State.t(), handler :: module) :: boolean
-  def enabled?(transition, {:event, event_name, _} = event, state, handler) do
-    responds_to?(transition, event_name) && guard_allows?(transition, event, state, handler)
+  @spec enabled?(Transition.t(), Machine.event() | nil, State.t(), handler :: module) :: boolean
+  def enabled?(transition, event, state, handler) do
+    responds_to?(transition, event) && guard_allows?(transition, event, state, handler)
   end
 
-  @spec responds_to?(Transition.t(), Machine.event_name()) :: boolean
-  defp responds_to?(transition, event_name),
+  @spec responds_to?(Transition.t(), Machine.event() | nil) :: boolean
+  defp responds_to?(%Transition{event_descriptor: nil}, _event), do: true
+
+  defp responds_to?(transition, {:event, event_name, _}),
     do: event_descriptor_match?(transition.event_descriptor, event_name)
 
   @doc """
