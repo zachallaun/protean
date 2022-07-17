@@ -20,6 +20,26 @@ Goals fall into two rough categories:
 
 If the result of this project is generally useful, that's great! Usefulness, however, is not a part of my criteria for success.
 
+## TODO
+
+- [ ] Invoked services
+  - [ ] Machines/Interpreters
+  - [ ] GenServers (non-Protean)
+  - [ ] Autoforward events
+  - [ ] Tasks
+- [ ] Actions
+  - [ ] Send event to self
+  - [ ] Send event to service
+  - [ ] Send event to parent
+  - [ ] Delayed sends for all the above
+  - [ ] Spawn in assigns
+- [ ] Transitions
+  - [ ] Automatic transitions (:initial should be implemented as an automatic transition)
+  - [ ] Delayed transitions
+  - [ ] Internal vs. external transitions
+- [ ] Parallel states
+  - [ ] Correct transition conflict handling
+
 ## Installation (Not currently published)
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
