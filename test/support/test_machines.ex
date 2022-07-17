@@ -261,7 +261,7 @@ defmodule TestMachines do
     {PureMachine1.protean_machine(), PureMachine1}
   end
 
-  defmodule HigherOrderGuardMachine do
+  defmodule HigherOrderGuardMachine1 do
     use Protean,
       machine: [
         initial: :a,
@@ -295,7 +295,45 @@ defmodule TestMachines do
     def condition("asked_nicely", _ctx, {:event, _, :please}, _), do: true
   end
 
-  def higher_order_guard_machine do
-    {HigherOrderGuardMachine.protean_machine(), HigherOrderGuardMachine}
+  def higher_order_guard_machine_1 do
+    {HigherOrderGuardMachine1.protean_machine(), HigherOrderGuardMachine1}
+  end
+
+  defmodule HigherOrderGuardMachine2 do
+    use Protean,
+      machine: [
+        initial: :a,
+        states: [
+          a: [],
+          b: [],
+          c: [],
+          d: []
+        ],
+        on: [
+          goto_a: [
+            target: "#a",
+            when: [:not, in: "#d"]
+          ],
+          goto_b: [
+            target: "#b",
+            when: [in: "#a"]
+          ],
+          goto_c: [
+            target: "#c",
+            when: [:or, in: "#d", in: "#b"]
+          ],
+          goto_d: [
+            target: "#d",
+            when: ["asked_nicely", in: "#c"]
+          ]
+        ]
+      ]
+
+    @impl true
+    def condition("asked_nicely", _ctx, {:event, _, :please}, _), do: true
+  end
+
+  def higher_order_guard_machine_2 do
+    {HigherOrderGuardMachine2.protean_machine(), HigherOrderGuardMachine2}
   end
 end

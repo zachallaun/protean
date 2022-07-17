@@ -127,9 +127,32 @@ defmodule Protean.MachineConfig do
       event_descriptor: parse_event_descriptor(descriptor),
       actions: parse_actions(transition[:actions]),
       targets: resolve_targets(transition[:target], id),
-      guard: transition[:when]
+      guard: parse_guard(transition[:when])
     }
   end
+
+  defp parse_guard(nil), do: nil
+
+  defp parse_guard(guard) when is_binary(guard) or is_tuple(guard),
+    do: guard
+
+  defp parse_guard([:not | guards]),
+    do: {:not, parse_guard(guards)}
+
+  defp parse_guard([:and | guards]),
+    do: {:and, Enum.map(guards, &parse_guard/1)}
+
+  defp parse_guard([:or | guards]),
+    do: {:or, Enum.map(guards, &parse_guard/1)}
+
+  defp parse_guard([guard]),
+    do: parse_guard(guard)
+
+  defp parse_guard([_ | _] = guards),
+    do: parse_guard([:and | guards])
+
+  defp parse_guard([]),
+    do: []
 
   defp resolve_targets(nil, _id), do: []
 
