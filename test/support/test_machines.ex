@@ -354,4 +354,43 @@ defmodule TestMachines do
   def auto_transition_machine_1 do
     {AutoTransitionMachine1.protean_machine(), AutoTransitionMachine1}
   end
+
+  defmodule AutoTransitionMachine2 do
+    use Protean,
+      machine: [
+        initial: :a,
+        context: %{
+          acc: []
+        },
+        states: [
+          a: [
+            on: [
+              goto_b: :b
+            ]
+          ],
+          b: [
+            always: [
+              target: :c,
+              actions: ["auto_to_c"]
+            ]
+          ],
+          c: [
+            always: [
+              target: :d,
+              actions: ["auto_to_d"]
+            ]
+          ],
+          d: []
+        ]
+      ]
+
+    @impl true
+    def pure(action_name, context, _, _) do
+      update_in(context.acc, &[action_name | &1])
+    end
+  end
+
+  def auto_transition_machine_2 do
+    {AutoTransitionMachine2.protean_machine(), AutoTransitionMachine2}
+  end
 end

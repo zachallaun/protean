@@ -39,7 +39,7 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Escalate action
   - [ ] Choose action / conditional actions
 - [ ] Transitions
-  - [ ] Automatic transitions (:initial should be implemented as an automatic transition)
+  - [x] Automatic transitions
   - [ ] Delayed transitions
   - [ ] Internal vs. external transitions
     - External = exit/entry actions will be re-triggered
