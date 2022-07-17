@@ -1,6 +1,43 @@
 # Scratch Machines
 
-## Simple machine
+## Misc
+
+```elixir
+defmodule DelayedTransitionMachine do
+  alias Protean.Action
+
+  use Protean,
+    machine: [
+      initial: :a,
+      states: [
+        a: [
+          exit: ["a_exit"],
+          after: [
+            delay: 1000,
+            target: :b
+          ]
+        ],
+        b: [
+          entry: ["b_entry"]
+        ]
+      ]
+    ]
+
+  def pure(_, _, _, _), do: nil
+
+  def effect(effect, _, _, _), do: IO.puts("effect: #{effect}")
+end
+
+children = [
+  DelayedTransitionMachine
+]
+
+{:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+```elixir
+Protean.current(DelayedTransitionMachine)
+```
 
 ```elixir
 defmodule SimpleMachine do

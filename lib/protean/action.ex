@@ -58,6 +58,11 @@ defmodule Protean.Action do
     %Action.SendEvent{event: event, to: opts[:to], delay: opts[:delay]}
   end
 
+  @doc "TODO"
+  def cancel_event(id) do
+    %Action.CancelEvent{id: id}
+  end
+
   @doc """
   Resolves actions to `t:bound_resolved`, which are `{resolved_action, context}`
   pairs that can be executed later by an interpreter.

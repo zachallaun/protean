@@ -2,26 +2,33 @@ defmodule TestMachines do
   alias Protean.{Machine, Interpreter, Action}
 
   def with_test_machine(%{machine: machine} = context) do
-    machine = apply(TestMachines, machine, [])
+    context
+    |> Map.merge(test_machine(machine))
+  end
 
-    context =
-      case machine do
-        %Machine{} = machine ->
-          Map.merge(context, %{machine: machine, initial: Machine.initial_state(machine)})
-
-        {machine, handler} ->
-          Map.merge(context, %{
-            machine: machine,
-            handler: handler,
-            initial: Machine.initial_state(machine),
-            interpreter: Interpreter.new(machine, handler)
-          })
-      end
-
-    {:ok, context}
+  def with_test_machine(%{machines: machines} = context) do
+    context
+    |> Map.put(:machines, Enum.map(machines, &test_machine/1))
   end
 
   def with_test_machine(context), do: context
+
+  def test_machine(machine) do
+    machine = apply(TestMachines, machine, [])
+
+    case machine do
+      %Machine{} = machine ->
+        %{machine: machine, initial: Machine.initial_state(machine)}
+
+      {machine, handler} ->
+        %{
+          machine: machine,
+          handler: handler,
+          initial: Machine.initial_state(machine),
+          interpreter: Interpreter.new(machine, handler)
+        }
+    end
+  end
 
   def simple_machine_1 do
     Protean.Machine.new(
@@ -392,5 +399,78 @@ defmodule TestMachines do
 
   def auto_transition_machine_2 do
     {AutoTransitionMachine2.protean_machine(), AutoTransitionMachine2}
+  end
+
+  def delayed_transition_machine_implicit do
+    Machine.new(
+      initial: :a,
+      states: [
+        a: [
+          after: [
+            delay: 2000,
+            target: :b
+          ],
+          on: [
+            goto_c: :c
+          ]
+        ],
+        b: [
+          after: [
+            [
+              delay: 1000,
+              when: "some_condition",
+              target: :c
+            ],
+            [
+              delay: 2000,
+              target: :c
+            ]
+          ]
+        ],
+        c: []
+      ]
+    )
+  end
+
+  def delayed_transition_machine_explicit do
+    Machine.new(
+      initial: :a,
+      states: [
+        a: [
+          entry: [
+            Action.send_event("$protean.after.2000-#a", delay: 2000)
+          ],
+          exit: [
+            Action.cancel_event("$protean.after.2000-#a")
+          ],
+          on: [
+            "$protean.after.2000-#a": [
+              target: :b
+            ],
+            goto_c: :c
+          ]
+        ],
+        b: [
+          entry: [
+            Action.send_event("$protean.after.1000-#b", delay: 1000),
+            Action.send_event("$protean.after.2000-#b", delay: 2000)
+          ],
+          exit: [
+            Action.cancel_event("$protean.after.1000-#b"),
+            Action.cancel_event("$protean.after.2000-#b")
+          ],
+          on: [
+            "$protean.after.1000-#b": [
+              target: :c,
+              when: "some_condition"
+            ],
+            "$protean.after.2000-#b": [
+              target: :c
+            ]
+          ]
+        ],
+        c: []
+      ]
+    )
   end
 end

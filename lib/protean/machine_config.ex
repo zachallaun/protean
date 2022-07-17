@@ -4,7 +4,7 @@ defmodule Protean.MachineConfig do
   format used when defining a machine to the structured format used internally.
   """
 
-  alias Protean.{StateNode, Transition}
+  alias Protean.{StateNode, Transition, Action}
 
   @doc """
   Parses machine config into a `StateNode`.
@@ -14,8 +14,7 @@ defmodule Protean.MachineConfig do
 
     {root, _order} =
       config
-      |> node_type()
-      |> parse_node(config)
+      |> parse_node(["#"])
       |> set_order()
 
     {root, context}
@@ -49,72 +48,96 @@ defmodule Protean.MachineConfig do
     end
   end
 
-  defp parse_node(type, config, id \\ ["#"])
+  defp parse_node(config, id) do
+    config
+    |> node_type()
+    |> parse_node(config, id)
+  end
+
+  defp parse_node(type, config, id)
 
   defp parse_node(:atomic, config, id) do
     forbid!(config, [:states, :initial])
 
-    %StateNode{
-      type: :atomic,
-      id: id,
-      transitions: parse_transitions(config[:on], id),
-      automatic_transitions: parse_automatic_transitions(config[:always], id),
-      entry: parse_actions(config[:entry]),
-      exit: parse_actions(config[:exit])
-    }
+    parse_node_common(:atomic, config, id)
   end
 
   defp parse_node(:final, config, id) do
-    forbid!(config, [:states, :initial, :on, :always])
+    forbid!(config, [:states, :initial, :on, :always, :after])
 
-    %StateNode{
-      type: :final,
-      id: id,
-      entry: parse_actions(config[:entry]),
-      exit: parse_actions(config[:exit])
-    }
+    parse_node_common(:final, config, id)
   end
 
   defp parse_node(:compound, config, id) do
     require!(config, [:states, :initial])
 
-    %StateNode{
-      type: :compound,
-      id: id,
-      states: parse_children(config[:states], id),
-      initial: parse_target(config[:initial]) ++ id,
-      automatic_transitions: parse_automatic_transitions(config[:always], id),
-      transitions: parse_transitions(config[:on], id),
-      entry: parse_actions(config[:entry]),
-      exit: parse_actions(config[:exit])
-    }
+    parse_node_common(:compound, config, id)
   end
 
   defp parse_node(:parallel, config, id) do
     require!(config, [:states])
     forbid!(config, [:initial])
 
+    parse_node_common(:parallel, config, id)
+  end
+
+  defp parse_node_common(type, config, id) do
+    {delay_entry, delay_exit, delay_transitions} = parse_delayed_transitions(config[:after], id)
+
     %StateNode{
-      type: :parallel,
+      type: type,
       id: id,
       states: parse_children(config[:states], id),
+      initial: parse_initial(config[:initial], id),
       automatic_transitions: parse_automatic_transitions(config[:always], id),
-      transitions: parse_transitions(config[:on], id),
-      entry: parse_actions(config[:entry]),
-      exit: parse_actions(config[:exit])
+      transitions: delay_transitions ++ parse_transitions(config[:on], id),
+      entry: delay_entry ++ parse_actions(config[:entry]),
+      exit: delay_exit ++ parse_actions(config[:exit])
     }
   end
+
+  defp parse_delayed_transitions(nil, _id), do: {[], [], []}
+
+  defp parse_delayed_transitions(transitions, id) do
+    if Keyword.keyword?(transitions) do
+      parse_delayed_transitions([transitions], id)
+    else
+      transitions
+      |> Enum.map(&parse_delayed_transition(&1, id))
+      |> unzip3()
+    end
+  end
+
+  defp parse_delayed_transition(config, id) do
+    {delay, config} = Keyword.pop!(config, :delay)
+    event_name = delayed_transition_event_name(id, delay)
+
+    entry_action = parse_action(Action.send_event(event_name, delay: delay))
+    exit_action = parse_action(Action.cancel_event(event_name))
+    transition = parse_transition(config ++ [on: event_name], id)
+
+    {entry_action, exit_action, transition}
+  end
+
+  defp delayed_transition_event_name(id, delay) do
+    ["#" | rest] = Enum.reverse(id)
+    "$protean.after.#{delay}-#" <> Enum.join(rest, ".")
+  end
+
+  defp parse_children(nil, _id), do: nil
 
   defp parse_children(children, id) do
     for {name, child_config} <- children,
         name = to_string(name) do
       child_id = [name | id]
-      child_config |> node_type() |> parse_node(child_config, child_id)
+      parse_node(child_config, child_id)
     end
   end
 
   defp parse_actions(nil), do: []
-  defp parse_actions(actions), do: actions
+  defp parse_actions(actions), do: Enum.map(actions, &parse_action/1)
+
+  defp parse_action(action), do: action
 
   defp parse_automatic_transitions(nil, _id), do: []
 
@@ -202,6 +225,11 @@ defmodule Protean.MachineConfig do
     relative ++ ancestors
   end
 
+  defp parse_initial(nil, _id), do: nil
+
+  defp parse_initial(target, id),
+    do: parse_target(target) ++ id
+
   defp parse_target(target) when is_atom(target),
     do: parse_target(to_string(target))
 
@@ -241,4 +269,13 @@ defmodule Protean.MachineConfig do
       raise "#{message} #{Enum.join(filtered, ", ")}: #{inspect(config)}"
     end
   end
+
+  defp unzip3(list),
+    do: unzip3(Enum.reverse(list), [], [], [])
+
+  defp unzip3([{el1, el2, el3} | reversed_list], l1, l2, l3),
+    do: unzip3(reversed_list, [el1 | l1], [el2 | l2], [el3 | l3])
+
+  defp unzip3([], l1, l2, l3),
+    do: {l1, l2, l3}
 end

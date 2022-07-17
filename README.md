@@ -31,16 +31,19 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [x] Send event to self
   - [ ] Send event to service
   - [ ] Send event to parent
-  - [ ] Delayed sends for all the above
+  - [x] Delayed sends
   - [ ] Spawn in assigns
   - [ ] Raise action (queues event in internal queue)
   - [ ] Respond action
   - [ ] Forward action
   - [ ] Escalate action
   - [ ] Choose action / conditional actions
+  - [ ] Cancel event
 - [ ] Transitions
   - [x] Automatic transitions
   - [ ] Delayed transitions (implemented as delayed sends to auto transition states)
+    - [x] Syntax sugar over entry/exit actions + transitions
+    - [ ] Correctly cancel non-sent actions (see Actions -> Cancel Event)
   - [ ] Internal vs. external transitions
     - External = exit/entry actions will be re-triggered
     - Internal = exit/entry actions will not be re-triggered, only transition actions
