@@ -72,6 +72,8 @@ defmodule Protean.Interpreter.Server do
 
   @impl true
   def init(opts) do
+    Process.flag(:trap_exit, true)
+
     machine = Keyword.fetch!(opts, :machine)
     handler = Keyword.fetch!(opts, :handler)
 
