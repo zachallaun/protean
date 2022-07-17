@@ -11,7 +11,8 @@ defmodule Protean.MixProject do
       deps: deps(),
       package: package(),
       name: "Protean",
-      source_url: "https://github.com/zachallaun/protean"
+      source_url: "https://github.com/zachallaun/protean",
+      description: description()
     ]
   end
 
@@ -19,6 +20,17 @@ defmodule Protean.MixProject do
     [
       extra_applications: [:logger]
     ]
+  end
+
+  defp deps do
+    []
+  end
+
+  defp description do
+    """
+    Protean is a currently-experimental library for managing changes in state and side-effects
+    through the use of finite state machines and statecharts.
+    """
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -30,13 +42,6 @@ defmodule Protean.MixProject do
       links: %{
         "GitHub" => "https://github.com/zachallaun/protean"
       }
-    ]
-  end
-
-  defp deps do
-    [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]
   end
 end
