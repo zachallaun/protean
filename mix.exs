@@ -9,7 +9,8 @@ defmodule Protean.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      package: package()
+      package: package(),
+      source_url: "https://github.com/zachallaun/protean"
     ]
   end
 
