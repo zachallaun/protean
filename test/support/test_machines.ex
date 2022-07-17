@@ -311,20 +311,20 @@ defmodule TestMachines do
         ],
         on: [
           goto_a: [
-            target: "#a",
-            when: [:not, in: "#d"]
+            target: ".a",
+            when: [:not, in: "d"]
           ],
           goto_b: [
-            target: "#b",
-            when: [in: "#a"]
+            target: ".b",
+            when: [in: "a"]
           ],
           goto_c: [
-            target: "#c",
-            when: [:or, in: "#d", in: "#b"]
+            target: ".c",
+            when: [:or, in: "d", in: "b"]
           ],
           goto_d: [
-            target: "#d",
-            when: ["asked_nicely", in: "#c"]
+            target: ".d",
+            when: ["asked_nicely", in: "c"]
           ]
         ]
       ]

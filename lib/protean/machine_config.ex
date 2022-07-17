@@ -7,7 +7,7 @@ defmodule Protean.MachineConfig do
   alias Protean.{StateNode, Transition}
 
   @doc """
-  Parses semi-structured machine config into a `StateNode`.
+  Parses machine config into a `StateNode`.
   """
   def parse!(config) do
     context = Keyword.get(config, :context, %{})
@@ -159,19 +159,24 @@ defmodule Protean.MachineConfig do
   defp resolve_targets(targets, _id) when is_list(targets),
     do: raise("Multiple targets not yet implemented")
 
-  defp resolve_targets(target, [_self | ancestors]),
-    do: [resolve_target(target, ancestors)]
+  defp resolve_targets(target, id),
+    do: [resolve_target(target, id)]
 
-  defp resolve_target(target, ancestors) when is_atom(target),
-    do: resolve_target(to_string(target), ancestors)
+  defp resolve_target(target, id) when is_atom(target),
+    do: resolve_target(to_string(target), id)
 
-  defp resolve_target("#" <> target, _ancestors) when is_binary(target) do
+  defp resolve_target("#" <> target, _id) do
     target
     |> parse_target()
     |> List.insert_at(-1, "#")
   end
 
-  defp resolve_target(target, ancestors) when is_binary(target) do
+  defp resolve_target("." <> target, id) do
+    relative = parse_target(target)
+    relative ++ id
+  end
+
+  defp resolve_target(target, [_self | ancestors]) when is_binary(target) do
     relative = parse_target(target)
     relative ++ ancestors
   end
