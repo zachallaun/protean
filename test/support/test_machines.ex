@@ -121,6 +121,7 @@ defmodule TestMachines do
       initial: :parallel_state_a,
       states: [
         parallel_state_a: [
+          type: :parallel,
           entry: ["entry_parallel_a"],
           exit: ["exit_parallel_a"],
           states: [

@@ -45,7 +45,6 @@ defmodule Protean.MachineConfig do
     cond do
       type = config[:type] -> type
       config[:initial] -> :compound
-      config[:states] -> :parallel
       true -> :atomic
     end
   end
