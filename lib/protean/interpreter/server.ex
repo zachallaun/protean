@@ -48,6 +48,7 @@ defmodule Protean.Interpreter.Server do
   @spec send_async(server(), Machine.event()) :: :ok
   def send_async(pid, event) do
     GenServer.cast(pid, Machine.normalize_event(event))
+    :ok
   end
 
   @doc """
@@ -64,6 +65,7 @@ defmodule Protean.Interpreter.Server do
   @spec stop(server()) :: :ok
   def stop(pid) do
     GenServer.cast(pid, @protean_terminate)
+    :ok
   end
 
   # GenServer callbacks
