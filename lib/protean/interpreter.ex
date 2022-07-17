@@ -44,8 +44,6 @@ defmodule Protean.Interpreter do
           event: Machine.event()
         }
 
-  @type sendable :: Machine.event() | Machine.event_name()
-
   # SCXML main event loop:
   #
   # 0. if running, continue, otherwise exit interpreter
@@ -88,7 +86,7 @@ defmodule Protean.Interpreter do
   @spec start(Interpreter.t()) :: Interpreter.t()
   def start(%Interpreter{running: false} = interpreter) do
     %{interpreter | running: true}
-    |> add_internal({@protean_init, nil})
+    |> add_internal({:event, @protean_init, nil})
     |> run_interpreter()
   end
 
@@ -105,11 +103,10 @@ defmodule Protean.Interpreter do
   Send an event to a running interpreter. This will execute any transitions, actions, and side-
   effects associated with the current machine state and this event.
   """
-  @spec send_event(Interpreter.t(), sendable) :: Interpreter.t()
-  def send_event(%Interpreter{running: true} = interpreter, event) when is_binary(event),
-    do: send_event(interpreter, {event, nil})
-
+  @spec send_event(Interpreter.t(), Machine.sendable_event()) :: Interpreter.t()
   def send_event(%Interpreter{running: true} = interpreter, event) do
+    event = Machine.normalize_event(event)
+
     interpreter
     |> autoforward_event(event)
     |> process_event(event)

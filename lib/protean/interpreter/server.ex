@@ -18,11 +18,6 @@ defmodule Protean.Interpreter.Server do
 
   @type gen_server_options :: {:gen_server, GenServer.options()}
 
-  @type server_event ::
-          {:event, name :: Machine.event_name(), data :: term}
-          | {name :: Machine.event_name(), data :: term}
-          | Machine.event_name()
-
   # Client API
 
   @doc """
@@ -33,7 +28,7 @@ defmodule Protean.Interpreter.Server do
     * `:gen_server` (optional) - A keyword list of options to be passed to
       `GenServer.start_link/3`. For more information, see [those docs](https://hexdocs.pm/elixir/GenServer.html#start_link/3).
   """
-  @spec start_link(server_options) :: GenServer.on_start()
+  @spec start_link(server_options()) :: GenServer.on_start()
   def start_link(opts) do
     {gen_server_opts, interpreter_opts} = Keyword.pop(opts, :gen_server, [])
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
@@ -42,17 +37,17 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send(server(), server_event()) :: State.t()
+  @spec send(server(), Machine.event()) :: State.t()
   def send(pid, event) do
-    GenServer.call(pid, normalize_event(event))
+    GenServer.call(pid, Machine.normalize_event(event))
   end
 
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_async(server(), server_event()) :: :ok
+  @spec send_async(server(), Machine.event()) :: :ok
   def send_async(pid, event) do
-    GenServer.cast(pid, normalize_event(event))
+    GenServer.cast(pid, Machine.normalize_event(event))
   end
 
   @doc """
@@ -71,10 +66,6 @@ defmodule Protean.Interpreter.Server do
     GenServer.cast(pid, @protean_terminate)
   end
 
-  defp normalize_event({:event, _name, _data} = event), do: event
-  defp normalize_event({name, data}), do: {:event, name, data}
-  defp normalize_event(name) when is_binary(name), do: {:event, name, nil}
-
   # GenServer callbacks
 
   @impl true
@@ -91,12 +82,17 @@ defmodule Protean.Interpreter.Server do
 
   @impl true
   def handle_call(@protean_snapshot, _from, interpreter) do
-    {:reply, Interpreter.state(interpreter), interpreter}
+    reply_with_state(interpreter)
   end
 
-  def handle_call({:event, name, data}, _from, interpreter) do
-    interpreter = Interpreter.send_event(interpreter, {name, data})
-    {:reply, interpreter.state, interpreter}
+  def handle_call({:event, _name, _data} = event, _from, interpreter) do
+    interpreter
+    |> Interpreter.send_event(event)
+    |> reply_with_state()
+  end
+
+  defp reply_with_state(interpreter) do
+    {:reply, Interpreter.state(interpreter), interpreter}
   end
 
   @impl true
@@ -109,8 +105,8 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_continue({:event, name, data}, interpreter) do
-    {:noreply, Interpreter.send_event(interpreter, {name, data})}
+  def handle_continue({:event, _name, _data} = event, interpreter) do
+    {:noreply, Interpreter.send_event(interpreter, event)}
   end
 
   @impl true

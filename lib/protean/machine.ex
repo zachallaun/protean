@@ -15,9 +15,7 @@ defmodule Protean.Machine do
     initial_context: %{}
   ]
 
-  @typedoc """
-  A full Protean machine configuration.
-  """
+  @typedoc "A full Protean machine configuration."
   @type t :: %Machine{
           root: StateNode.t(),
           handler: module,
@@ -25,20 +23,21 @@ defmodule Protean.Machine do
           initial_context: context
         }
 
-  @typedoc """
-  An event name used in a machine configuration and when sending events to a
-  machine.
-  """
+  @typedoc "An event name used in a machine configuration and when sending events to a machine."
   @type event_name :: String.t()
 
-  @typedoc """
-  An event that can be sent to a machine to trigger a transition.
-  """
-  @type event :: {name :: event_name, data :: term}
+  @typedoc "Data payload sent along with an event."
+  @type event_data :: term()
 
   @typedoc """
-  The extended state defined for a machine.
+  The full representation of an event. `t:sendable_event()` is normalized to this form.
   """
+  @type event :: {:event, event_name(), event_data()}
+
+  @typedoc "An event that can be sent to a machine to trigger a transition."
+  @type sendable_event :: event() | event_name() | {event_name(), event_data()}
+
+  @typedoc "The extended state defined for a machine."
   @type context :: %{any => any}
 
   def new(config, opts \\ []) do
@@ -86,11 +85,11 @@ defmodule Protean.Machine do
 
   def take_transitions(machine, state, transitions) do
     Enum.reduce(transitions, state, fn transition, state ->
-      take_transition(machine, state, transition)
+      apply_transition(machine, state, transition)
     end)
   end
 
-  defp take_transition(machine, state, transition) do
+  defp apply_transition(machine, state, transition) do
     %State{
       value: value,
       actions: actions
@@ -131,7 +130,7 @@ defmodule Protean.Machine do
   end
 
   @spec will_exit?(Machine.t(), StateNode.id(), Transition.t()) :: boolean
-  def will_exit?(machine, id, transition) do
+  defp will_exit?(machine, id, transition) do
     transition
     |> Transition.targets()
     |> Enum.any?(fn target_id ->
@@ -153,7 +152,7 @@ defmodule Protean.Machine do
     []
   end
 
-  @spec select_transitions(Machine.t(), State.t(), event) :: [Transition.t()]
+  @spec select_transitions(Machine.t(), State.t(), event()) :: [Transition.t()]
   def select_transitions(machine, state, event) do
     # TODO: Handle conflicting transitions
     # TODO: order nodes correctly (specificity + document order)
@@ -169,11 +168,22 @@ defmodule Protean.Machine do
   Given a machine, a machine state, and an event, transition to the next state
   if the machine defines a transition for the given state and event.
   """
-  @spec transition(Machine.t(), State.t(), event) :: State.t()
+  @spec transition(Machine.t(), State.t(), sendable_event()) :: State.t()
   def transition(machine, state, event) do
-    transitions = select_transitions(machine, state, event)
-    take_transitions(machine, state, transitions)
+    with event <- normalize_event(event),
+         transitions <- select_transitions(machine, state, event) do
+      take_transitions(machine, state, transitions)
+    end
   end
+
+  @doc """
+  Normalizes any valid `t:sendable_event()` to a `t:event()`. Event data will default to `nil` if
+  not provided with the event.
+  """
+  @spec normalize_event(sendable_event()) :: event()
+  def normalize_event({:event, _name, _data} = event), do: event
+  def normalize_event({name, data}), do: {:event, name, data}
+  def normalize_event(name) when is_binary(name), do: {:event, name, nil}
 
   defp lookup_by_id(id, machine), do: machine.idmap[id]
 

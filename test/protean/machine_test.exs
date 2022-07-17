@@ -15,19 +15,19 @@ defmodule Protean.MachineTest do
     end
 
     test "ignores unknown events", %{machine: machine, initial: initial} do
-      maybe_different = Machine.transition(machine, initial, {"UNKNOWN_EVENT", nil})
+      maybe_different = Machine.transition(machine, initial, "UNKNOWN_EVENT")
       assert maybe_different == initial
     end
 
     test "transitions to atomic nodes", %{machine: machine, initial: initial} do
-      next = Machine.transition(machine, initial, {"event_a", nil})
+      next = Machine.transition(machine, initial, "event_a")
       assert next.value == [["state_b", "#"]]
     end
   end
 
   @tag machine: :simple_machine_2
   test "transitions when parent responds to event", %{machine: machine, initial: initial} do
-    next = Machine.transition(machine, initial, {"event_a", nil})
+    next = Machine.transition(machine, initial, "event_a")
     assert next.value == [["state_b", "#"]]
   end
 
@@ -50,7 +50,7 @@ defmodule Protean.MachineTest do
       machine: machine,
       initial: initial
     } do
-      state = Machine.transition(machine, initial, {"event_a", nil})
+      state = Machine.transition(machine, initial, "event_a")
       assert state.value == [["state_b", "#"]]
       assert state.actions == ["entry_a", "exit_a", "event_a_action", "entry_b"]
     end
@@ -69,7 +69,7 @@ defmodule Protean.MachineTest do
     end
 
     test "can transition within a parallel state", %{machine: machine, initial: initial} do
-      state = Machine.transition(machine, initial, {"foo_event", nil})
+      state = Machine.transition(machine, initial, "foo_event")
 
       assert state.value == [
                ["state_a1", "parallel_state_a", "#"],
