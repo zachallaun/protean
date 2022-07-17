@@ -23,7 +23,9 @@ defmodule Protean.MixProject do
   end
 
   defp deps do
-    []
+    [
+      {:ex_doc, "~> 0.28.4", only: :dev, runtime: false}
+    ]
   end
 
   defp description do
