@@ -20,7 +20,7 @@ defmodule Protean.Machine do
   """
   @type t :: %Machine{
           root: StateNode.t(),
-          handler: Module.t(),
+          handler: module,
           idmap: %{StateNode.id() => StateNode.t()},
           initial_context: context
         }

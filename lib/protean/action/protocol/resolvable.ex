@@ -13,7 +13,7 @@ defprotocol Protean.Action.Protocol.Resolvable do
           | {Action.resolved() | nil, Machine.context()}
           | Action.resolved()
 
-  @spec resolve(Action.unresolved(), Machine.context(), Module.t(), Interpreter.metadata()) ::
+  @spec resolve(Action.unresolved(), Machine.context(), module, Interpreter.metadata()) ::
           resolved_return
   def resolve(unresolved, context, handler, meta)
 end

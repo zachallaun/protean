@@ -16,7 +16,7 @@ defmodule Protean.Transition.Guard do
             ) :: boolean
 
   defprotocol Guards do
-    @spec allows?(t, Machine.event(), State.t(), Module.t()) :: boolean
+    @spec allows?(t, Machine.event(), State.t(), module) :: boolean
     def allows?(guard, event, state, handler)
   end
 

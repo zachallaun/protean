@@ -22,7 +22,7 @@ defmodule Protean.Interpreter do
   @type t :: %Interpreter{
           machine: Machine.t(),
           state: State.t(),
-          handler: Module.t(),
+          handler: module,
           running: boolean,
           internal_queue: :queue.queue(),
           invoked: invoked
@@ -37,7 +37,7 @@ defmodule Protean.Interpreter do
   @type options :: [option]
   @type option ::
           {:machine, Machine.t()}
-          | {:handler, Module.t()}
+          | {:handler, module}
 
   @type metadata :: %{
           state: %{value: State.value()},
@@ -64,7 +64,7 @@ defmodule Protean.Interpreter do
   Create a new `Interpreter` from a `Machine` and handler module. The returned interpreter will
   still need to be started; see `start/1`.
   """
-  @spec new(Machine.t(), Module.t()) :: Interpreter.t()
+  @spec new(Machine.t(), module) :: Interpreter.t()
   def new(machine, handler) do
     %Interpreter{
       machine: machine,

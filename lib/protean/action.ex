@@ -57,7 +57,7 @@ defmodule Protean.Action do
   Resolves actions to `t:bound_resolved`, which are `{resolved_action, context}`
   pairs that can be executed later by an interpreter.
   """
-  @spec resolve_actions([unresolved], Machine.context(), Module.t(), Interpreter.metadata()) ::
+  @spec resolve_actions([unresolved], Machine.context(), module, Interpreter.metadata()) ::
           [bound_resolved]
   def resolve_actions(actions, context, handler, meta) do
     {context, List.wrap(actions)}
