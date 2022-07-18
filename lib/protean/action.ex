@@ -11,6 +11,7 @@ defmodule Protean.Action do
   """
 
   alias __MODULE__
+  alias Protean.Action.Protocol.Resolvable
   alias Protean.Interpreter
   alias Protean.Machine
 
@@ -77,7 +78,7 @@ defmodule Protean.Action do
   end
 
   def resolve_action({context, [action | rest]}, handler, meta) do
-    case Action.Protocol.Resolvable.resolve(action, context, handler, meta) do
+    case Resolvable.resolve(action, context, handler, meta) do
       {resolved, context, unresolved} ->
         {{resolved, context}, {context, List.wrap(unresolved) ++ rest}}
 
@@ -91,7 +92,7 @@ defmodule Protean.Action do
 
   def resolve_action({_context, []}, _handler, _meta), do: nil
 
-  defimpl Action.Protocol.Resolvable, for: BitString do
+  defimpl Resolvable, for: BitString do
     def resolve(action_name, context, _handler, _meta) do
       {nil, context, [Action.pure(action_name), Action.effect(action_name)]}
     end

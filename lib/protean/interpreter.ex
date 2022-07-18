@@ -7,6 +7,7 @@ defmodule Protean.Interpreter do
 
   alias __MODULE__
   alias Protean.Action
+  alias Protean.Action.Protocol.Executable
   alias Protean.Machine
   alias Protean.State
 
@@ -278,7 +279,7 @@ defmodule Protean.Interpreter do
   end
 
   defp exec_bound_action({action, context}, interpreter),
-    do: Action.Protocol.Executable.exec(action, context, interpreter)
+    do: Executable.exec(action, context, interpreter)
 
   defp add_internal(interpreter, event) do
     update_in(interpreter.internal_queue, &:queue.in(event, &1))

@@ -23,7 +23,7 @@ defmodule Protean.Transition.Guard do
 
   defimpl Guards, for: BitString do
     def allows?(name, event, state, handler) do
-      apply(handler, :condition, [name, state.context, event, %{state: state}])
+      handler.condition(name, state.context, event, %{state: state})
     end
   end
 
