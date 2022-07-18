@@ -2,21 +2,21 @@
 
 ## Misc
 
+Example using types and returning actions directly.
+
 ```elixir
 defmodule TodosMachine do
   use Protean
 
   alias Protean.Action
 
-  @type filter :: :all | :active | :completed
-
-  @context %{
-    todo: "" :: String.t(),
-    todos: [] :: [TodoMachine.context()],
-    filter: :all :: filter
+  @type context :: %{
+    todo: String.t(),
+    todos: [TodoMachine.context()],
+    filter: :all | :active | :completed
   }
 
-  @events ::
+  @type events ::
     {:event, "NEWTODO.CHANGE", value :: String.t()}
     | {:event, "NEWTODO.COMMIT", value :: String.t()}
     | {:event, "TODO.COMMIT", TodoMachine.todo()}
@@ -27,6 +27,11 @@ defmodule TodosMachine do
     | {:event, "CLEAR_COMPLETED", nil}
 
   @machine [
+    context: %{
+      todo: "",
+      todos: [],
+      filter: :all
+    },
     initial: :loading,
     states: [
       loading: [
@@ -114,6 +119,123 @@ defmodule TodosMachine do
     todos
     |> Enum.filter(fn {_, _, todo} -> !todo.completed end)
     |> Action.assign(to: :todos)
+  end
+end
+```
+
+Same as above but using a `Plug.Conn` style API where `state` is piped through and every action essentially returns a new `state`.
+
+```elixir
+defmodule TodosMachine do
+  use Protean
+
+  alias Protean.Action
+
+  @type context :: %{
+          todo: String.t(),
+          todos: [TodoMachine.context()],
+          filter: :all | :active | :completed
+        }
+
+  @type events ::
+          {"NEWTODO.CHANGE", value :: String.t()}
+          | {"NEWTODO.COMMIT", value :: String.t()}
+          | {"TODO.COMMIT", TodoMachine.todo()}
+          | {"TODO.DELETE", TodoMachine.todo()}
+          | {"SHOW", filter}
+          | {"ALL.COMPLETED", nil}
+          | {"ALL.ACTIVE", nil}
+          | {"CLEAR_COMPLETED", nil}
+
+  @machine [
+    context: %{
+      todo: "",
+      todos: [],
+      filter: :all
+    },
+    initial: :loading,
+    states: [
+      loading: [
+        entry: ["spawn_todos"],
+        always: :ready
+      ],
+      ready: []
+    ],
+    on: [
+      "NEWTODO.CHANGE": [
+        actions: ["update_new_todo"]
+      ],
+      "NEWTODO.COMMIT": [
+        actions: ["create_new_todo"],
+        when: fn %{todo: todo}, _ -> String.trim(todo) != "" end
+      ],
+      "TODO.COMMIT": [
+        actions: ["update_todo"]
+      ],
+      "TODO.DELETE": [
+        actions: ["delete_todo"]
+      ],
+      SHOW: [
+        actions: ["set_filter"]
+      ],
+      "ALL.COMPLETED": [
+        actions: ["send_all_completed"]
+      ],
+      "ALL.ACTIVE": [
+        actions: ["send_all_active"]
+      ],
+      CLEAR_COMPLETED: [
+        actions: ["stop_completed"]
+      ]
+    ]
+  ]
+
+  @impl true
+  def pure("update_new_todo", %{event: {_name, value}} = state, _context),
+    do: assign(state, :todo, value)
+
+  def pure("create_new_todo", state, %{todos: todos, todo: todo}) do
+    new_todo = TodoMachine.new_todo(todo)
+    spawn_action = Action.spawn({TodoMachine, new_todo})
+    entry = {new_todo.id, spawn_action, new_todo}
+
+    assign(state, %{todo: "", todos: [entry | todos]})
+  end
+
+  def pure("update_todo", state, %{todos: todos}) do
+    %{event: {_, updated_todo}} = state
+
+    with {_, pid, todo} <- List.keyfind(todos, updated_todo.id, 0),
+         todo <- Map.merge(todo, updated_todo),
+         todos <- List.keyreplace(todos, todo.id, 0, {todo.id, pid, todo}) do
+      assign(state, :todos, todos)
+    end
+  end
+
+  def pure("delete_todo", state, %{todos: todos}) do
+    %{event: {_, todo}} = state
+    assign(state, :todos, List.keydelete(todos, todo.id, 0))
+  end
+
+  def pure("set_filter", %{event: {_, filter}} = state, _context),
+    do: assign(state, :filter, filter)
+
+  def pure("send_all_completed", state, %{todos: todos}) do
+    pids = Enum.map(todos, fn {_, pid, _} -> pid end)
+    Action.send_event(state, "SET_COMPLETED", to: pids)
+  end
+
+  def pure("send_all_active", state, %{todos: todos}) do
+    pids = Enum.map(todos, fn {_, pid, _} -> pid end)
+    Action.send_event(state, "SET_ACTIVE", to: pids)
+  end
+
+  def pure("stop_completed", state, %{todos: todos}) do
+    completed = Enum.filter(todos, fn {_id, _pid, todo} -> todo.completed end)
+
+    state
+    |> assign(:todos, todos -- completed)
+    |> Action.stop(Enum.map(completed, &elem(&1, 1)))
   end
 end
 ```
