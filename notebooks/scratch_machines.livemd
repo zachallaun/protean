@@ -3,6 +3,122 @@
 ## Misc
 
 ```elixir
+defmodule TodosMachine do
+  use Protean
+
+  alias Protean.Action
+
+  @type filter :: :all | :active | :completed
+
+  @context %{
+    todo: "" :: String.t(),
+    todos: [] :: [TodoMachine.context()],
+    filter: :all :: filter
+  }
+
+  @events ::
+    {:event, "NEWTODO.CHANGE", value :: String.t()}
+    | {:event, "NEWTODO.COMMIT", value :: String.t()}
+    | {:event, "TODO.COMMIT", TodoMachine.todo()}
+    | {:event, "TODO.DELETE", TodoMachine.todo()}
+    | {:event, "SHOW", filter}
+    | {:event, "ALL.COMPLETED", nil}
+    | {:event, "ALL.ACTIVE", nil}
+    | {:event, "CLEAR_COMPLETED", nil}
+
+  @machine [
+    initial: :loading,
+    states: [
+      loading: [
+        entry: ["spawn_todos"],
+        always: :ready
+      ],
+      ready: []
+    ],
+    on: [
+      "NEWTODO.CHANGE": [
+        actions: ["update_new_todo"]
+      ],
+      "NEWTODO.COMMIT": [
+        actions: ["create_new_todo"],
+        when: fn %{todo: todo}, _ -> String.trim(todo) != "" end
+      ],
+      "TODO.COMMIT": [
+        actions: ["update_todo"]
+      ],
+      "TODO.DELETE": [
+        actions: ["delete_todo"]
+      ],
+      SHOW: [
+        actions: ["set_filter"]
+      ],
+      "ALL.COMPLETED": [
+        actions: ["send_all_completed"]
+      ],
+      "ALL.ACTIVE": [
+        actions: ["send_all_active"]
+      ],
+      CLEAR_COMPLETED: [
+        actions: ["stop_completed", "remove_completed"]
+      ]
+    ]
+  ]
+
+  @impl true
+  def pure("update_new_todo", _context, {:event, _, value}, _),
+    do: Action.assign(todo: value)
+
+  def pure("create_new_todo", %{todos: todos, todo: todo}, _, _) do
+    with new_todo <- TodoMachine.new_todo(todo),
+         entry <- {new_todo.id, Action.spawn({TodoMachine, new_todo}, new_todo} do
+      Action.assign(todo: "", todos: [entry | todos])
+    end
+  end
+
+  def pure("update_todo", %{todos: todos}, {:event, _, updated}, _) do
+    with {_, pid, todo} <- List.keyfind(todos, updated.id, 0),
+         todo <- Map.merge(todo, updated),
+         todos <- List.keyreplace(todos, todo.id, 0, {todo.id, pid, todo}) do
+      Action.assign(todos: todos)
+    end
+  end
+
+  def pure("delete_todo", %{todos: todos}, {:event, _, todo}, _),
+    do: Action.assign(todos: List.keydelete(todos, todo.id, 0))
+
+  def pure("set_filter", _context, {:event, _, filter}, _),
+    do: Action.assign(filter: filter)
+
+  def pure("send_all_completed", %{todos: todos}, _, _) do
+    todos
+    |> Enum.map(fn {_, pid, _} -> pid end)
+    |> Action.send_event("SET_COMPLETED")
+  end
+
+  def pure("send_all_active", %{todos: todos}, _, _) do
+    todos
+    |> Enum.map(fn {_, pid, _} -> pid end)
+    |> Action.send_event("SET_ACTIVE")
+  end
+
+  def pure("stop_completed", %{todos: todos}, _, _) do
+    pids =
+      todos
+      |> Enum.filter(fn {_, _, todo} -> todo.completed end)
+      |> Enum.map(fn {_, pid, _} -> pid end)
+
+    Action.stop(pids)
+  end
+
+  def pure("remove_completed", %{todos: todos}, _, _) do
+    todos
+    |> Enum.filter(fn {_, _, todo} -> !todo.completed end)
+    |> Action.assign(to: :todos)
+  end
+end
+```
+
+```elixir
 defmodule DelayedTransitionMachine do
   alias Protean.Action
 
