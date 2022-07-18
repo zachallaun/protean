@@ -43,7 +43,7 @@ defmodule Protean.MachineTest do
     @describetag machine: :machine_with_actions_1
 
     test "entry actions are collected in initial state", %{initial: initial} do
-      assert initial.actions == ["entry_a"]
+      assert initial.private.actions == ["entry_a"]
     end
 
     test "exit and entry actions are collected on transition", %{
@@ -52,7 +52,7 @@ defmodule Protean.MachineTest do
     } do
       state = Machine.transition(machine, initial, "event_a")
       assert state.value == [["state_b", "#"]]
-      assert state.actions == ["entry_a", "exit_a", "event_a_action", "entry_b"]
+      assert state.private.actions == ["entry_a", "exit_a", "event_a_action", "entry_b"]
     end
   end
 
@@ -65,7 +65,7 @@ defmodule Protean.MachineTest do
                ["foo", "state_a2", "parallel_state_a", "#"]
              ]
 
-      assert initial.actions == ["entry_parallel_a", "entry_a1", "entry_a2"]
+      assert initial.private.actions == ["entry_parallel_a", "entry_a1", "entry_a2"]
     end
 
     test "can transition within a parallel state", %{machine: machine, initial: initial} do
@@ -76,7 +76,7 @@ defmodule Protean.MachineTest do
                ["bar", "state_a2", "parallel_state_a", "#"]
              ]
 
-      assert state.actions == initial.actions ++ ["exit_foo", "entry_bar"]
+      assert state.private.actions == initial.private.actions ++ ["exit_foo", "entry_bar"]
     end
   end
 end

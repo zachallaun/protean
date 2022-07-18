@@ -167,7 +167,7 @@ defmodule TodosMachine do
       ],
       "NEWTODO.COMMIT": [
         actions: ["create_new_todo"],
-        when: fn %{todo: todo}, _ -> String.trim(todo) != "" end
+        when: fn _, %{todo: todo} -> String.trim(todo) != "" end
       ],
       "TODO.COMMIT": [
         actions: ["update_todo"]

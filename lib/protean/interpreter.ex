@@ -249,17 +249,18 @@ defmodule Protean.Interpreter do
   # executing any resulting actions.
   defp microstep(transitions, interpreter) do
     %Interpreter{
-      machine: machine,
       state: state,
+      machine: machine,
       handler: handler
     } = interpreter
 
     %State{
       value: value,
       event: event,
-      actions: actions,
       context: context
     } = state = Machine.take_transitions(machine, state, transitions)
+
+    actions = State.actions(state)
 
     meta = %{
       state: %{value: value},
@@ -271,7 +272,7 @@ defmodule Protean.Interpreter do
     interpreter
     |> put_in([Access.key(:state)], state)
     |> exec_all(bound_actions)
-    |> put_in([Access.key(:state), Access.key(:actions)], [])
+    |> update_in([Access.key(:state)], &State.assign_actions(&1, []))
   end
 
   defp exec_all(interpreter, bound_actions) do

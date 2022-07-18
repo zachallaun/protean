@@ -17,10 +17,10 @@ defmodule Protean.InterpreterTest do
     end
 
     test "executes initial entry actions on start", %{interpreter: interpreter} do
-      assert Enum.count(interpreter.state.actions) == 1
+      assert Enum.count(interpreter.state.private.actions) == 1
 
       with interpreter <- Interpreter.start(interpreter) do
-        assert Enum.empty?(interpreter.state.actions)
+        assert Enum.empty?(interpreter.state.private.actions)
         assert interpreter.state.context[:acc] == ["entering_a"]
       end
     end

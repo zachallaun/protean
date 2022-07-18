@@ -75,11 +75,9 @@ defmodule Protean.Machine do
       |> Enum.flat_map(&StateNode.ancestor_ids/1)
       |> Enum.uniq()
 
-    %State{
-      value: active_ids,
-      actions: entry_actions(machine, entry_ids),
-      context: context
-    }
+    State.new(active_ids)
+    |> State.assign(context)
+    |> State.assign_actions(entry_actions(machine, entry_ids))
   end
 
   @spec take_transitions(Machine.t(), State.t(), [Transition.t()]) :: State.t()
@@ -93,11 +91,8 @@ defmodule Protean.Machine do
     end)
   end
 
-  defp apply_transition(machine, state, transition) do
-    %State{
-      value: value,
-      actions: actions
-    } = state
+  defp apply_transition(machine, %State{value: value} = state, transition) do
+    actions = State.actions(state)
 
     exit_ids =
       Enum.flat_map(value, &StateNode.ancestor_ids/1)
@@ -130,7 +125,9 @@ defmodule Protean.Machine do
       |> Enum.concat(entry_ids)
       |> Enum.uniq()
 
-    %{state | value: value, actions: List.wrap(actions) ++ new_actions}
+    state
+    |> Map.put(:value, value)
+    |> State.assign_actions(List.wrap(actions) ++ new_actions)
   end
 
   @spec will_exit?(Machine.t(), StateNode.id(), Transition.t()) :: boolean
