@@ -11,7 +11,8 @@ defmodule Protean.Action do
   """
 
   alias __MODULE__
-  alias Protean.{Machine, Interpreter}
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   @typedoc """
   A resolved action is anything that implements the `Executable` protocol.

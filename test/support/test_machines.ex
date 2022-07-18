@@ -1,5 +1,7 @@
 defmodule TestMachines do
-  alias Protean.{Machine, Interpreter, Action}
+  alias Protean.Action
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   def with_test_machine(%{machine: machine} = context) do
     context

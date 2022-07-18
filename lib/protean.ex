@@ -65,7 +65,8 @@ defmodule Protean do
       %Protean.State{value: [["red", "#"]], ...}
   """
 
-  alias Protean.{State, Interpreter, Interpreter.Server}
+  alias Protean.Interpreter
+  alias Protean.State
 
   @doc false
   defmacro __using__(opts) do
@@ -125,19 +126,19 @@ defmodule Protean do
   end
 
   @doc "TODO"
-  defdelegate send(pid, event), to: Server
+  defdelegate send(pid, event), to: Interpreter.Server
 
   @doc "TODO"
-  defdelegate send_async(pid, event), to: Server
+  defdelegate send_async(pid, event), to: Interpreter.Server
 
   @doc "TODO"
-  defdelegate send_after(pid, event, time), to: Server
+  defdelegate send_after(pid, event, time), to: Interpreter.Server
 
   @doc "TODO"
-  defdelegate current(pid), to: Server
+  defdelegate current(pid), to: Interpreter.Server
 
   @doc "TODO"
-  defdelegate stop(pid, reason), to: Server
+  defdelegate stop(pid, reason), to: Interpreter.Server
 
   @doc "TODO"
   @spec matches?(Interpreter.t() | State.t(), match_query :: term()) :: boolean

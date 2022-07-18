@@ -2,7 +2,10 @@ defmodule Protean.Transition do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Machine, State, StateNode, Action}
+  alias Protean.Action
+  alias Protean.Machine
+  alias Protean.State
+  alias Protean.StateNode
 
   defstruct [
     :targets,

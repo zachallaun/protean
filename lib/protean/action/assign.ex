@@ -2,7 +2,8 @@ defmodule Protean.Action.Assign do
   @moduledoc "TODO"
 
   alias __MODULE__
-  alias Protean.{Interpreter, Action}
+  alias Protean.Action
+  alias Protean.Interpreter
 
   defstruct [:merge]
 

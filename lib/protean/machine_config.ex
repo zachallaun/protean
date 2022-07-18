@@ -4,7 +4,9 @@ defmodule Protean.MachineConfig do
   format used when defining a machine to the structured format used internally.
   """
 
-  alias Protean.{StateNode, Transition, Action}
+  alias Protean.Action
+  alias Protean.StateNode
+  alias Protean.Transition
 
   @doc """
   Parses machine config into a `StateNode`.

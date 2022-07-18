@@ -2,7 +2,9 @@ defmodule Protean.Action.SendEvent do
   @moduledoc "TODO"
 
   alias __MODULE__
-  alias Protean.{Interpreter, Machine, Action}
+  alias Protean.Action
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   defstruct [:event, :to, :delay]
 

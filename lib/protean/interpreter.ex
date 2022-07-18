@@ -6,7 +6,9 @@ defmodule Protean.Interpreter do
   """
 
   alias __MODULE__
-  alias Protean.{Machine, State, Action}
+  alias Protean.Action
+  alias Protean.Machine
+  alias Protean.State
 
   defstruct [
     :machine,

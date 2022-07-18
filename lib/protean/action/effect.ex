@@ -4,7 +4,9 @@ defmodule Protean.Action.Effect do
   """
 
   alias __MODULE__
-  alias Protean.{Action, Machine, Interpreter}
+  alias Protean.Action
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   @doc "Invoked to handle side-effecting actions."
   @callback effect(Action.name(), Machine.context(), Machine.event(), Interpreter.metadata()) ::

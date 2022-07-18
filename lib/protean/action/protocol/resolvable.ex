@@ -6,7 +6,9 @@ defprotocol Protean.Action.Protocol.Resolvable do
   still need to be resolved.
   """
 
-  alias Protean.{Action, Machine, Interpreter}
+  alias Protean.Action
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   @type resolved_return ::
           {Action.resolved() | nil, Machine.context(), [Action.unresolved()]}

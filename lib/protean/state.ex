@@ -2,7 +2,9 @@ defmodule Protean.State do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Machine, StateNode, Action}
+  alias Protean.Action
+  alias Protean.Machine
+  alias Protean.StateNode
 
   defstruct [
     :value,

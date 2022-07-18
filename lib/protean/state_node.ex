@@ -2,7 +2,8 @@ defmodule Protean.StateNode do
   @moduledoc false
 
   alias __MODULE__
-  alias Protean.{Transition, Action}
+  alias Protean.Action
+  alias Protean.Transition
 
   @enforce_keys [:id, :type]
 

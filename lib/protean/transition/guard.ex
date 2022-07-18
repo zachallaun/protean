@@ -3,7 +3,8 @@ defmodule Protean.Transition.Guard do
   Defines behaviour for guarded transition handler modules.
   """
 
-  alias Protean.{Machine, State}
+  alias Protean.Machine
+  alias Protean.State
 
   @doc """
   Determines whether a transition should take place given the current machien state.

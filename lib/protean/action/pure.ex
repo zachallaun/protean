@@ -5,7 +5,9 @@ defmodule Protean.Action.Pure do
   """
 
   alias __MODULE__
-  alias Protean.{Action, Machine, Interpreter}
+  alias Protean.Action
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   @doc "Invoked to handle pure actions."
   @callback pure(Action.name(), Machine.context(), Machine.event(), Interpreter.metadata()) ::

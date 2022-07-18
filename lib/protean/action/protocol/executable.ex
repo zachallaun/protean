@@ -5,7 +5,9 @@ defprotocol Protean.Action.Protocol.Executable do
   modify an interpreter.
   """
 
-  alias Protean.{Action, Machine, Interpreter}
+  alias Protean.Action
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   @spec exec(Action.resolved(), Machine.context(), Interpreter.t()) :: Interpreter.t()
   def exec(action, context, interpreter)

@@ -7,7 +7,8 @@ defmodule Protean.Interpreter.Server do
 
   use GenServer
 
-  alias Protean.{Interpreter, Machine}
+  alias Protean.Interpreter
+  alias Protean.Machine
 
   @type server :: GenServer.server()
 

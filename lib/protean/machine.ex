@@ -6,7 +6,11 @@ defmodule Protean.Machine do
   """
 
   alias __MODULE__
-  alias Protean.{State, StateNode, MachineConfig, Transition, Utilities}
+  alias Protean.MachineConfig
+  alias Protean.State
+  alias Protean.StateNode
+  alias Protean.Transition
+  alias Protean.Utilities
 
   defstruct [
     :root,
