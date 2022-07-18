@@ -109,6 +109,8 @@ defmodule Protean.State do
   @doc false
   @spec assign_actions(t, [Action.t()]) :: t
   @spec assign_actions(t, nil) :: t
+  def assign_actions(state, actions \\ [])
+
   def assign_actions(state, nil), do: assign_actions(state, [])
 
   def assign_actions(%State{} = state, actions) when is_list(actions),

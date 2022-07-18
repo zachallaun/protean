@@ -45,6 +45,12 @@ defmodule Protean.Interpreter do
           event: Machine.event()
         }
 
+  # Partial Access behaviour (not defining `pop/2`)
+  @doc false
+  def fetch(interpreter, key), do: Map.fetch(interpreter, key)
+  @doc false
+  def get_and_update(interpreter, key, fun), do: Map.get_and_update(interpreter, key, fun)
+
   # SCXML main event loop:
   #
   # 0. if running, continue, otherwise exit interpreter
@@ -121,15 +127,6 @@ defmodule Protean.Interpreter do
   @spec with_context(Interpreter.t(), Machine.context()) :: Interpreter.t()
   def with_context(%Interpreter{} = interpreter, context) do
     put_in(interpreter.state.context, context)
-  end
-
-  @doc """
-  Updates the context of the current state.
-  """
-  @spec update_context(Interpreter.t(), (Machine.context() -> Machine.context())) ::
-          Interpreter.t()
-  def update_context(%Interpreter{} = interpreter, fun) do
-    update_in(interpreter.state.context, fun)
   end
 
   @doc """
@@ -270,9 +267,9 @@ defmodule Protean.Interpreter do
     bound_actions = Action.resolve_actions(actions, context, handler, meta)
 
     interpreter
-    |> put_in([Access.key(:state)], state)
+    |> put_in([:state], state)
     |> exec_all(bound_actions)
-    |> update_in([Access.key(:state)], &State.assign_actions(&1, []))
+    |> update_in([:state], &State.assign_actions/1)
   end
 
   defp exec_all(interpreter, bound_actions) do

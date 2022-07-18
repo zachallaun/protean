@@ -3,7 +3,7 @@ defmodule Protean.Action.Assign do
 
   alias __MODULE__
   alias Protean.Action
-  alias Protean.Interpreter
+  alias Protean.State
 
   defstruct [:merge]
 
@@ -17,7 +17,7 @@ defmodule Protean.Action.Assign do
 
   defimpl Action.Protocol.Executable, for: Assign do
     def exec(%Assign{merge: context}, _context, interpreter) do
-      Interpreter.update_context(interpreter, &Map.merge(&1, context))
+      update_in(interpreter.state, &State.assign(&1, context))
     end
   end
 end
