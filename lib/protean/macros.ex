@@ -40,7 +40,7 @@ defmodule Protean.Macros do
       @behaviour Protean.Action.Effect
       @behaviour Protean.Transition.Guard
 
-      Module.put_attribute(__MODULE__, Protean.Options, unquote(opts))
+      Module.put_attribute(__MODULE__, Protean.Options, unquote(Macro.escape(opts)))
 
       @before_compile Protean.Macros
     end
@@ -102,7 +102,7 @@ defmodule Protean.Macros do
         quote generated: true, location: :keep do
           def unquote(machine_function_name(env))() do
             Protean.Machine.new(
-              unquote(Macro.escape(machine_option)),
+              unquote(machine_option),
               handler: unquote(machine_handler_name(env))
             )
           end
