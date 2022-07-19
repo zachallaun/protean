@@ -36,10 +36,10 @@ defmodule Protean.Machine do
   @typedoc """
   The full representation of an event. `t:sendable_event()` is normalized to this form.
   """
-  @type event :: {:event, event_name(), event_data()}
+  @type event :: {event_name(), event_data()}
 
   @typedoc "An event that can be sent to a machine to trigger a transition."
-  @type sendable_event :: event() | event_name() | {event_name(), event_data()}
+  @type sendable_event :: event() | event_name()
 
   def new(config, opts \\ []) do
     {root, context} = MachineConfig.parse!(config)
@@ -183,9 +183,8 @@ defmodule Protean.Machine do
   not provided with the event.
   """
   @spec normalize_event(sendable_event()) :: event()
-  def normalize_event({:event, _name, _data} = event), do: event
-  def normalize_event({name, data}), do: {:event, name, data}
-  def normalize_event(name) when is_binary(name), do: {:event, name, nil}
+  def normalize_event({name, data}), do: {name, data}
+  def normalize_event(name), do: {name, nil}
 
   defp lookup_by_id(id, machine), do: machine.idmap[id]
 

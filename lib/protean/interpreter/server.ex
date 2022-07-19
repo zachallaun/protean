@@ -35,17 +35,17 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send(server(), Machine.event()) :: State.t()
+  @spec send(server(), Machine.sendable_event()) :: State.t()
   def send(pid, event) do
-    GenServer.call(pid, Machine.normalize_event(event))
+    GenServer.call(pid, {:event, Machine.normalize_event(event)})
   end
 
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_async(server(), Machine.event()) :: :ok
+  @spec send_async(server(), Machine.sendable_event()) :: :ok
   def send_async(pid, event) do
-    GenServer.cast(pid, Machine.normalize_event(event))
+    GenServer.cast(pid, {:event, Machine.normalize_event(event)})
     :ok
   end
 
@@ -53,11 +53,11 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
   reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_after(server(), Machine.event(), non_neg_integer()) :: reference
+  @spec send_after(server(), Machine.sendable_event(), non_neg_integer()) :: reference
   def send_after(pid, event, time) do
     pid
     |> GenServer.whereis()
-    |> Process.send_after(Machine.normalize_event(event), time)
+    |> Process.send_after({:event, Machine.normalize_event(event)}, time)
   end
 
   @doc """
@@ -98,7 +98,7 @@ defmodule Protean.Interpreter.Server do
     reply_with_state(interpreter)
   end
 
-  def handle_call({:event, _name, _data} = event, _from, interpreter) do
+  def handle_call({:event, event}, _from, interpreter) do
     interpreter
     |> Interpreter.send_event(event)
     |> reply_with_state()
@@ -109,17 +109,17 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_cast({:event, _name, _data} = event, interpreter) do
-    {:noreply, interpreter, {:continue, event}}
+  def handle_cast({:event, event}, interpreter) do
+    {:noreply, interpreter, {:continue, {:event, event}}}
   end
 
   @impl true
-  def handle_continue({:event, _name, _data} = event, interpreter) do
+  def handle_continue({:event, event}, interpreter) do
     {:noreply, Interpreter.send_event(interpreter, event)}
   end
 
   @impl true
-  def handle_info({:event, _name, _data} = event, interpreter) do
+  def handle_info({:event, event}, interpreter) do
     {:noreply, Interpreter.send_event(interpreter, event)}
   end
 

@@ -75,7 +75,7 @@ defmodule Protean.Transition do
   @spec responds_to?(Transition.t(), Machine.event() | nil) :: boolean
   defp responds_to?(%Transition{event_descriptor: nil}, _event), do: true
 
-  defp responds_to?(transition, {:event, event_name, _}),
+  defp responds_to?(transition, {event_name, _}),
     do: event_descriptor_match?(transition.event_descriptor, event_name)
 
   @doc """

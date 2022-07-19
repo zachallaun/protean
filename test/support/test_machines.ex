@@ -302,7 +302,7 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("asked_nicely", _ctx, {:event, _, :please}, _), do: true
+    def condition("asked_nicely", _ctx, {_, :please}, _), do: true
   end
 
   def higher_order_guard_machine_1 do
@@ -340,7 +340,7 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("asked_nicely", _ctx, {:event, _, :please}, _), do: true
+    def condition("asked_nicely", _ctx, {_, :please}, _), do: true
   end
 
   def higher_order_guard_machine_2 do
