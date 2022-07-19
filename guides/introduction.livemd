@@ -14,26 +14,27 @@ Let's start with a very simple machine: a counter.
 
 ```elixir
 defmodule Counter do
-  use Protean,
-    machine: [
-      context: %{
-        count: 0
-      },
-      initial: :active,
-      states: [
-        active: [
-          on: [
-            INC: [
-              actions: [
-                Protean.Action.assign(fn _state, %{count: count}, _event ->
-                  %{count: count + 1}
-                end)
-              ]
+  use Protean
+
+  @machine [
+    context: %{
+      count: 0
+    },
+    initial: :active,
+    states: [
+      active: [
+        on: [
+          INC: [
+            actions: [
+              Protean.Action.assign(fn _state, %{count: count}, _event ->
+                %{count: count + 1}
+              end)
             ]
           ]
         ]
       ]
     ]
+  ]
 end
 ```
 
@@ -140,27 +141,28 @@ Let's define a slightly more interesting machine, one that models a request that
 
 ```elixir
 defmodule Request do
-  use Protean,
-    machine: [
-      initial: :pending,
-      states: [
-        pending: [
-          on: [
-            SUCCEEDED: :success,
-            FAILED: :fail
-          ]
-        ],
-        success: [],
-        fail: []
-      ]
+  use Protean
+
+  @machine [
+    initial: :pending,
+    states: [
+      pending: [
+        on: [
+          SUCCEEDED: :success,
+          FAILED: :fail
+        ]
+      ],
+      success: [],
+      fail: []
     ]
+  ]
 end
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-{:module, Request, <<70, 79, 82, 49, 0, 0, 13, ...>>, :ok}
+{:module, Request, <<70, 79, 82, 49, 0, 0, 14, ...>>, :ok}
 ```
 
 ```elixir
