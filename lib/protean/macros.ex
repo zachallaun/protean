@@ -42,6 +42,8 @@ defmodule Protean.Macros do
 
       Module.put_attribute(__MODULE__, Protean.Options, unquote(Macro.escape(opts)))
 
+      unquote(persist_attribute(opts))
+
       @before_compile Protean.Macros
     end
   end
@@ -66,6 +68,18 @@ defmodule Protean.Macros do
     end
   end
 
+  defp persist_attribute(opts) do
+    case Keyword.get(opts, :machine, :machine) do
+      attr when is_atom(attr) ->
+        quote do
+          Module.register_attribute(__MODULE__, unquote(attr), persist: true)
+        end
+
+      _ ->
+        :ok
+    end
+  end
+
   defp def_machine_function(env) do
     # Four cases:
     # 1. use Protean -> check for @machine or machine/0
@@ -82,7 +96,7 @@ defmodule Protean.Macros do
         quote generated: true, location: :keep do
           def unquote(machine_function_name(env))() do
             Protean.Machine.new(
-              unquote(Module.get_attribute(env.module, :machine)),
+              __MODULE__.__info__(:attributes)[:machine],
               handler: unquote(machine_handler_name(env))
             )
           end
