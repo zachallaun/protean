@@ -55,9 +55,11 @@ defmodule Protean.Action do
   def assign(%State{} = state, assigns),
     do: State.put_actions(state, [assign(assigns)])
 
-  def assign(key, value), do: %Action.Assign.Unresolved{merge: %{key => value}}
+  def assign(key, value),
+    do: %Action.Assign.Unresolved{merge: %{key => value}}
 
-  def assign(assigns), do: %Action.Assign.Unresolved{merge: Enum.into(assigns, %{})}
+  def assign(assigns),
+    do: %Action.Assign.Unresolved{merge: Enum.into(assigns, %{})}
 
   @doc "TODO"
   def send_event(event, opts \\ []),
