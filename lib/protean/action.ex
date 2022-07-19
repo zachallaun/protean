@@ -58,6 +58,9 @@ defmodule Protean.Action do
   def assign(key, value),
     do: %Action.Assign.Unresolved{merge: %{key => value}}
 
+  def assign(update_fun) when is_function(update_fun),
+    do: %Action.Assign.Unresolved{function: update_fun}
+
   def assign(assigns),
     do: %Action.Assign.Unresolved{merge: Enum.into(assigns, %{})}
 
