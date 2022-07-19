@@ -1,0 +1,195 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Introduction to Protean
+
+```elixir
+Mix.install([
+  {:protean, git: "https://github.com/zachallaun/protean.git"}
+])
+```
+
+## Run this guide in Livebook
+
+This guide was written in [Livebook](livebook.dev/) and can be running locally by importing it from GitHub:
+
+```
+https://github.com/zachallaun/protean/guides/introduction.livemd
+```
+
+## A very simple machine
+
+Let's start with a very simple machine: a counter.
+
+```elixir
+defmodule Counter do
+  use Protean,
+    machine: [
+      context: %{
+        count: 0
+      },
+      initial: :active,
+      states: [
+        active: [
+          on: [
+            INC: [
+              actions: [
+                Protean.Action.assign(fn _state, %{count: count}, _event ->
+                  %{count: count + 1}
+                end)
+              ]
+            ]
+          ]
+        ]
+      ]
+    ]
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Counter, <<70, 79, 82, 49, 0, 0, 15, ...>>, :ok}
+```
+
+This machine has a single `:active` state that it will automatically enter when the machine starts (set by `:initial`). It also has some extended state, it's `:context`. While it's `:active`, it will listen for `"INC"` events and perform a pretty simple action: updating its context by incrementing the current count.
+
+Let's start the machine as a process and poke around a bit. When we defined our counter with `use Protean`, some functions were defined to start up our machine separately (or under a supervisor).
+
+```elixir
+{:ok, counter} = Counter.start_link()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:ok, #PID<0.255.0>}
+```
+
+Under the hood, this started up a `GenServer` to encapsulate our running machine state. We can get the current state:
+
+```elixir
+state = Protean.current(counter)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Protean.State{context: %{count: 0}, event: nil, private: %{actions: []}, value: [["active", "#"]]}
+```
+
+`Protean.current/1` returns a `%Protean.State{}` that represents the current state of our machine. Notice that we can access the current context.
+
+```elixir
+state.context
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{count: 0}
+```
+
+And though we know that our counter only has a single state that it can be in, we can check anyways.
+
+```elixir
+Protean.matches?(state, :active)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+true
+```
+
+Let's send an event to our machine and see it increment that counter.
+
+```elixir
+state = Protean.send(counter, "INC")
+state.context
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{count: 1}
+```
+
+`Protean.send/2` sends an event syncronously and returns the updated state. We can also send events asyncronously:
+
+```elixir
+:ok = Protean.send_async(counter, "INC")
+:ok = Protean.send_async(counter, "INC")
+:ok = Protean.send_async(counter, "INC")
+
+Protean.current(counter).context
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{count: 4}
+```
+
+One last thing to note is that Protean machines don't mind receiving events they don't care about. Our counter doesn't know how to decrement, but we can send that event anyway and watch the counter do nothing.
+
+```elixir
+Protean.send(counter, "DEC").context
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{count: 4}
+```
+
+## Changing state
+
+Let's define a slightly more interesting machine, one that models a request that can either succeed or fail.
+
+```elixir
+defmodule Request do
+  use Protean,
+    machine: [
+      initial: :pending,
+      states: [
+        pending: [
+          on: [
+            SUCCEEDED: :success,
+            FAILED: :fail
+          ]
+        ],
+        success: [],
+        fail: []
+      ]
+    ]
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Request, <<70, 79, 82, 49, 0, 0, 13, ...>>, :ok}
+```
+
+```elixir
+{:ok, request} = Request.start_link()
+Protean.matches?(request, :pending)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+true
+```
+
+```elixir
+request
+|> Protean.send("SUCCEEDED")
+|> Protean.matches?(:success)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+true
+```
