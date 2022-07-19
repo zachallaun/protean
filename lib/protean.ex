@@ -66,6 +66,7 @@ defmodule Protean do
   """
 
   alias Protean.Interpreter
+  alias Protean.Interpreter.Server
   alias Protean.State
 
   @doc false
@@ -150,16 +151,21 @@ defmodule Protean do
   defdelegate stop(pid, reason), to: Interpreter.Server
 
   @doc "TODO"
-  @spec matches?(Interpreter.t() | State.t(), match_query :: term()) :: boolean
-  def matches?(interpreter_or_state, value)
+  @spec matches?(State.t(), descriptor :: term) :: boolean
+  @spec matches?(Interpreter.t(), descriptor :: term) :: boolean
+  @spec matches?(GenServer.server(), descriptor :: term) :: boolean
+  def matches?(item, descriptor)
 
-  def matches?(%Interpreter{} = interpreter, value) do
+  def matches?(%State{} = state, descriptor),
+    do: State.matches?(state, descriptor)
+
+  def matches?(%Interpreter{} = interpreter, descriptor) do
     interpreter
     |> Interpreter.state()
-    |> State.matches?(value)
+    |> State.matches?(descriptor)
   end
 
-  def matches?(%State{} = state, value) do
-    State.matches?(state, value)
+  def matches?(server, descriptor) do
+    Server.matches?(server, descriptor)
   end
 end
