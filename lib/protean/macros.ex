@@ -29,7 +29,10 @@ defmodule Protean.Macros do
       end
   """
 
-  require Logger
+  defmodule ConfigError do
+    @moduledoc false
+    defexception [:message]
+  end
 
   defmacro __using__(opts) do
     quote generated: true, location: :keep do
@@ -50,12 +53,10 @@ defmodule Protean.Macros do
         def_defaults(env, machine)
 
       nil ->
-        Logger.error(
-          "Protean: machine config not found. Please define `@machine` or pass machine to `use Protean, machine: [...]`"
-        )
+        raise ConfigError, message: "no machine config found"
 
       other ->
-        Logger.error("Protean: machine config must be a keyword list. Got #{inspect(other)}")
+        raise ConfigError, message: "invalid machine config: #{inspect(other)}"
     end
   end
 
