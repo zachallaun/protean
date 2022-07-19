@@ -23,7 +23,7 @@ defmodule TestMachines do
         %{machine: machine, initial: Machine.initial_state(machine)}
 
       module when is_atom(module) ->
-        machine = module.__protean_machine__()
+        machine = module.machine()
 
         %{
           machine: machine,

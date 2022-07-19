@@ -48,29 +48,69 @@ defmodule Protean.Macros do
 
   @doc false
   defmacro __before_compile__(env) do
-    case resolve_machine(env) do
-      machine when is_list(machine) ->
-        def_defaults(env, machine)
-
-      nil ->
-        raise ConfigError, message: "no machine config found"
-
-      other ->
-        raise ConfigError, message: "invalid machine config: #{inspect(other)}"
+    quote generated: true, location: :keep do
+      unquote(def_machine_function(env))
+      unquote(def_default_impls(env))
+      unquote(def_default_otp(env))
     end
   end
 
-  defp def_defaults(env, machine) do
-    quote generated: true, location: :keep do
-      def unquote(machine_function_name(env))() do
-        Protean.Machine.new(
-          unquote(Macro.escape(machine)),
-          handler: unquote(machine_handler_name(env))
-        )
-      end
+  @doc """
+  Helper macro to create a new module with the current module as the handler. Equivalent to:
 
-      unquote(def_default_impls(env))
-      unquote(def_default_otp(env))
+      Protean.Machine.new(..., handler: __MODULE__)
+  """
+  defmacro machine(config) do
+    quote location: :keep do
+      Protean.Machine.new(unquote(config), handler: __MODULE__)
+    end
+  end
+
+  defp def_machine_function(env) do
+    # Four cases:
+    # 1. use Protean -> check for @machine or machine/0
+    # 2. use Protean, machine: :foo -> check for @foo
+    # 3. use Protean, machine: [foo: 0] -> check for foo/0
+    # 4. use Protean, machine: [initial: ...] -> generate __protean_machine__()
+    machine_option = Keyword.get(protean_opts(env), :machine)
+
+    cond do
+      is_nil(machine_option) && Module.defines?(env.module, {:machine, 0}, :def) ->
+        :ok
+
+      is_nil(machine_option) && Module.has_attribute?(env.module, :machine) ->
+        quote generated: true, location: :keep do
+          def unquote(machine_function_name(env))() do
+            Protean.Machine.new(
+              unquote(Module.get_attribute(env.module, :machine)),
+              handler: unquote(machine_handler_name(env))
+            )
+          end
+        end
+
+      match?([{_name, 0}], machine_option) ->
+        [{name, 0}] = machine_option
+
+        if Module.defines?(env.module, {name, 0}, :def) do
+          :ok
+        else
+          raise ConfigError,
+            message: "Machine function definition not found: #{to_string(name)}/0"
+        end
+
+      Keyword.keyword?(machine_option) ->
+        quote generated: true, location: :keep do
+          def unquote(machine_function_name(env))() do
+            Protean.Machine.new(
+              unquote(Macro.escape(machine_option)),
+              handler: unquote(machine_handler_name(env))
+            )
+          end
+        end
+
+      true ->
+        raise ConfigError,
+          message: "No valid machine config found. Got: #{inspect(machine_option)}"
     end
   end
 
@@ -113,25 +153,26 @@ defmodule Protean.Macros do
     end
   end
 
-  defp resolve_machine(env) do
-    opts = Module.get_attribute(env.module, Protean.Options)
-
-    case Keyword.get(opts, :machine, :machine) do
-      attr when is_atom(attr) ->
-        Module.get_attribute(env.module, attr)
-
-      machine ->
-        machine
-    end
-  end
-
   defp machine_handler_name(env) do
-    env.module
-    |> Module.get_attribute(Protean.Options)
+    env
+    |> protean_opts()
     |> Keyword.get(:handler, env.module)
   end
 
-  defp machine_function_name(_env) do
-    :__protean_machine__
+  defp machine_function_name(env) do
+    case Keyword.get(protean_opts(env), :machine) do
+      [{function_name, 0}] ->
+        function_name
+
+      [{function_name, n}] ->
+        raise ConfigError,
+          message: "machine function must have arity 0, got: #{to_string(function_name)}/#{n}"
+
+      _other ->
+        :machine
+    end
   end
+
+  defp protean_opts(env),
+    do: Module.get_attribute(env.module, Protean.Options, [])
 end
