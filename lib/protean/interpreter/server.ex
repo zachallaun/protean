@@ -9,6 +9,7 @@ defmodule Protean.Interpreter.Server do
 
   alias Protean.Interpreter
   alias Protean.Machine
+  alias Protean.State
 
   @type server :: GenServer.server()
 
@@ -65,6 +66,17 @@ defmodule Protean.Interpreter.Server do
   @spec current(server) :: State.t()
   def current(pid) do
     GenServer.call(pid, :current_state)
+  end
+
+  @doc """
+  Get the current machine state and check whether it matches the given descriptor. See
+  `Protean.State.matches?/2` for descriptor usage.
+  """
+  @spec matches?(server, descriptor :: any) :: boolean
+  def matches?(pid, pattern) do
+    pid
+    |> current()
+    |> State.matches?(pattern)
   end
 
   @doc """
