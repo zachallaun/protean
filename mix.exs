@@ -58,7 +58,7 @@ defmodule Protean.MixProject do
       # source_ref: "v#{@version}",
       extras: [
         "README.md",
-        "guides/introduction.livemd"
+        "guides/introduction.livemd": [title: "Introduction"]
       ],
       groups_for_extras: [
         Guides: Path.wildcard("guides/*")
