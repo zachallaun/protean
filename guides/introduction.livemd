@@ -8,14 +8,6 @@ Mix.install([
 ])
 ```
 
-## Run this guide in Livebook
-
-This guide was written in [Livebook](livebook.dev/) and can be running locally by importing it from GitHub:
-
-```
-https://github.com/zachallaun/protean/guides/introduction.livemd
-```
-
 ## A very simple machine
 
 Let's start with a very simple machine: a counter.
