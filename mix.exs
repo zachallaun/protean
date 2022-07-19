@@ -1,24 +1,36 @@
 defmodule Protean.MixProject do
   use Mix.Project
 
+  @version "0.0.1"
+  @source_url "https://github.com/zachallaun/protean"
+
   def project do
     [
       app: :protean,
-      version: "0.0.1",
+      version: @version,
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
-      name: "Protean",
-      source_url: "https://github.com/zachallaun/protean",
-      description: description()
+      docs: docs()
     ]
   end
 
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  defp package do
+    [
+      name: "Protean",
+      description: description(),
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url
+      }
     ]
   end
 
@@ -29,6 +41,9 @@ defmodule Protean.MixProject do
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   defp description do
     """
     Protean is a currently-experimental library for managing changes in state and side-effects
@@ -36,15 +51,14 @@ defmodule Protean.MixProject do
     """
   end
 
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
-
-  defp package do
+  defp docs do
     [
-      licenses: ["MIT"],
-      links: %{
-        "GitHub" => "https://github.com/zachallaun/protean"
-      }
+      main: "readme",
+      source_url: @source_url,
+      # source_ref: "v#{@version}",
+      extras: [
+        "README.md"
+      ]
     ]
   end
 end

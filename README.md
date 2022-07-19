@@ -1,5 +1,7 @@
 Caveat emptor: Protean is currently a library for personal learning and exploration, not for doing _Serious Work_. Nothing here, including documentation, should be fully trusted!
 
+![Warning](https://img.shields.io/badge/Warning-Experimental-critical?labelColor=870800&color=d11a0f) [![Hex](https://img.shields.io/badge/protean-v0.0.1-orange)](https://hex.pm/packages/protean) [![Docs](https://img.shields.io/badge/-Docs-informational)](https://hexdocs.pm/protean/)
+
 # Protean
 
 Protean is a library for manage state change and side-effects through the use of finite state machines and statecharts. It is heavily inspired by [XState](https://xstate.js.org/docs/), a JavaScript/TypeScript project that I heavily recommend looking into, and [SCXML](https://www.w3.org/TR/scxml/), a W3C standard developed by smart people over a number of years.
@@ -51,20 +53,14 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Correct transition conflict handling
 - [ ] History states
 
-## Installation (Not currently published)
+## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `protean` to your list of dependencies in `mix.exs`:
+This package can be found on [hex.pm](https://hex.pm/packages/protean) and can be installed by adding `protean` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:protean, "~> 0.1.0"}
+    {:protean, "~> 0.0.1"}
   ]
 end
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/protean>.
-
