@@ -78,7 +78,7 @@ defmodule Protean.Interpreter do
   end
 
   @doc "Whether the interpreter has been started and can accept events."
-  @spec running?(Interpreter.t()) :: boolean
+  @spec running?(t) :: boolean
   def running?(%Interpreter{running: true}), do: true
   def running?(%Interpreter{running: false}), do: false
 
@@ -89,7 +89,7 @@ defmodule Protean.Interpreter do
 
   Calling `start/1` on an already-running interpreter is a no-op.
   """
-  @spec start(Interpreter.t()) :: Interpreter.t()
+  @spec start(t) :: t
   def start(%Interpreter{running: false} = interpreter) do
     %{interpreter | running: true}
     |> add_internal({"$protean.init", nil})
@@ -101,7 +101,7 @@ defmodule Protean.Interpreter do
   @doc """
   Stop an interpreter, preventing further event processing.
   """
-  @spec stop(Interpreter.t()) :: Interpreter.t()
+  @spec stop(t) :: t
   def stop(%Interpreter{} = interpreter),
     do: %{interpreter | running: false}
 
@@ -109,7 +109,7 @@ defmodule Protean.Interpreter do
   Send an event to a running interpreter. This will execute any transitions, actions, and side-
   effects associated with the current machine state and this event.
   """
-  @spec send_event(Interpreter.t(), Machine.sendable_event()) :: Interpreter.t()
+  @spec send_event(t, Machine.sendable_event()) :: t
   def send_event(%Interpreter{running: true} = interpreter, event) do
     event = Machine.normalize_event(event)
 
@@ -123,7 +123,7 @@ defmodule Protean.Interpreter do
   @doc """
   Sets the context of the current state.
   """
-  @spec with_context(Interpreter.t(), Machine.context()) :: Interpreter.t()
+  @spec with_context(t, State.context()) :: t
   def with_context(%Interpreter{} = interpreter, context) do
     put_in(interpreter.state.context, context)
   end
@@ -131,7 +131,7 @@ defmodule Protean.Interpreter do
   @doc """
   Return the current machine state.
   """
-  @spec state(Interpreter.t()) :: State.t()
+  @spec state(t) :: State.t()
   def state(%Interpreter{state: state}), do: state
 
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
@@ -200,17 +200,17 @@ defmodule Protean.Interpreter do
     end
   end
 
-  @spec select_automatic_transitions(Interpreter.t()) :: [Transition.t()]
+  @spec select_automatic_transitions(t) :: [Transition.t()]
   defp select_automatic_transitions(%{machine: machine, state: state}) do
     Machine.select_automatic_transitions(machine, state)
   end
 
-  @spec select_transitions(Interpreter.t(), Machine.event()) :: [Transition.t()]
+  @spec select_transitions(t, Machine.event()) :: [Transition.t()]
   defp select_transitions(%{machine: machine, state: state}, event) do
     Machine.select_transitions(machine, state, event)
   end
 
-  @spec autoforward_event(Interpreter.t(), Machine.event()) :: Interpreter.t()
+  @spec autoforward_event(t, Machine.event()) :: t
   defp autoforward_event(%Interpreter{invoked: invoked} = interpreter, event) do
     invoked
     |> Enum.filter(&autoforward?/1)
@@ -221,7 +221,7 @@ defmodule Protean.Interpreter do
   defp autoforward?(%{autoforward: true}), do: true
   defp autoforward?(_invoke), do: false
 
-  @spec autoforward_to(invoked_service, Machine.event(), Interpreter.t()) :: Interpreter.t()
+  @spec autoforward_to(invoked_service, Machine.event(), t) :: t
   defp autoforward_to(%{pid: pid}, event, interpreter) do
     # TODO: do we need to handle failures here? can add to internal queue
     # if errors occur.
@@ -229,13 +229,13 @@ defmodule Protean.Interpreter do
     interpreter
   end
 
-  @spec select_invokes(Interpreter.t()) :: [any]
+  @spec select_invokes(t) :: [any]
   defp select_invokes(_interpreter) do
     # TODO
     []
   end
 
-  @spec invoke(Interpreter.t(), [any]) :: Interpreter.t()
+  @spec invoke(t, [any]) :: t
   defp invoke(interpreter, _to_invoke) do
     # TODO
     interpreter

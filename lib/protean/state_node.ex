@@ -88,7 +88,7 @@ defmodule Protean.StateNode do
           type: :compound,
           id: id,
           initial: id,
-          states: [StateNode.t(), ...],
+          states: [t, ...],
           automatic_transitions: [Transition.t()],
           transitions: [Transition.t()],
           entry: [Action.t()],
@@ -104,7 +104,7 @@ defmodule Protean.StateNode do
           type: :parallel,
           id: id,
           initial: nil,
-          states: [StateNode.t(), ...],
+          states: [t, ...],
           automatic_transitions: [Transition.t()],
           transitions: [Transition.t()],
           entry: [Action.t()],
@@ -116,7 +116,7 @@ defmodule Protean.StateNode do
   Resolve a StateNode to its leaves (atomic or final) by either returning the
   given node or following the node's children.
   """
-  @spec resolve_to_leaves(StateNode.t()) :: [StateNode.leaf()]
+  @spec resolve_to_leaves(t) :: [leaf]
   def resolve_to_leaves(%StateNode{} = node) do
     case node.type do
       :atomic ->
@@ -140,7 +140,7 @@ defmodule Protean.StateNode do
   Given a StateNode id, return a list containing that id and all of its
   ancestors.
   """
-  @spec ancestor_ids(StateNode.id()) :: [StateNode.id()]
+  @spec ancestor_ids(id) :: [id]
   def ancestor_ids([]), do: []
   def ancestor_ids([_self | parent] = id), do: [id | ancestor_ids(parent)]
 
@@ -148,12 +148,12 @@ defmodule Protean.StateNode do
   Tests whether `descendant_id` is in fact a descendant of `ancestor_id`.
   Returns false if they are the same node.
   """
-  @spec descendant?(StateNode.id(), StateNode.id()) :: boolean
+  @spec descendant?(id, id) :: boolean
   def descendant?(descendant_id, ancestor_id) do
     descendant_id != ancestor_id && common_ancestor_id(descendant_id, ancestor_id) == ancestor_id
   end
 
-  @spec common_ancestor_id(StateNode.id(), StateNode.id()) :: StateNode.id()
+  @spec common_ancestor_id(id, id) :: id
   def common_ancestor_id(id1, id2) do
     [id1, id2]
     |> Enum.map(&Enum.reverse/1)

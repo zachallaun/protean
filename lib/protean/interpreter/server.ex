@@ -26,7 +26,7 @@ defmodule Protean.Interpreter.Server do
     * `:gen_server` (optional) - A keyword list of options to be passed to
       `GenServer.start_link/3`. For more information, see [those docs](https://hexdocs.pm/elixir/GenServer.html#start_link/3).
   """
-  @spec start_link(server_options()) :: GenServer.on_start()
+  @spec start_link(server_options) :: GenServer.on_start()
   def start_link(opts) do
     {gen_server_opts, interpreter_opts} = Keyword.pop(opts, :gen_server, [])
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
@@ -35,7 +35,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send(server(), Machine.sendable_event()) :: State.t()
+  @spec send(server, Machine.sendable_event()) :: State.t()
   def send(pid, event) do
     GenServer.call(pid, {:event, Machine.normalize_event(event)})
   end
@@ -43,7 +43,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_async(server(), Machine.sendable_event()) :: :ok
+  @spec send_async(server, Machine.sendable_event()) :: :ok
   def send_async(pid, event) do
     GenServer.cast(pid, {:event, Machine.normalize_event(event)})
     :ok
@@ -53,7 +53,7 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
   reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_after(server(), Machine.sendable_event(), non_neg_integer()) :: reference
+  @spec send_after(server, Machine.sendable_event(), non_neg_integer) :: reference
   def send_after(pid, event, time) do
     pid
     |> GenServer.whereis()
@@ -63,7 +63,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Get the current machine state.
   """
-  @spec current(server()) :: State.t()
+  @spec current(server) :: State.t()
   def current(pid) do
     GenServer.call(pid, :current_state)
   end
@@ -71,7 +71,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Stop the service, terminating the process.
   """
-  @spec stop(server(), reason :: term()) :: :ok
+  @spec stop(server, reason :: term) :: :ok
   def stop(pid, reason \\ :normal) do
     GenServer.stop(pid, reason)
     :ok

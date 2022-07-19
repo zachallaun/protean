@@ -67,12 +67,12 @@ defmodule Protean.Transition do
   @doc """
   Checks whether the transition is enabled for the given event.
   """
-  @spec enabled?(Transition.t(), Machine.event() | nil, State.t(), handler :: module) :: boolean
+  @spec enabled?(t, Machine.event() | nil, State.t(), handler :: module) :: boolean
   def enabled?(transition, event, state, handler) do
     responds_to?(transition, event) && guard_allows?(transition, state, event, handler)
   end
 
-  @spec responds_to?(Transition.t(), Machine.event() | nil) :: boolean
+  @spec responds_to?(t, Machine.event() | nil) :: boolean
   defp responds_to?(%Transition{event_descriptor: nil}, _event), do: true
 
   defp responds_to?(transition, {event_name, _}),
@@ -81,7 +81,7 @@ defmodule Protean.Transition do
   @doc """
   Gets the target state node IDs for the given transition.
   """
-  @spec targets(Transition.t()) :: StateNode.id()
+  @spec targets(t) :: StateNode.id()
   def targets(%Transition{targets: targets}), do: targets
 
   def target(%Transition{targets: [target | _]}), do: target

@@ -31,15 +31,15 @@ defmodule Protean.Machine do
   @type event_name :: String.t()
 
   @typedoc "Data payload sent along with an event."
-  @type event_data :: term()
+  @type event_data :: term
 
   @typedoc """
   The full representation of an event. `t:sendable_event()` is normalized to this form.
   """
-  @type event :: {event_name(), event_data()}
+  @type event :: {event_name, event_data}
 
   @typedoc "An event that can be sent to a machine to trigger a transition."
-  @type sendable_event :: event() | event_name()
+  @type sendable_event :: event | event_name
 
   def new(config, opts \\ []) do
     {root, context} = MachineConfig.parse!(config)
@@ -60,7 +60,7 @@ defmodule Protean.Machine do
   @doc """
   Returns the initial `Protean.State` for a given machine.
   """
-  @spec initial_state(Machine.t()) :: State.t()
+  @spec initial_state(t) :: State.t()
   def initial_state(%Machine{root: root, initial_context: context} = machine) do
     active_ids =
       root
@@ -77,7 +77,7 @@ defmodule Protean.Machine do
     |> State.assign_actions(entry_actions(machine, entry_ids))
   end
 
-  @spec take_transitions(Machine.t(), State.t(), [Transition.t()]) :: State.t()
+  @spec take_transitions(t, State.t(), [Transition.t()]) :: State.t()
   def take_transitions(machine, state, transitions)
 
   def take_transitions(_machine, state, []), do: state
@@ -127,7 +127,7 @@ defmodule Protean.Machine do
     |> State.assign_actions(List.wrap(actions) ++ new_actions)
   end
 
-  @spec will_exit?(Machine.t(), StateNode.id(), Transition.t()) :: boolean
+  @spec will_exit?(t, StateNode.id(), Transition.t()) :: boolean
   defp will_exit?(machine, id, transition) do
     transition
     |> Transition.targets()
@@ -144,7 +144,7 @@ defmodule Protean.Machine do
     Map.fetch!(idmap, ancestor_id)
   end
 
-  @spec select_automatic_transitions(Machine.t(), State.t()) :: [Transition.t()]
+  @spec select_automatic_transitions(t, State.t()) :: [Transition.t()]
   def select_automatic_transitions(machine, state) do
     nodes = active_nodes(machine, state)
 
@@ -154,7 +154,7 @@ defmodule Protean.Machine do
     end
   end
 
-  @spec select_transitions(Machine.t(), State.t(), event()) :: [Transition.t()]
+  @spec select_transitions(t, State.t(), event) :: [Transition.t()]
   def select_transitions(machine, state, event) do
     # TODO: Handle conflicting transitions
     # TODO: order nodes correctly (specificity + document order)
@@ -170,7 +170,7 @@ defmodule Protean.Machine do
   Given a machine, a machine state, and an event, transition to the next state
   if the machine defines a transition for the given state and event.
   """
-  @spec transition(Machine.t(), State.t(), sendable_event()) :: State.t()
+  @spec transition(t, State.t(), sendable_event) :: State.t()
   def transition(machine, state, event) do
     with event <- normalize_event(event),
          transitions <- select_transitions(machine, state, event) do
@@ -182,7 +182,7 @@ defmodule Protean.Machine do
   Normalizes any valid `t:sendable_event()` to a `t:event()`. Event data will default to `nil` if
   not provided with the event.
   """
-  @spec normalize_event(sendable_event()) :: event()
+  @spec normalize_event(sendable_event) :: event
   def normalize_event({name, data}), do: {name, data}
   def normalize_event(name), do: {name, nil}
 
@@ -200,55 +200,28 @@ defmodule Protean.Machine do
     end)
   end
 
-  @spec active_nodes(Machine.t(), State.t()) :: [StateNode.t()]
+  @spec active_nodes(t, State.t()) :: [StateNode.t()]
   defp active_nodes(machine, %State{value: value}) do
     value
     |> Enum.flat_map(&ancestors(machine, &1))
     |> Enum.uniq()
   end
 
-  @spec ancestors(Machine.t(), StateNode.id()) :: [StateNode.t()]
+  @spec ancestors(t, StateNode.id()) :: [StateNode.t()]
   defp ancestors(%Machine{idmap: idmap}, id) do
     id
     |> StateNode.ancestor_ids()
     |> Enum.map(&idmap[&1])
   end
 
-  # @spec entry_order(Machine.t(), [StateNode.id()]) :: [StateNode.t()]
-  # defp entry_order(machine, ids) do
-  #   ids
-  #   |> Enum.flat_map(&ordered_nodes(machine, &1, :desc))
-  #   |> Enum.uniq()
-  # end
-
-  # @spec exit_order(Machine.t(), [StateNode.id()]) :: [StateNode.t()]
-  # defp exit_order(machine, ids) do
-  #   ids
-  #   |> Enum.flat_map(&ordered_nodes(machine, &1, :asc))
-  #   |> Enum.uniq()
-  # end
-
-  # @spec ordered_nodes(Machine.t(), StateNode.id(), :asc | :desc) :: [StateNode.t()]
-  # defp ordered_nodes(machine, id, order)
-
-  # defp ordered_nodes(machine, id, :desc) do
-  #   ordered_nodes(machine, id, :asc) |> Enum.reverse()
-  # end
-
-  # defp ordered_nodes(machine, [_ | parent] = id, :asc) do
-  #   [machine.idmap[id] | ordered_nodes(machine, parent, :asc)]
-  # end
-
-  # defp ordered_nodes(_machine, [], :asc), do: []
-
-  @spec entry_actions(Machine.t(), [StateNode.id()]) :: [Action.t()]
+  @spec entry_actions(t, [StateNode.id()]) :: [Action.t()]
   defp entry_actions(machine, ids) do
     machine
     |> entry_order(ids)
     |> Enum.flat_map(& &1.entry)
   end
 
-  @spec exit_actions(Machine.t(), [StateNode.id()]) :: [Action.t()]
+  @spec exit_actions(t, [StateNode.id()]) :: [Action.t()]
   defp exit_actions(machine, ids) do
     machine
     |> exit_order(ids)
