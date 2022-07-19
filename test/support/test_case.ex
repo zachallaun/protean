@@ -1,4 +1,4 @@
-defmodule ProteanTest.Case do
+defmodule Protean.TestCase do
   @moduledoc """
   Utilities for testing modules defined with `use Protean`.
   """

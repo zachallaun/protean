@@ -1,5 +1,5 @@
 defmodule Protean.Interpreter.ServerTest do
-  use ProteanTest.Case
+  use Protean.TestCase
 
   alias Protean.Interpreter.Server
   alias Protean.State
