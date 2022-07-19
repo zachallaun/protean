@@ -13,7 +13,8 @@ defmodule Protean.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
-      docs: docs()
+      docs: docs(),
+      name: "Protean"
     ]
   end
 
@@ -25,7 +26,6 @@ defmodule Protean.MixProject do
 
   defp package do
     [
-      name: "Protean",
       description: description(),
       licenses: ["MIT"],
       links: %{
