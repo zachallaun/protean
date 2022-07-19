@@ -22,12 +22,14 @@ defmodule TestMachines do
       %Machine{} = machine ->
         %{machine: machine, initial: Machine.initial_state(machine)}
 
-      {machine, handler} ->
+      module when is_atom(module) ->
+        machine = module.__protean_machine__()
+
         %{
           machine: machine,
-          handler: handler,
+          handler: module,
           initial: Machine.initial_state(machine),
-          interpreter: Interpreter.new(machine, handler)
+          interpreter: Interpreter.new(machine, module)
         }
     end
   end
@@ -221,7 +223,7 @@ defmodule TestMachines do
   end
 
   def silly_direction_machine do
-    {SillyDirectionMachine.protean_machine(), SillyDirectionMachine}
+    SillyDirectionMachine
   end
 
   defmodule PureMachine1 do
@@ -268,7 +270,7 @@ defmodule TestMachines do
   end
 
   def pure_machine_1 do
-    {PureMachine1.protean_machine(), PureMachine1}
+    PureMachine1
   end
 
   defmodule HigherOrderGuardMachine1 do
@@ -306,7 +308,7 @@ defmodule TestMachines do
   end
 
   def higher_order_guard_machine_1 do
-    {HigherOrderGuardMachine1.protean_machine(), HigherOrderGuardMachine1}
+    HigherOrderGuardMachine1
   end
 
   defmodule HigherOrderGuardMachine2 do
@@ -344,7 +346,7 @@ defmodule TestMachines do
   end
 
   def higher_order_guard_machine_2 do
-    {HigherOrderGuardMachine2.protean_machine(), HigherOrderGuardMachine2}
+    HigherOrderGuardMachine2
   end
 
   defmodule AutoTransitionMachine1 do
@@ -361,7 +363,7 @@ defmodule TestMachines do
   end
 
   def auto_transition_machine_1 do
-    {AutoTransitionMachine1.protean_machine(), AutoTransitionMachine1}
+    AutoTransitionMachine1
   end
 
   defmodule AutoTransitionMachine2 do
@@ -400,7 +402,7 @@ defmodule TestMachines do
   end
 
   def auto_transition_machine_2 do
-    {AutoTransitionMachine2.protean_machine(), AutoTransitionMachine2}
+    AutoTransitionMachine2
   end
 
   def delayed_transition_machine_implicit do

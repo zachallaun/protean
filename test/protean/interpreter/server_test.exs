@@ -5,18 +5,19 @@ defmodule Protean.Interpreter.ServerTest do
   alias Protean.State
 
   defmodule TestMachine do
-    use Protean,
-      machine: [
-        initial: :a,
-        states: [
-          a: [
-            on: [
-              goto_b: :b
-            ]
-          ],
-          b: []
-        ]
+    use Protean
+
+    @machine [
+      initial: :a,
+      states: [
+        a: [
+          on: [
+            goto_b: :b
+          ]
+        ],
+        b: []
       ]
+    ]
   end
 
   setup context do
