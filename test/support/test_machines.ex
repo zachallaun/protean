@@ -210,13 +210,13 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("direction_straight?", %{direction: :straight}, _, _), do: true
+    def condition("direction_straight?", _state, %{direction: :straight}, _event), do: true
     def condition("direction_straight?", _, _, _), do: false
 
-    def condition("direction_left?", %{direction: :left}, _, _), do: true
+    def condition("direction_left?", _state, %{direction: :left}, _event), do: true
     def condition("direction_left?", _, _, _), do: false
 
-    def condition("direction_right?", %{direction: :right}, _, _), do: true
+    def condition("direction_right?", _state, %{direction: :right}, _event), do: true
     def condition("direction_right?", _, _, _), do: false
   end
 
@@ -302,7 +302,7 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("asked_nicely", _ctx, {_, :please}, _), do: true
+    def condition("asked_nicely", _state, _context, {_, :please}), do: true
   end
 
   def higher_order_guard_machine_1 do
@@ -340,7 +340,7 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("asked_nicely", _ctx, {_, :please}, _), do: true
+    def condition("asked_nicely", _state, _context, {_, :please}), do: true
   end
 
   def higher_order_guard_machine_2 do

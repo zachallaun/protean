@@ -11,45 +11,45 @@ defmodule Protean.Transition.Guard do
   """
   @callback condition(
               guard_name :: String.t(),
-              context :: Machine.context(),
-              event :: Machine.event(),
-              metadata :: %{any => any}
+              state :: State.t(),
+              context :: State.context(),
+              event :: Machine.event()
             ) :: boolean
 
   defprotocol Guards do
-    @spec allows?(t, Machine.event(), State.t(), module) :: boolean
-    def allows?(guard, event, state, handler)
+    @spec allows?(t, State.t(), Machine.event(), module) :: boolean
+    def allows?(guard, state, event, handler)
   end
 
   defimpl Guards, for: BitString do
-    def allows?(name, event, state, handler) do
-      handler.condition(name, state.context, event, %{state: state})
+    def allows?(name, state, event, handler) do
+      handler.condition(name, state, state.context, event)
     end
   end
 
   defimpl Guards, for: Function do
-    def allows?(guard_fun, event, state, _handler) do
-      guard_fun.(state.context, event, %{state: state})
+    def allows?(guard_fun, state, event, _handler) do
+      guard_fun.(state, state.context, event)
     end
   end
 
   defimpl Guards, for: Tuple do
-    def allows?({:and, guards}, event, state, handler) when is_list(guards) do
-      Enum.all?(guards, &Guards.allows?(&1, event, state, handler))
+    def allows?({:and, guards}, state, event, handler) when is_list(guards) do
+      Enum.all?(guards, &Guards.allows?(&1, state, event, handler))
     end
 
-    def allows?({:or, guards}, event, state, handler) when is_list(guards) do
-      Enum.any?(guards, &Guards.allows?(&1, event, state, handler))
+    def allows?({:or, guards}, state, event, handler) when is_list(guards) do
+      Enum.any?(guards, &Guards.allows?(&1, state, event, handler))
     end
 
-    def allows?({:not, guard}, event, state, handler) do
-      !Guards.allows?(guard, event, state, handler)
+    def allows?({:not, guard}, state, event, handler) do
+      !Guards.allows?(guard, state, event, handler)
     end
 
-    def allows?({:in, match_query}, _event, state, _handler) do
+    def allows?({:in, match_query}, state, _event, _handler) do
       State.matches?(state, match_query)
     end
   end
 
-  defdelegate allows?(guard, event, state, handler), to: Guards
+  defdelegate allows?(guard, state, event, handler), to: Guards
 end

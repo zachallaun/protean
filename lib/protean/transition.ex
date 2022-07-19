@@ -69,7 +69,7 @@ defmodule Protean.Transition do
   """
   @spec enabled?(Transition.t(), Machine.event() | nil, State.t(), handler :: module) :: boolean
   def enabled?(transition, event, state, handler) do
-    responds_to?(transition, event) && guard_allows?(transition, event, state, handler)
+    responds_to?(transition, event) && guard_allows?(transition, state, event, handler)
   end
 
   @spec responds_to?(Transition.t(), Machine.event() | nil) :: boolean
@@ -98,8 +98,8 @@ defmodule Protean.Transition do
 
   defp guard_allows?(%Transition{guard: nil}, _, _, _), do: true
 
-  defp guard_allows?(%Transition{guard: guard}, event, state, handler) do
-    Transition.Guard.allows?(guard, event, state, handler)
+  defp guard_allows?(%Transition{guard: guard}, state, event, handler) do
+    Transition.Guard.allows?(guard, state, event, handler)
   end
 
   defp any_components_match?(descriptor, name_parts),
