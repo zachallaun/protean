@@ -36,14 +36,14 @@ defmodule Protean.Action do
 
   @doc "TODO"
   def pure(action_name) when is_binary(action_name),
-    do: %Action.Pure{action_name: action_name}
+    do: %Action.Pure.Unresolved{action_name: action_name}
 
   def pure(%State{} = state, action_name),
     do: State.put_actions(state, [pure(action_name)])
 
   @doc "TODO"
   def effect(action_name) when is_binary(action_name),
-    do: %Action.Effect{action_name: action_name}
+    do: %Action.Effect.Unresolved{action_name: action_name}
 
   def effect(%State{} = state, action_name),
     do: State.put_actions(state, [effect(action_name)])
@@ -55,20 +55,20 @@ defmodule Protean.Action do
   def assign(%State{} = state, assigns),
     do: State.put_actions(state, [assign(assigns)])
 
-  def assign(key, value), do: %Action.Assign{merge: %{key => value}}
+  def assign(key, value), do: %Action.Assign.Unresolved{merge: %{key => value}}
 
-  def assign(assigns), do: %Action.Assign{merge: Enum.into(assigns, %{})}
+  def assign(assigns), do: %Action.Assign.Unresolved{merge: Enum.into(assigns, %{})}
 
   @doc "TODO"
   def send_event(event, opts \\ []),
-    do: %Action.SendEvent{event: event, to: opts[:to], delay: opts[:delay]}
+    do: %Action.SendEvent.Unresolved{event: event, to: opts[:to], delay: opts[:delay]}
 
   def send_event(%State{} = state, event, opts),
     do: State.put_actions(state, [send_event(event, opts)])
 
   @doc "TODO"
   def cancel_event(id),
-    do: %Action.CancelEvent{id: id}
+    do: %Action.CancelEvent.Unresolved{id: id}
 
   def cancel_event(%State{} = state, id),
     do: State.put_actions(state, [cancel_event(id)])

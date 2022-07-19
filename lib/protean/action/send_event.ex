@@ -4,38 +4,50 @@ defmodule Protean.Action.SendEvent do
   alias __MODULE__
   alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
-  alias Protean.Interpreter
-  alias Protean.Machine
+  alias Protean.Interpreter.Server
 
-  defstruct [:event, :to, :delay]
+  defmodule Resolved.Immediate do
+    @moduledoc false
 
-  @type t :: %SendEvent{
-          event: Machine.sendable_event(),
-          to: Process.dest() | nil,
-          delay: non_neg_integer | nil
-        }
+    defstruct [:event, :to]
 
-  defimpl Resolvable, for: SendEvent do
-    def resolve(send_event, _state, _handler), do: send_event
+    defimpl Executable, for: __MODULE__ do
+      def exec(%{event: event, to: to}, interpreter) do
+        Server.send_async(to, event)
+        interpreter
+      end
+    end
   end
 
-  defimpl Executable, for: SendEvent do
-    def exec(action, interpreter) do
-      action
-      |> recipient()
-      |> send_event_to(action)
+  defmodule Resolved.Delay do
+    @moduledoc false
 
-      interpreter
+    defstruct [:event, :to, :delay]
+
+    defimpl Executable, for: __MODULE__ do
+      def exec(%{event: event, to: to, delay: delay}, interpreter) do
+        Server.send_after(to, event, delay)
+        interpreter
+      end
     end
+  end
 
-    defp recipient(%{to: nil}), do: self()
-    defp recipient(%{to: :self}), do: self()
-    defp recipient(%{to: to}), do: to
+  defmodule Unresolved do
+    @moduledoc false
 
-    defp send_event_to(to, %{event: event, delay: delay}) when is_integer(delay),
-      do: Interpreter.Server.send_after(to, event, delay)
+    defstruct [:event, :to, :delay]
 
-    defp send_event_to(to, %{event: event}),
-      do: Interpreter.Server.send_async(to, event)
+    defimpl Resolvable, for: __MODULE__ do
+      def resolve(%{to: to, event: event, delay: delay}, _state, _handler)
+          when is_integer(delay),
+          do: %SendEvent.Resolved.Delay{event: event, delay: delay, to: recipient(to)}
+
+      def resolve(%{to: to, event: event}, _state, _handler),
+        do: %SendEvent.Resolved.Immediate{event: event, to: recipient(to)}
+
+      defp recipient(nil), do: self()
+      defp recipient(:self), do: self()
+      defp recipient(to), do: to
+    end
   end
 end
