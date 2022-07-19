@@ -12,9 +12,9 @@ defmodule Protean.Interpreter.Server do
 
   @type server :: GenServer.server()
 
-  @type server_options :: [Interpreter.option() | gen_server_options]
+  @type server_options :: [Interpreter.option() | GenServer.option()]
 
-  @type gen_server_options :: {:gen_server, GenServer.options()}
+  @gen_server_options [:name, :timeout, :debug, :spawn_opt, :hibernate_after]
 
   # Client API
 
@@ -23,12 +23,11 @@ defmodule Protean.Interpreter.Server do
 
     * `:machine` (required) - The `Protean.Machine` defining the behavior of the state machine.
     * `:handler` (required) - The module defining action handlers.
-    * `:gen_server` (optional) - A keyword list of options to be passed to
-      `GenServer.start_link/3`. For more information, see [those docs](https://hexdocs.pm/elixir/GenServer.html#start_link/3).
+    * GenServer options - All other options will be passed to `GenServer.start_link/3`.
   """
   @spec start_link(server_options) :: GenServer.on_start()
   def start_link(opts) do
-    {gen_server_opts, interpreter_opts} = Keyword.pop(opts, :gen_server, [])
+    {gen_server_opts, interpreter_opts} = Keyword.split(opts, @gen_server_options)
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
   end
 
@@ -83,11 +82,8 @@ defmodule Protean.Interpreter.Server do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    machine = Keyword.fetch!(opts, :machine)
-    handler = Keyword.fetch!(opts, :handler)
-
     interpreter =
-      Interpreter.new(machine, handler)
+      Interpreter.new(opts)
       |> Interpreter.start()
 
     {:ok, interpreter}

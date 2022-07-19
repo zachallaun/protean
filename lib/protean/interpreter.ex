@@ -50,25 +50,15 @@ defmodule Protean.Interpreter do
   @doc false
   def get_and_update(interpreter, key, fun), do: Map.get_and_update(interpreter, key, fun)
 
-  # SCXML main event loop:
-  #
-  # 0. if running, continue, otherwise exit interpreter
-  # 1. handle automatic transitions
-  #   - if any exit, microstep and go to 1
-  # 2. handle internal queue
-  #   - if event, select transitions, microstep, and go to 1
-  # 3. handle invokes
-  #   - if states to invoke, invoke them
-  #   - if invoking added event to internal queue, go to 1
-  # 4. wait for external event
-  #   - if termination event received, exit interpreter
-  #   - if regular event received, select transitions, microstep, and go to 0
-
   @doc """
   Create a new `Interpreter` from a `Machine` and handler module. The returned interpreter will
   still need to be started; see `start/1`.
   """
+  @spec new(options) :: Interpreter.t()
   @spec new(Machine.t(), module) :: Interpreter.t()
+  def new(opts),
+    do: new(Keyword.fetch!(opts, :machine), Keyword.fetch!(opts, :handler))
+
   def new(machine, handler) do
     %Interpreter{
       machine: machine,

@@ -88,20 +88,29 @@ defmodule Protean do
         {id, opts} = Keyword.pop(opts, :id, __MODULE__)
 
         defaults = [
-          handler: __MODULE__,
-          machine: protean_machine(),
           gen_server: [name: __MODULE__]
         ]
 
         spec = %{
           id: id,
-          start: {Protean.Interpreter.Server, :start_link, [Keyword.merge(defaults, opts)]}
+          start: {__MODULE__, :start_link, [Keyword.merge(defaults, opts)]}
         }
 
         Supervisor.child_spec(spec, [])
       end
 
       defoverridable child_spec: 1
+
+      def start_link(opts \\ []) do
+        defaults = [
+          handler: __MODULE__,
+          machine: protean_machine()
+        ]
+
+        Protean.Interpreter.Server.start_link(Keyword.merge(defaults, opts))
+      end
+
+      defoverridable start_link: 1
 
       def protean_machine do
         Protean.Machine.new(unquote(Macro.escape(config)), handler: __MODULE__)
