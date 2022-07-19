@@ -22,7 +22,7 @@ Goals fall into two rough categories:
 
 If the result of this project is generally useful, that's great! Usefulness, however, is not a part of my criteria for success.
 
-## TODO
+## Todo
 
 - [ ] Invoked services
   - [ ] Machines/Interpreters
