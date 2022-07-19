@@ -328,7 +328,7 @@ Protean.current(SimpleMachine)
 ```
 
 ```elixir
-Protean.send(SimpleMachine, "goto_bar")
+Protean.send(SimpleMachine, "goto_baz")
 ```
 
 ```elixir

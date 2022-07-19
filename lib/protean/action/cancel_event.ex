@@ -2,7 +2,8 @@ defmodule Protean.Action.CancelEvent do
   @moduledoc "TODO"
 
   alias __MODULE__
-  alias Protean.Action
+  alias Protean.Action.Protocol.Executable
+  alias Protean.Action.Protocol.Resolvable
 
   defstruct [:id]
 
@@ -10,12 +11,13 @@ defmodule Protean.Action.CancelEvent do
           id: term()
         }
 
-  defimpl Action.Protocol.Resolvable, for: CancelEvent do
-    def resolve(cancel_event, _, _, _), do: cancel_event
+  defimpl Resolvable, for: CancelEvent do
+    def resolve(cancel_event, _state, _handler), do: cancel_event
   end
 
-  defimpl Action.Protocol.Executable, for: CancelEvent do
-    def exec(%CancelEvent{}, _context, interpreter) do
+  defimpl Executable, for: CancelEvent do
+    def exec(%CancelEvent{}, interpreter) do
+      # TODO:
       interpreter
     end
   end

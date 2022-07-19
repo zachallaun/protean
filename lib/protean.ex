@@ -115,10 +115,10 @@ defmodule Protean do
   defmacro __before_compile__(_env) do
     quote do
       @impl Protean.Action.Pure
-      def pure(_, _, _, _), do: nil
+      def pure(_, _, _), do: nil
 
       @impl Protean.Action.Effect
-      def effect(_, _, _, _), do: nil
+      def effect(_, _, _), do: nil
 
       @impl Protean.Transition.Guard
       def condition(_, _, _, _), do: false

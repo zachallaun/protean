@@ -7,7 +7,6 @@ defmodule Protean.Interpreter do
 
   alias __MODULE__
   alias Protean.Action
-  alias Protean.Action.Protocol.Executable
   alias Protean.Machine
   alias Protean.State
 
@@ -244,42 +243,37 @@ defmodule Protean.Interpreter do
 
   # A microstep fully processes a set of transitions, updating the state configuration and
   # executing any resulting actions.
-  defp microstep(transitions, interpreter) do
-    %Interpreter{
-      state: state,
-      machine: machine,
-      handler: handler
-    } = interpreter
-
-    %State{
-      value: value,
-      event: event,
-      context: context
-    } = state = Machine.take_transitions(machine, state, transitions)
-
-    actions = State.actions(state)
-
-    meta = %{
-      state: %{value: value},
-      event: event
-    }
-
-    bound_actions = Action.resolve_actions(actions, context, handler, meta)
+  defp microstep(transitions, %Interpreter{state: state, machine: machine} = interpreter) do
+    {actions, state} =
+      machine
+      |> Machine.take_transitions(state, transitions)
+      |> State.pop_actions()
 
     interpreter
-    |> put_in([:state], state)
-    |> exec_all(bound_actions)
-    |> update_in([:state], &State.assign_actions/1)
+    |> with_state(state)
+    |> exec_all(actions)
   end
 
-  defp exec_all(interpreter, bound_actions) do
-    Enum.reduce(bound_actions, interpreter, &exec_bound_action/2)
+  # Recursively resolve and execute all actions in order, ensuring that actions are resolved
+  # and executed with the proper state.
+  defp exec_all(interpreter, unresolved, resolved \\ [])
+
+  defp exec_all(interpreter, [], []), do: interpreter
+
+  defp exec_all(interpreter, unresolved, [_ | _] = resolved) do
+    resolved
+    |> Enum.reduce(interpreter, &Action.exec/2)
+    |> exec_all(unresolved, [])
   end
 
-  defp exec_bound_action({action, context}, interpreter),
-    do: Executable.exec(action, context, interpreter)
-
-  defp add_internal(interpreter, event) do
-    update_in(interpreter.internal_queue, &:queue.in(event, &1))
+  defp exec_all(interpreter, [action | rest], []) do
+    {resolved, unresolved} = Action.resolve(action, interpreter.state, interpreter.handler)
+    exec_all(interpreter, unresolved ++ rest, resolved)
   end
+
+  defp add_internal(interpreter, event),
+    do: update_in(interpreter.internal_queue, &:queue.in(event, &1))
+
+  defp with_state(interpreter, state),
+    do: put_in(interpreter.state, state)
 end

@@ -27,14 +27,16 @@ defmodule Protean.State do
   @type t :: %State{
           value: value,
           event: Machine.event() | nil,
-          context: Machine.context(),
+          context: context,
           private: protean_state
         }
 
   @type value :: [StateNode.id(), ...]
 
+  @type context :: %{any => any}
+
   @opaque protean_state :: %{
-            actions: [Action.t()]
+            actions: [Action.unresolved()]
           }
 
   @doc false
@@ -103,16 +105,21 @@ defmodule Protean.State do
     do: assign(state, Enum.into(enum, %{}))
 
   @doc false
-  @spec actions(t) :: [Action.t()]
-  def actions(%State{private: %{actions: actions}}), do: actions
+  def actions(state), do: state.private.actions
 
   @doc false
-  @spec assign_actions(t, [Action.t()]) :: t
-  @spec assign_actions(t, nil) :: t
-  def assign_actions(state, actions \\ [])
-
-  def assign_actions(state, nil), do: assign_actions(state, [])
-
-  def assign_actions(%State{} = state, actions) when is_list(actions),
+  def assign_actions(state, actions \\ []),
     do: put_in(state.private.actions, actions)
+
+  @doc false
+  def update_actions(state, fun),
+    do: update_in(state.private.actions, fun)
+
+  @doc false
+  def put_actions(state, actions),
+    do: update_actions(state, &(&1 ++ actions))
+
+  @doc false
+  def pop_actions(state),
+    do: {actions(state), assign_actions(state)}
 end

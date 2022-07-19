@@ -24,7 +24,7 @@ defmodule Protean.Machine do
           root: StateNode.t(),
           handler: module,
           idmap: %{StateNode.id() => StateNode.t()},
-          initial_context: context
+          initial_context: State.context()
         }
 
   @typedoc "An event name used in a machine configuration and when sending events to a machine."
@@ -40,9 +40,6 @@ defmodule Protean.Machine do
 
   @typedoc "An event that can be sent to a machine to trigger a transition."
   @type sendable_event :: event() | event_name() | {event_name(), event_data()}
-
-  @typedoc "The extended state defined for a machine."
-  @type context :: %{any => any}
 
   def new(config, opts \\ []) do
     {root, context} = MachineConfig.parse!(config)

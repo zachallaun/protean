@@ -7,94 +7,94 @@ defmodule Protean.Action do
   TODO explain pure/4 and effect/4 callbacks
 
   ### Resolution and Execution
-  TODO explain protocols
+
+  Under the hood, Protean uses two protocols to manage actions:
+  `Protean.Action.Protocol.Resolvable` and `Protean.Action.Protocol.Executable`. Resolution is a
+  preparation step that allows actions to use runtime information to determine what side-effects
+  will take place. Execution can be thought of as a "commit" step, executing the complete list of
+  actions in order.
+
+  Resolution acts on the machine state and is a functional transformation of one machine state
+  to the next (and some actions). Execution acts on the interpreter state, managing things like
+  stateful processes.
   """
 
   alias __MODULE__
+  alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
   alias Protean.Interpreter
-  alias Protean.Machine
-
-  @typedoc """
-  A resolved action is anything that implements the `Executable` protocol.
-  """
-  @type resolved :: any
-
-  @typedoc """
-  A resolved action and the machine context that it should be executed with.
-  """
-  @type bound_resolved :: {resolved, Machine.context()}
-
-  @typedoc """
-  An unresolved action is anything that implements the `Resolvable` protocol,
-  which is used by an interpreter to resolve to `t:resolved()`.
-  """
-  @type unresolved :: any
+  alias Protean.State
 
   @typedoc "The string name of an action used to pattern match in a handler."
   @type name :: String.t()
 
-  @doc "TODO"
-  def pure(action_name) when is_binary(action_name) do
-    %Action.Pure{action_name: action_name}
-  end
+  @typedoc "Must implement the `Protean.Action.Protocol.Executable` protocol."
+  @type resolved :: any
+
+  @typedoc "Must implement the `Protean.Action.Protocol.Resolvable` protocol."
+  @type unresolved :: any
 
   @doc "TODO"
-  def effect(action_name) when is_binary(action_name) do
-    %Action.Effect{action_name: action_name}
-  end
+  def pure(action_name) when is_binary(action_name),
+    do: %Action.Pure{action_name: action_name}
+
+  def pure(%State{} = state, action_name),
+    do: State.put_actions(state, [pure(action_name)])
 
   @doc "TODO"
-  def assign(assigns) when is_map(assigns) do
-    %Action.Assign{merge: assigns}
-  end
+  def effect(action_name) when is_binary(action_name),
+    do: %Action.Effect{action_name: action_name}
 
-  def assign(assigns) when is_list(assigns) do
-    assigns
-    |> Enum.into(%{})
-    |> assign()
-  end
+  def effect(%State{} = state, action_name),
+    do: State.put_actions(state, [effect(action_name)])
 
   @doc "TODO"
-  def send_event(event, opts \\ []) do
-    %Action.SendEvent{event: event, to: opts[:to], delay: opts[:delay]}
-  end
+  def assign(%State{} = state, key, value),
+    do: State.put_actions(state, [assign(key, value)])
+
+  def assign(%State{} = state, assigns),
+    do: State.put_actions(state, [assign(assigns)])
+
+  def assign(key, value), do: %Action.Assign{merge: %{key => value}}
+
+  def assign(assigns), do: %Action.Assign{merge: Enum.into(assigns, %{})}
 
   @doc "TODO"
-  def cancel_event(id) do
-    %Action.CancelEvent{id: id}
-  end
+  def send_event(event, opts \\ []),
+    do: %Action.SendEvent{event: event, to: opts[:to], delay: opts[:delay]}
 
-  @doc """
-  Resolves actions to `t:bound_resolved`, which are `{resolved_action, context}`
-  pairs that can be executed later by an interpreter.
-  """
-  @spec resolve_actions([unresolved], Machine.context(), module, Interpreter.metadata()) ::
-          [bound_resolved]
-  def resolve_actions(actions, context, handler, meta) do
-    {context, List.wrap(actions)}
-    |> Stream.unfold(&resolve_action(&1, handler, meta))
-    |> Enum.filter(&elem(&1, 0))
-  end
+  def send_event(%State{} = state, event, opts),
+    do: State.put_actions(state, [send_event(event, opts)])
 
-  def resolve_action({context, [action | rest]}, handler, meta) do
-    case Resolvable.resolve(action, context, handler, meta) do
-      {resolved, context, unresolved} ->
-        {{resolved, context}, {context, List.wrap(unresolved) ++ rest}}
+  @doc "TODO"
+  def cancel_event(id),
+    do: %Action.CancelEvent{id: id}
 
-      {resolved, context} ->
-        {{resolved, context}, {context, rest}}
+  def cancel_event(%State{} = state, id),
+    do: State.put_actions(state, [cancel_event(id)])
 
-      resolved ->
-        {{resolved, context}, {context, rest}}
+  @doc false
+  @spec resolve(unresolved, State.t(), module) :: {[resolved], [unresolved]}
+  def resolve(action, state, handler) do
+    case Resolvable.resolve(action, state, handler) do
+      nil -> {[], []}
+      {resolved, unresolved} -> {List.wrap(resolved), List.wrap(unresolved)}
+      resolved -> {List.wrap(resolved), []}
     end
   end
 
-  def resolve_action({_context, []}, _handler, _meta), do: nil
+  @doc false
+  @spec exec(resolved, Interpreter.t()) :: Interpreter.t()
+  def exec(action, interpreter) do
+    case Executable.exec(action, interpreter) do
+      nil -> interpreter
+      interpreter -> interpreter
+    end
+  end
 
   defimpl Resolvable, for: BitString do
-    def resolve(action_name, context, _handler, _meta) do
-      {nil, context, [Action.pure(action_name), Action.effect(action_name)]}
+    def resolve(action_name, _state, _handler) do
+      {nil, [Action.pure(action_name), Action.effect(action_name)]}
     end
   end
 end

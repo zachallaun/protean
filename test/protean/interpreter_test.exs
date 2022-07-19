@@ -2,6 +2,7 @@ defmodule Protean.InterpreterTest do
   use ExUnit.Case
 
   alias Protean.Interpreter
+  alias Protean.State
 
   setup context do
     TestMachines.with_test_machine(context)
@@ -17,10 +18,10 @@ defmodule Protean.InterpreterTest do
     end
 
     test "executes initial entry actions on start", %{interpreter: interpreter} do
-      assert Enum.count(interpreter.state.private.actions) == 1
+      assert Enum.count(State.actions(interpreter.state)) == 1
 
       with interpreter <- Interpreter.start(interpreter) do
-        assert Enum.empty?(interpreter.state.private.actions)
+        assert Enum.empty?(State.actions(interpreter.state))
         assert interpreter.state.context[:acc] == ["entering_a"]
       end
     end

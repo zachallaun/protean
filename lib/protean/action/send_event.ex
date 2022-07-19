@@ -2,7 +2,8 @@ defmodule Protean.Action.SendEvent do
   @moduledoc "TODO"
 
   alias __MODULE__
-  alias Protean.Action
+  alias Protean.Action.Protocol.Executable
+  alias Protean.Action.Protocol.Resolvable
   alias Protean.Interpreter
   alias Protean.Machine
 
@@ -14,24 +15,27 @@ defmodule Protean.Action.SendEvent do
           delay: non_neg_integer | nil
         }
 
-  defimpl Action.Protocol.Resolvable, for: SendEvent do
-    def resolve(send_event, _, _, _), do: send_event
+  defimpl Resolvable, for: SendEvent do
+    def resolve(send_event, _state, _handler), do: send_event
   end
 
-  defimpl Action.Protocol.Executable, for: SendEvent do
-    def exec(%SendEvent{to: nil} = action, context, interpreter) do
-      exec(%{action | to: self()}, context, interpreter)
-    end
+  defimpl Executable, for: SendEvent do
+    def exec(action, interpreter) do
+      action
+      |> recipient()
+      |> send_event_to(action)
 
-    def exec(%SendEvent{event: event, to: to, delay: delay}, _context, interpreter)
-        when is_integer(delay) do
-      Interpreter.Server.send_after(to, event, delay)
       interpreter
     end
 
-    def exec(%SendEvent{event: event, to: to}, _context, interpreter) do
-      Interpreter.Server.send_async(to, event)
-      interpreter
-    end
+    defp recipient(%{to: nil}), do: self()
+    defp recipient(%{to: :self}), do: self()
+    defp recipient(%{to: to}), do: to
+
+    defp send_event_to(to, %{event: event, delay: delay}) when is_integer(delay),
+      do: Interpreter.Server.send_after(to, event, delay)
+
+    defp send_event_to(to, %{event: event}),
+      do: Interpreter.Server.send_async(to, event)
   end
 end

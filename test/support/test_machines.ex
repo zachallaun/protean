@@ -258,12 +258,12 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def pure("entering_a", context, _event, _meta) do
-      %{context | acc: ["entering_a" | context.acc]}
+    def pure("entering_a", state, %{acc: acc}) do
+      Action.assign(state, :acc, ["entering_a" | acc])
     end
 
-    def pure("exiting_a", context, _event, _meta) do
-      %{context | acc: ["exiting_a" | context.acc]}
+    def pure("exiting_a", state, %{acc: acc}) do
+      Action.assign(state, :acc, ["exiting_a" | acc])
     end
   end
 
@@ -394,8 +394,8 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def pure(action_name, context, _, _) do
-      update_in(context.acc, &[action_name | &1])
+    def pure(action_name, state, %{acc: acc}) do
+      Action.assign(state, :acc, [action_name | acc])
     end
   end
 
