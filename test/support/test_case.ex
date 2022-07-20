@@ -29,10 +29,10 @@ defmodule Protean.TestCase do
 
         test "example", %{machine: machine} do
           assert_protean(machine, [
-            {:matches?, :a},
-            {:send, "goto_b"},
-            {:matches?, :b},
-            {:context, foo: 1}
+            matches: "a",
+            send: "goto_b",
+            matches: "b",
+            context: [foo: 1]
           ])
         end
       end
@@ -74,18 +74,18 @@ defmodule Protean.TestCase do
   def assert_protean(pid, instructions) do
     Enum.each(instructions, fn
       # Actions
+      {:send, {event, data}} ->
+        Protean.send(pid, {event, data})
+
       {:send, event} ->
         Protean.send(pid, event)
-
-      {:send, event, data} ->
-        Protean.send(pid, {event, data})
 
       # Utilities
       {:sleep, milliseconds} when is_integer(milliseconds) ->
         :timer.sleep(milliseconds)
 
       # Assertions
-      {:matches?, descriptor} ->
+      {:matches, descriptor} ->
         state = Protean.current(pid)
         assert Protean.matches?(state, descriptor)
 

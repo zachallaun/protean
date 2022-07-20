@@ -8,13 +8,13 @@ defmodule ProteanIntegration.SimpleTest do
       context: [
         data: nil
       ],
-      initial: :a,
+      initial: "a",
       states: [
         a: [
-          on: [goto_b: :b]
+          on: [goto_b: "b"]
         ],
         b: [
-          on: [goto_a: :a]
+          on: [goto_a: "a"]
         ]
       ],
       on: [
@@ -34,16 +34,16 @@ defmodule ProteanIntegration.SimpleTest do
   @moduletag machine: SimpleMachine
 
   test "SimpleMachine", %{machine: machine} do
-    assert_protean(machine, [
-      {:matches?, :a},
-      {:send, "goto_b"},
-      {:matches?, :b},
-      {:context, data: nil},
-      {:send, "set_data", :ok},
-      {:context, data: :ok},
-      {:send, "goto_a"},
-      {:matches?, :a},
-      {:context, data: :ok}
-    ])
+    assert_protean(machine,
+      matches: "a",
+      send: "goto_b",
+      matches: "b",
+      context: [data: nil],
+      send: {"set_data", :ok},
+      context: [data: :ok],
+      send: "goto_a",
+      matches: "a",
+      context: [data: :ok]
+    )
   end
 end

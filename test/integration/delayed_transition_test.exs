@@ -8,20 +8,20 @@ defmodule ProteanIntegration.DelayedTransitionTest do
       context: %{
         path: []
       },
-      initial: :a,
+      initial: "a",
       states: [
         a: [
           entry: ["save_path"],
           after: [
             delay: 30,
-            target: :b
+            target: "b"
           ]
         ],
         b: [
           entry: ["save_path"],
           after: [
             delay: 30,
-            target: :c
+            target: "c"
           ]
         ],
         c: [
@@ -47,11 +47,11 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
   test "takes automatic delayed transitions", %{machine: machine} do
     assert_protean(machine,
-      matches?: :a,
+      matches: "a",
       sleep: 40,
-      matches?: :b,
+      matches: "b",
       sleep: 30,
-      matches?: :c
+      matches: "c"
     )
   end
 
@@ -59,7 +59,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     assert_protean(machine,
       send: "goto_c",
       sleep: 40,
-      matches?: :c
+      matches: "c"
     )
   end
 

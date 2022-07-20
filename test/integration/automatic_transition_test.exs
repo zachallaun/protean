@@ -65,7 +65,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
   test "automatic transitions trigger actions in correct order", %{machine: machine} do
     assert_protean(machine,
       send: "goto_b",
-      matches?: "d",
+      matches: "d",
       context: [acc: ["auto_to_d", "auto_to_c"]]
     )
   end
@@ -74,19 +74,19 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     assert_protean(machine,
       send: "goto_b",
       send: "allow",
-      matches?: "e",
+      matches: "e",
       send: "goto_a",
       send: "goto_b",
-      matches?: "a"
+      matches: "a"
     )
   end
 
   test "auto transition triggered when condition is met", %{machine: machine} do
     assert_protean(machine,
       send: "goto_b",
-      matches?: "d",
+      matches: "d",
       send: "outer_allow",
-      matches?: "a"
+      matches: "a"
     )
   end
 end
