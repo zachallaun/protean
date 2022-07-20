@@ -13,14 +13,14 @@ defmodule ProteanIntegration.DelayedTransitionTest do
         a: [
           entry: ["save_path"],
           after: [
-            delay: 20,
+            delay: 30,
             target: :b
           ]
         ],
         b: [
           entry: ["save_path"],
           after: [
-            delay: 20,
+            delay: 30,
             target: :c
           ]
         ],
@@ -37,30 +37,40 @@ defmodule ProteanIntegration.DelayedTransitionTest do
       ]
     ]
 
-    def pure("save_path", state, %{path: path}, _) do
+    @impl true
+    def pure("save_path", state, %{path: path}) do
       Protean.Action.assign(state, :path, [state.value | path])
     end
   end
 
-  @tag machine: TestMachine
+  @moduletag machine: TestMachine
+
   test "takes automatic delayed transitions", %{machine: machine} do
-    assert Protean.matches?(machine, :a)
-    :timer.sleep(20)
-    assert Protean.matches?(machine, :b)
-    :timer.sleep(20)
-    assert Protean.matches?(machine, :c)
+    assert_protean(machine,
+      matches?: :a,
+      sleep: 40,
+      matches?: :b,
+      sleep: 30,
+      matches?: :c
+    )
   end
 
-  @tag machine: TestMachine
   test "delayed transitions can be short-circuited by transitioning early", %{machine: machine} do
-    Protean.send(machine, "goto_c")
-    :timer.sleep(20)
-    assert Protean.matches?(machine, :c)
+    assert_protean(machine,
+      send: "goto_c",
+      sleep: 40,
+      matches?: :c
+    )
   end
 
-  # @tag machine: TestMachine
-  @tag skip: true
   test "short-circuited transitions don't execute actions", %{machine: machine} do
-    assert [[["a", "#"]]] = Protean.current(machine).context
+    assert_protean(machine,
+      context: [path: [[["a", "#"]]]],
+      sleep: 40,
+      context: [path: [[["b", "#"]], [["a", "#"]]]],
+      send: "goto_d",
+      sleep: 40,
+      context: [path: [[["d", "#"]], [["b", "#"]], [["a", "#"]]]]
+    )
   end
 end

@@ -86,7 +86,8 @@ defmodule Protean.TestCase do
 
       # Assertions
       {:matches?, descriptor} ->
-        assert Protean.matches?(pid, descriptor)
+        state = Protean.current(pid)
+        assert Protean.matches?(state, descriptor)
 
       {:context, context} ->
         current_context = Protean.current(pid).context
