@@ -93,31 +93,9 @@ defmodule Protean.Machine do
   # (they should have non-overlapping exit sets, otherwise we have to figure out which one "wins")
   defp apply_transition(machine, state, transition) do
     %{idmap: idmap} = machine
-
+    active = active_nodes(machine, state)
     targets = effective_targets(transition.targets, idmap)
     domain_id = transition_domain(transition, targets)
-
-    # FIXME: related to internal_transitions_test
-
-    targets =
-      if transition.internal do
-        Enum.filter(targets, fn node ->
-          !loose_descendant?(node, idmap[transition.source_id])
-        end)
-      else
-        targets
-      end
-
-    active = active_nodes(machine, state)
-
-    active =
-      if transition.internal do
-        Enum.filter(active, fn node ->
-          !loose_descendant?(node, idmap[transition.source_id])
-        end)
-      else
-        active
-      end
 
     to_exit =
       domain_id
@@ -129,14 +107,33 @@ defmodule Protean.Machine do
       |> entry_set(targets, idmap)
       |> Enum.sort_by(& &1.order, :asc)
 
+    value =
+      (state.value -- Enum.map(to_exit, & &1.id)) ++
+        Enum.map(targets, & &1.id)
+
+    new_active = active_nodes(machine, value)
+
+    # if internal, we don't exit states we normally would have exited if they're a part of the
+    # new active set
+    to_exit =
+      if transition.internal do
+        to_exit -- new_active
+      else
+        to_exit
+      end
+
+    # if internal, we don't enter states we normally would if they were already active
+    to_enter =
+      if transition.internal do
+        to_enter -- active
+      else
+        to_enter
+      end
+
     actions =
       Enum.flat_map(to_exit, & &1.exit) ++
         transition.actions ++
         Enum.flat_map(to_enter, & &1.entry)
-
-    value =
-      (state.value -- Enum.map(to_exit, & &1.id)) ++
-        Enum.map(targets, & &1.id)
 
     state
     |> Map.put(:value, value)
@@ -161,7 +158,7 @@ defmodule Protean.Machine do
       %{type: :compound} = compound ->
         child =
           Enum.find(compound.states, fn child ->
-            Enum.any?(targets, &loose_descendant?(&1, child))
+            Enum.any?(targets, &loose_descendant?(&1.id, child.id))
           end)
 
         if child do
@@ -173,9 +170,9 @@ defmodule Protean.Machine do
       %{type: :parallel} = parallel ->
         parallel.states ++ Enum.map(parallel.states, &entry_set(&1, targets, idmap))
 
-      nil ->
-        IO.inspect(domain_id, label: "domain id")
-        []
+        # nil ->
+        #   IO.inspect(domain_id, label: "domain id")
+        #   []
     end
   end
 
@@ -202,7 +199,7 @@ defmodule Protean.Machine do
     end
   end
 
-  defp loose_descendant?(%{id: id1} = _descendant, %{id: id2} = _ancestor) do
+  defp loose_descendant?(id1, id2) do
     id1 == id2 || StateNode.descendant?(id1, id2)
   end
 
@@ -265,7 +262,9 @@ defmodule Protean.Machine do
   end
 
   @spec active_nodes(t, State.t()) :: [StateNode.t()]
-  defp active_nodes(machine, %State{value: value}) do
+  defp active_nodes(machine, %State{value: value}), do: active_nodes(machine, value)
+
+  defp active_nodes(machine, value) when is_list(value) do
     value
     |> Enum.flat_map(&ancestors(machine, &1))
     |> Enum.uniq()

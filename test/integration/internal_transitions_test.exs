@@ -95,7 +95,6 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     )
   end
 
-  # FIXME: Bug
   test "internal relative transitions do not trigger entry/exit actions", %{machine: machine} do
     assert_protean(machine,
       send: "a2_internal",
