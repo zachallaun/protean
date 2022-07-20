@@ -153,7 +153,84 @@ defmodule Protean.StateNode do
     descendant_id != ancestor_id && common_ancestor_id(descendant_id, ancestor_id) == ancestor_id
   end
 
+  # ["a2" "a" "#"]
+  # ["a1" "a" "#"]
+  #      ["a" "#"]
+  # => ["#"]
+  #
+  # ["#" "a" "a2"]
+  # ["#" "a" "a1"]
+  # ["#" "a"]
+  #
+  # truncate to shortest length - 1
+  # ["#"]
+  # ["#"]
+  # ["#"]
+  #
+  # all same, put in acc: ["#"]
+  # all empty, return acc
+  #
+  #
+  #
+  # ["d1" "c" "b" "a" "#"]
+  # ["d2" "c" "b" "a" "#"]
+  #      ["c" "b" "a" "#"]
+  #      ["c" "Z" "a" "#"]
+  #
+  # reverse
+  # [# a b c d1]
+  # [# a b c d2]
+  # [# a b c]
+  # [# a Z c]
+  #
+  # truncate to shortest - 1
+  # [# a b]
+  # [# a b]
+  # [# a b]
+  # [# a Z]
+  #
+  # all same, put in acc: [#]
+  # all same, put in acc: [a #]
+  # diff, return acc
+  #
+  # [# a b c d1]
+  # [# a b c d2]
+  # [# a]
+  # [# a b2]
+  #
+  # acc: []
+  # all same, put in acc: ["#"]
+  # all same, put in acc: ["a"]
+  #
+  def common_ancestor_id(ids) do
+    shortest = ids |> Enum.map(&Enum.count/1) |> Enum.min()
+
+    ids
+    |> Enum.map(&Enum.reverse/1)
+    |> Enum.map(&Enum.take(&1, shortest - 1))
+    |> do_common_ancestor_id()
+  end
+
+  defp do_common_ancestor_id(ids, acc \\ [])
+
+  defp do_common_ancestor_id([[] | _], acc), do: acc
+
+  defp do_common_ancestor_id(ids, acc) do
+    [id | _] = ids
+
+    if Enum.all?(ids, &(hd(&1) == hd(id))) do
+      ids
+      |> Enum.map(&Enum.drop(&1, 1))
+      |> do_common_ancestor_id([hd(id) | acc])
+    else
+      acc
+    end
+  end
+
   @spec common_ancestor_id(id, id) :: id
+  def common_ancestor_id([self | rest], [self | rest]),
+    do: List.wrap(rest)
+
   def common_ancestor_id(id1, id2) do
     [id1, id2]
     |> Enum.map(&Enum.reverse/1)

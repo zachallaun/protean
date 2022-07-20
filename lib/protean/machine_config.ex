@@ -169,12 +169,26 @@ defmodule Protean.MachineConfig do
     do: parse_transition([target: target], id)
 
   defp parse_transition(transition, id) when is_list(transition) do
+    targets = resolve_targets(transition[:target], id)
+
     %Transition{
+      source_id: id,
       event_descriptor: parse_event_descriptor(transition[:on]),
       actions: parse_actions(transition[:actions]),
-      targets: resolve_targets(transition[:target], id),
+      targets: targets,
       guard: parse_guard(transition[:when])
     }
+    |> add_internal(targets, transition[:internal])
+  end
+
+  defp add_internal(transition, targets, internal) do
+    case {transition.source_id, targets, internal} do
+      {id, [id], nil} -> %{transition | internal: true}
+      {id, [id], false} -> %{transition | internal: false}
+      {id, [id], _} -> %{transition | internal: true}
+      {_, _, true} -> %{transition | internal: true}
+      {_, _, _} -> %{transition | internal: false}
+    end
   end
 
   defp parse_guard(nil), do: nil
@@ -200,7 +214,7 @@ defmodule Protean.MachineConfig do
   defp parse_guard([]),
     do: []
 
-  defp resolve_targets(nil, _id), do: []
+  defp resolve_targets(nil, id), do: [id]
 
   defp resolve_targets(targets, _id) when is_list(targets),
     do: raise("Multiple targets not yet implemented")

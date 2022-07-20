@@ -8,17 +8,20 @@ defmodule Protean.Transition do
   alias Protean.StateNode
 
   defstruct [
+    :source_id,
     :targets,
     :event_descriptor,
     :guard,
-    type: :external,
+    internal: false,
     actions: []
   ]
 
   @type t :: %Transition{
-          event_descriptor: event_descriptor,
-          type: :internal | :external,
+          source_id: StateNode.id(),
           targets: [StateNode.id()] | nil,
+          event_descriptor: event_descriptor,
+          guard: Transition.Guard.guard(),
+          internal: boolean,
           actions: [Action.t()]
         }
 

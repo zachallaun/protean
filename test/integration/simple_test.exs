@@ -19,13 +19,13 @@ defmodule ProteanIntegration.SimpleTest do
       ],
       on: [
         set_data: [
-          actions: ["set_data"]
+          actions: ["do_set"]
         ]
       ]
     ]
 
     @impl true
-    def pure("set_data", %{event: {_, data}} = state, _context) do
+    def pure("do_set", %{event: {_, data}} = state, _context) do
       state
       |> Protean.Action.assign(:data, data)
     end

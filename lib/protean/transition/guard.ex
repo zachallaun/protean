@@ -6,6 +6,9 @@ defmodule Protean.Transition.Guard do
   alias Protean.Machine
   alias Protean.State
 
+  @typedoc "Any type that implements the `Protean.Transition.Guard.Guards` protocol."
+  @type guard :: term
+
   @doc """
   Determines whether a transition should take place given the current machien state.
   """
