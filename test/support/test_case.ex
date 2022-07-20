@@ -45,6 +45,8 @@ defmodule Protean.TestCase do
        context: `%{machine: machine_pid, ref: monitor_ref}`
     * `@tag machine: {Machine, opts}` - Like the above but calls `Machine.start_link(opts)` to
       start the process with the given options.
+    * `@tag machines: [{Machine, opts}, Machine]` - Will start all machines in the list with
+      given options and will add to context: `%{machines: [%{machine: pid, ref: ref}, ...]}`
 
   ### Helpers
 
@@ -62,10 +64,29 @@ defmodule Protean.TestCase do
   end
 
   setup context do
-    if machine = context[:machine] do
-      setup_machine(machine)
-    end
+    setup_context(context)
   end
+
+  defp setup_context(%{machines: machines}) when is_list(machines) do
+    {all_machines, exit_funs} =
+      machines
+      |> Enum.map(&setup_machine/1)
+      |> Enum.unzip()
+
+    on_exit(fn -> Enum.each(exit_funs, & &1.()) end)
+
+    [machines: all_machines]
+  end
+
+  defp setup_context(%{machine: machine}) do
+    {context_to_add, exit_fun} = setup_machine(machine)
+
+    on_exit(exit_fun)
+
+    context_to_add
+  end
+
+  defp setup_context(_other), do: nil
 
   @doc """
   Runs through a list of instructions in order, sending events to and making assertions on the
@@ -105,9 +126,7 @@ defmodule Protean.TestCase do
     {:ok, pid} = module.start_link(opts)
     ref = Process.monitor(pid)
 
-    on_exit(fn -> Process.exit(pid, :normal) end)
-
-    [machine: pid, ref: ref]
+    {%{machine: pid, ref: ref}, fn -> Process.exit(pid, :normal) end}
   end
 
   defp setup_machine(module), do: setup_machine({module, []})

@@ -148,7 +148,7 @@ defmodule Protean.Macros do
 
         spec = %{
           id: id,
-          start: {__MODULE__, :start_link, [Keyword.merge([name: __MODULE__], opts)]}
+          start: {__MODULE__, :start_link, [opts]}
         }
 
         Supervisor.child_spec(spec, [])
