@@ -75,10 +75,10 @@ defmodule Protean.TestCase do
     Enum.each(instructions, fn
       # Actions
       {:send, {event, data}} ->
-        Protean.send(pid, {event, data})
+        Protean.send_event(pid, {event, data})
 
       {:send, event} ->
-        Protean.send(pid, event)
+        Protean.send_event(pid, event)
 
       # Utilities
       {:sleep, milliseconds} when is_integer(milliseconds) ->

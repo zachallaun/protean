@@ -97,7 +97,7 @@ true
 Let's send an event to our machine and see it increment that counter.
 
 ```elixir
-state = Protean.send(counter, "INC")
+state = Protean.send_event(counter, "INC")
 state.context
 ```
 
@@ -107,12 +107,12 @@ state.context
 %{count: 1}
 ```
 
-`Protean.send/2` sends an event syncronously and returns the updated state. We can also send events asyncronously:
+`Protean.send_event/2` sends an event syncronously and returns the updated state. We can also send events asyncronously:
 
 ```elixir
-:ok = Protean.send_async(counter, "INC")
-:ok = Protean.send_async(counter, "INC")
-:ok = Protean.send_async(counter, "INC")
+:ok = Protean.send_event_async(counter, "INC")
+:ok = Protean.send_event_async(counter, "INC")
+:ok = Protean.send_event_async(counter, "INC")
 
 Protean.current(counter).context
 ```
@@ -126,7 +126,7 @@ Protean.current(counter).context
 One last thing to note is that Protean machines don't mind receiving events they don't care about. Our counter doesn't know how to decrement, but we can send that event anyway and watch the counter do nothing.
 
 ```elixir
-Protean.send(counter, "DEC").context
+Protean.send_event(counter, "DEC").context
 ```
 
 <!-- livebook:{"output":true} -->
@@ -178,7 +178,7 @@ true
 
 ```elixir
 request
-|> Protean.send("SUCCEEDED")
+|> Protean.send_event("SUCCEEDED")
 |> Protean.matches?(:success)
 ```
 

@@ -13,7 +13,7 @@ defmodule Protean.Action.SendEvent do
 
     defimpl Executable, for: __MODULE__ do
       def exec(%{event: event, to: to}, interpreter) do
-        Server.send_async(to, event)
+        Server.send_event_async(to, event)
         interpreter
       end
     end
@@ -26,7 +26,7 @@ defmodule Protean.Action.SendEvent do
 
     defimpl Executable, for: __MODULE__ do
       def exec(%{event: event, to: to, delay: delay}, interpreter) do
-        Server.send_after(to, event, delay)
+        Server.send_event_after(to, event, delay)
         interpreter
       end
     end
@@ -39,8 +39,9 @@ defmodule Protean.Action.SendEvent do
 
     defimpl Resolvable, for: __MODULE__ do
       def resolve(%{to: to, event: event, delay: delay}, _state, _handler)
-          when is_integer(delay),
-          do: %SendEvent.Resolved.Delay{event: event, delay: delay, to: recipient(to)}
+          when is_integer(delay) do
+        %SendEvent.Resolved.Delay{event: event, delay: delay, to: recipient(to)}
+      end
 
       def resolve(%{to: to, event: event}, _state, _handler),
         do: %SendEvent.Resolved.Immediate{event: event, to: recipient(to)}

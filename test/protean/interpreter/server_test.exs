@@ -33,27 +33,27 @@ defmodule Protean.Interpreter.ServerTest do
   end
 
   @tag machine: TestMachine
-  test "send/2", %{machine: server} do
-    assert state = %State{} = Server.send(server, "goto_b")
+  test "send_event/2", %{machine: server} do
+    assert state = %State{} = Server.send_event(server, "goto_b")
     assert State.matches?(state, :b)
   end
 
   @tag machine: TestMachine
-  test "send_async/2", %{machine: server} do
-    assert :ok = Server.send_async(server, "goto_b")
+  test "send_event_async/2", %{machine: server} do
+    assert :ok = Server.send_event_async(server, "goto_b")
     assert Server.matches?(server, :b)
   end
 
   @tag machine: TestMachine
-  test "send_after/3", %{machine: server} do
-    Server.send_after(server, "goto_b", 10)
+  test "send_event_after/3", %{machine: server} do
+    Server.send_event_after(server, "goto_b", 10)
     :timer.sleep(20)
     assert Server.matches?(server, :b)
   end
 
   @tag machine: TestMachine
-  test "send_after/3 can be canceled", %{machine: server} do
-    timer = Server.send_after(server, "goto_b", 10)
+  test "send_event_after/3 can be canceled", %{machine: server} do
+    timer = Server.send_event_after(server, "goto_b", 10)
     Process.cancel_timer(timer)
     :timer.sleep(20)
     assert Server.matches?(server, :a)

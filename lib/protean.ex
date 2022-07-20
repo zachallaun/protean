@@ -55,13 +55,13 @@ defmodule Protean do
       iex> Protean.current(TrafficLight)
       %Protean.State{value: [["green", "#"]], ...}
 
-      iex> Protean.send(TrafficLight, "NEXT")
+      iex> Protean.send_event(TrafficLight, "NEXT")
       %Protean.State{value: [["yellow", "#"]], ...}
 
-      iex> Protean.send(TrafficLight, "NEXT")
+      iex> Protean.send_event(TrafficLight, "NEXT")
       %Protean.State{value: [["red", "#"]], ...}
 
-      iex> Protean.send(TrafficLight, "UNKNOWN_EVENT")
+      iex> Protean.send_event(TrafficLight, "UNKNOWN_EVENT")
       %Protean.State{value: [["red", "#"]], ...}
   """
 
@@ -81,13 +81,13 @@ defmodule Protean do
   end
 
   @doc "TODO"
-  defdelegate send(pid, event), to: Server
+  defdelegate send_event(pid, event), to: Server
 
   @doc "TODO"
-  defdelegate send_async(pid, event), to: Server
+  defdelegate send_event_async(pid, event), to: Server
 
   @doc "TODO"
-  defdelegate send_after(pid, event, time), to: Server
+  defdelegate send_event_after(pid, event, time), to: Server
 
   @doc "TODO"
   defdelegate current(pid), to: Server
