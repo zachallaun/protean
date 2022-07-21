@@ -94,7 +94,7 @@ defmodule Protean.Machine do
   defp apply_transition(machine, state, transition) do
     %{idmap: idmap} = machine
     active = active_nodes(machine, state)
-    targets = effective_targets(transition.targets, idmap)
+    targets = effective_targets(transition.target_ids, idmap)
     domain_id = transition_domain(transition, targets)
 
     to_exit =

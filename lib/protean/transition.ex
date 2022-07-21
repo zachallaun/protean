@@ -9,7 +9,7 @@ defmodule Protean.Transition do
 
   defstruct [
     :source_id,
-    :targets,
+    :target_ids,
     :event_descriptor,
     :guard,
     internal: false,
@@ -18,7 +18,7 @@ defmodule Protean.Transition do
 
   @type t :: %Transition{
           source_id: Node.id(),
-          targets: [Node.id()] | nil,
+          target_ids: [Node.id()] | nil,
           event_descriptor: event_descriptor,
           guard: Transition.Guard.guard(),
           internal: boolean,
@@ -80,15 +80,6 @@ defmodule Protean.Transition do
 
   defp responds_to?(transition, {event_name, _}),
     do: event_descriptor_match?(transition.event_descriptor, event_name)
-
-  @doc """
-  Gets the target node IDs for the given transition.
-  """
-  @spec targets(t) :: Node.id()
-  def targets(%Transition{targets: targets}), do: targets
-
-  def target(%Transition{targets: [target | _]}), do: target
-  def target(%Transition{targets: []}), do: nil
 
   @doc """
   Checks whether an event descriptor matches an event name.

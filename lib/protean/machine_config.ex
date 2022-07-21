@@ -169,20 +169,20 @@ defmodule Protean.MachineConfig do
     do: parse_transition([target: target], id)
 
   defp parse_transition(transition, id) when is_list(transition) do
-    targets = resolve_targets(transition[:target], id)
+    target_ids = resolve_targets(transition[:target], id)
 
     %Transition{
       source_id: id,
+      target_ids: target_ids,
       event_descriptor: parse_event_descriptor(transition[:on]),
       actions: parse_actions(transition[:actions]),
-      targets: targets,
       guard: parse_guard(transition[:when])
     }
-    |> add_internal(targets, transition[:internal])
+    |> add_internal(target_ids, transition[:internal])
   end
 
-  defp add_internal(transition, targets, internal) do
-    case {transition.source_id, targets, internal} do
+  defp add_internal(transition, target_ids, internal) do
+    case {transition.source_id, target_ids, internal} do
       {id, [id], nil} -> %{transition | internal: true}
       {id, [id], false} -> %{transition | internal: false}
       {id, [id], _} -> %{transition | internal: true}
