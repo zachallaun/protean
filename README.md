@@ -45,10 +45,10 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [x] Automatic transitions
   - [x] Delayed transitions (implemented as delayed sends to auto transition states)
   - [ ] Correctly cancel non-sent actions when transitioning out (see Actions -> Cancel Event)
-  - [ ] Internal vs. external transitions
+  - [x] Internal vs. external transitions
     - External = exit/entry actions will be re-triggered
     - Internal = exit/entry actions will not be re-triggered, only transition actions
-- [ ] Parallel states
+- [x] Parallel states
   - [ ] Correct transition conflict handling
 - [ ] History states
 
