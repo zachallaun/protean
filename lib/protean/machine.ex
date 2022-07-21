@@ -94,22 +94,16 @@ defmodule Protean.Machine do
   defp apply_transition(machine, state, transition) do
     %{idmap: idmap} = machine
     active = active_nodes(machine, state)
-    targets = effective_targets(transition.target_ids, idmap)
-    domain_id = transition_domain(transition, targets)
+    target_ids = effective_target_ids(transition.target_ids, idmap)
+    domain = transition_domain(transition, target_ids)
 
-    to_exit =
-      domain_id
-      |> exit_set(active)
-      |> Enum.sort_by(& &1.order, :desc)
+    to_exit = exit_set(domain, active)
 
-    to_enter =
-      domain_id
-      |> entry_set(targets, idmap)
-      |> Enum.sort_by(& &1.order, :asc)
+    to_enter = entry_set(domain, target_ids, idmap)
 
     value =
       (state.value -- Enum.map(to_exit, & &1.id)) ++
-        Enum.map(targets, & &1.id)
+        target_ids
 
     new_active = active_nodes(machine, value)
 
@@ -140,14 +134,20 @@ defmodule Protean.Machine do
     |> State.put_actions(actions)
   end
 
-  defp entry_set(domain_id, targets, idmap)
+  defp entry_set(domain, target_ids, idmap) do
+    domain
+    |> get_entry_nodes(target_ids, idmap)
+    |> Enum.sort_by(& &1.order, :asc)
+  end
 
-  defp entry_set([], targets, idmap),
-    do: entry_set(["#"], targets, idmap)
+  defp get_entry_nodes(domain_id, target_ids, idmap)
 
-  defp entry_set(_, [], _), do: []
+  defp get_entry_nodes([], target_ids, idmap),
+    do: entry_set(["#"], target_ids, idmap)
 
-  defp entry_set(domain_id, targets, idmap) do
+  defp get_entry_nodes(_, [], _), do: []
+
+  defp get_entry_nodes(domain_id, target_ids, idmap) do
     case idmap[domain_id] do
       %{type: :atomic} ->
         []
@@ -158,17 +158,17 @@ defmodule Protean.Machine do
       %{type: :compound} = compound ->
         child =
           Enum.find(compound.states, fn child ->
-            Enum.any?(targets, &loose_descendant?(&1.id, child.id))
+            Enum.any?(target_ids, &loose_descendant?(&1, child.id))
           end)
 
         if child do
-          [child | entry_set(child.id, targets, idmap)]
+          [child | get_entry_nodes(child.id, target_ids, idmap)]
         else
           []
         end
 
       %{type: :parallel} = parallel ->
-        parallel.states ++ Enum.map(parallel.states, &entry_set(&1, targets, idmap))
+        parallel.states ++ Enum.map(parallel.states, &get_entry_nodes(&1, target_ids, idmap))
 
         # nil ->
         #   IO.inspect(domain_id, label: "domain id")
@@ -176,20 +176,21 @@ defmodule Protean.Machine do
     end
   end
 
-  defp exit_set(domain_id, active_nodes) do
-    Enum.filter(active_nodes, fn node ->
-      Node.descendant?(node.id, domain_id)
-    end)
+  defp exit_set(domain, active_nodes) do
+    active_nodes
+    |> Enum.filter(&Node.descendant?(&1.id, domain))
+    |> Enum.sort_by(& &1.order, :desc)
   end
 
-  defp effective_targets(transition_targets, idmap) do
-    transition_targets
+  defp effective_target_ids(target_ids, idmap) do
+    target_ids
     |> Enum.map(fn id -> idmap[id] end)
     |> Enum.flat_map(&Node.resolve_to_leaves/1)
+    |> Enum.map(& &1.id)
   end
 
-  defp transition_domain(transition, targets) do
-    target_ids = Enum.map(targets, & &1.id)
+  @spec transition_domain(Transition.t(), [Node.id()]) :: Node.id()
+  defp transition_domain(transition, target_ids) do
     %{source_id: source_id} = transition
 
     if transition.internal && all_descendants_of?(source_id, target_ids) do
