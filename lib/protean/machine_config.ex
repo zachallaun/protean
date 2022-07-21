@@ -120,8 +120,8 @@ defmodule Protean.MachineConfig do
     end
   end
 
-  defp parse_invoke_config(%{id: id, task: fun} = config, node_id) when is_function(fun) do
-    require!(config, [:id])
+  defp parse_invoke_config(%{task: fun} = config, node_id) when is_function(fun) do
+    id = config[:id] || Utilities.uuid4()
 
     transitions =
       [

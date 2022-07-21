@@ -83,7 +83,7 @@ defmodule Protean.Interpreter do
   @spec start(t) :: t
   def start(%Interpreter{running: false} = interpreter) do
     %{interpreter | running: true}
-    |> add_internal({"$protean.init", nil})
+    |> add_internal({Utilities.internal_event(:init), nil})
     |> run_interpreter()
   end
 
