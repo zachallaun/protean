@@ -101,6 +101,12 @@ defmodule Protean.TestCase do
       {:send, event} ->
         Protean.send_event(pid, event)
 
+      {:send_async, {event, data}} ->
+        Protean.send_event_async(pid, event)
+
+      {:send_async, event} ->
+        Protean.send_event_async(pid, event)
+
       # Utilities
       {:sleep, milliseconds} when is_integer(milliseconds) ->
         :timer.sleep(milliseconds)

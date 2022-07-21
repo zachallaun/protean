@@ -85,7 +85,7 @@ defmodule Protean.MachineConfigTest do
             Action.Invoke.task("task_id", task_fun)
           ],
           exit: [
-            Action.Invoke.task_cancel("task_id")
+            Action.Invoke.cancel_invoke("task_id")
           ],
           on: [
             "$protean.invoke.done-task_id": "done_state",

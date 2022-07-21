@@ -47,7 +47,6 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
   test "takes automatic delayed transitions", %{machine: machine} do
     assert_protean(machine,
-      matches: "a",
       sleep: 40,
       matches: "b",
       sleep: 30,

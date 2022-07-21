@@ -120,7 +120,7 @@ defmodule Protean.MachineConfig do
     end
   end
 
-  defp parse_invoke_config(%{task: fun} = config, node_id) when is_function(fun) do
+  defp parse_invoke_config(%{task: task} = config, node_id) do
     id = config[:id] || Utilities.uuid4()
 
     transitions =
@@ -131,8 +131,8 @@ defmodule Protean.MachineConfig do
       |> Enum.filter(&Function.identity/1)
       |> Enum.map(&parse_transition(&1, node_id))
 
-    entry_action = parse_action(Action.Invoke.task(id, fun))
-    exit_action = parse_action(Action.Invoke.task_cancel(id))
+    entry_action = parse_action(Action.Invoke.task(id, task))
+    exit_action = parse_action(Action.Invoke.cancel_invoke(id))
 
     {entry_action, exit_action, transitions}
   end

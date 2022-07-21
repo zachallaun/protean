@@ -44,13 +44,14 @@ defmodule ProteanIntegration.InvokedTaskTest do
     end
   end
 
+  @moduletag here: true
+
   describe "AnonymousFunctionTasks" do
-    @describetag skip: true
     @describetag machine: AnonymousFunctionTasks
 
     test "invoke in initial state", %{machine: machine} do
       assert_protean(machine,
-        sleep: 20,
+        sleep: 50,
         matches: "b",
         context: [result: :task_result]
       )
@@ -58,8 +59,9 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     test "invoke in state transitioned to", %{machine: machine} do
       assert_protean(machine,
+        sleep: 30,
         send: "goto_c",
-        sleep: 20,
+        sleep: 30,
         matches: "d",
         context: [result: :second_task_result]
       )

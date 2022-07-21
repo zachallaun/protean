@@ -131,6 +131,12 @@ defmodule Protean.Interpreter.Server do
     {:noreply, Interpreter.send_event(interpreter, event)}
   end
 
+  def handle_info(anything, interpreter) do
+    require Logger
+    Logger.info("got something: #{inspect(anything)}")
+    {:noreply, interpreter}
+  end
+
   @impl true
   def terminate(_reason, interpreter) do
     Interpreter.stop(interpreter)

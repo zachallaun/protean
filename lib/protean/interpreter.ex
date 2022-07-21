@@ -29,7 +29,7 @@ defmodule Protean.Interpreter do
           invoked: invoked
         }
 
-  @type invoked :: [invoked_service]
+  @type invoked :: %{any => invoked_service}
   @type invoked_service :: %{
           pid: GenServer.server(),
           autoforward: boolean
@@ -160,10 +160,8 @@ defmodule Protean.Interpreter do
     interpreter_with_event = set_event(interpreter, event)
     transitions = select_transitions(interpreter_with_event, event)
 
-    case transitions do
-      [] -> microstep([], interpreter)
-      transitions -> microstep(transitions, interpreter_with_event)
-    end
+    transitions
+    |> microstep(interpreter_with_event)
     |> run_interpreter()
   end
 
@@ -204,6 +202,7 @@ defmodule Protean.Interpreter do
   @spec autoforward_event(t, Machine.event()) :: t
   defp autoforward_event(%Interpreter{invoked: invoked} = interpreter, event) do
     invoked
+    |> Map.values()
     |> Enum.filter(&autoforward?/1)
     |> Enum.reduce(interpreter, &autoforward_to(&1, event, &2))
   end
