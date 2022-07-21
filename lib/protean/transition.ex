@@ -5,7 +5,7 @@ defmodule Protean.Transition do
   alias Protean.Action
   alias Protean.Machine
   alias Protean.State
-  alias Protean.StateNode
+  alias Protean.Node
 
   defstruct [
     :source_id,
@@ -17,8 +17,8 @@ defmodule Protean.Transition do
   ]
 
   @type t :: %Transition{
-          source_id: StateNode.id(),
-          targets: [StateNode.id()] | nil,
+          source_id: Node.id(),
+          targets: [Node.id()] | nil,
           event_descriptor: event_descriptor,
           guard: Transition.Guard.guard(),
           internal: boolean,
@@ -82,9 +82,9 @@ defmodule Protean.Transition do
     do: event_descriptor_match?(transition.event_descriptor, event_name)
 
   @doc """
-  Gets the target state node IDs for the given transition.
+  Gets the target node IDs for the given transition.
   """
-  @spec targets(t) :: StateNode.id()
+  @spec targets(t) :: Node.id()
   def targets(%Transition{targets: targets}), do: targets
 
   def target(%Transition{targets: [target | _]}), do: target

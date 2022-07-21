@@ -5,11 +5,11 @@ defmodule Protean.MachineConfig do
   """
 
   alias Protean.Action
-  alias Protean.StateNode
+  alias Protean.Node
   alias Protean.Transition
 
   @doc """
-  Parses machine config into a `StateNode`.
+  Parses machine config into a `Node`.
   """
   def parse!(config) do
     context = Keyword.get(config, :context, %{})
@@ -25,13 +25,13 @@ defmodule Protean.MachineConfig do
   defp set_order(node, order \\ 0)
 
   defp set_order(%{states: nil} = node, order),
-    do: {%StateNode{node | order: order}, order + 1}
+    do: {%Node{node | order: order}, order + 1}
 
   defp set_order(%{states: []} = node, order),
-    do: {%StateNode{node | order: order}, order + 1}
+    do: {%Node{node | order: order}, order + 1}
 
   defp set_order(%{states: children} = node, order) do
-    node = %StateNode{node | order: order}
+    node = %Node{node | order: order}
 
     {children, order} =
       Enum.reduce(children, {[], order + 1}, fn child, {already_set, order} ->
@@ -39,7 +39,7 @@ defmodule Protean.MachineConfig do
         {[child | already_set], order}
       end)
 
-    {%StateNode{node | states: Enum.reverse(children)}, order}
+    {%Node{node | states: Enum.reverse(children)}, order}
   end
 
   defp node_type(config) do
@@ -86,7 +86,7 @@ defmodule Protean.MachineConfig do
   defp parse_node_common(type, config, id) do
     {delay_entry, delay_exit, delay_transitions} = parse_delayed_transitions(config[:after], id)
 
-    %StateNode{
+    %Node{
       type: type,
       id: id,
       states: parse_children(config[:states], id),

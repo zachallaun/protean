@@ -8,7 +8,7 @@ defmodule Protean.Machine do
   alias __MODULE__
   alias Protean.MachineConfig
   alias Protean.State
-  alias Protean.StateNode
+  alias Protean.Node
   alias Protean.Transition
   alias Protean.Utilities
 
@@ -21,9 +21,9 @@ defmodule Protean.Machine do
 
   @typedoc "A full Protean machine configuration."
   @type t :: %Machine{
-          root: StateNode.t(),
+          root: Node.t(),
           handler: module,
-          idmap: %{StateNode.id() => StateNode.t()},
+          idmap: %{Node.id() => Node.t()},
           initial_context: State.context()
         }
 
@@ -64,12 +64,12 @@ defmodule Protean.Machine do
   def initial_state(%Machine{root: root, initial_context: context} = machine) do
     active_ids =
       root
-      |> StateNode.resolve_to_leaves()
+      |> Node.resolve_to_leaves()
       |> Enum.map(& &1.id)
 
     entry_ids =
       active_ids
-      |> Enum.flat_map(&StateNode.ancestor_ids/1)
+      |> Enum.flat_map(&Node.ancestor_ids/1)
       |> Enum.uniq()
 
     State.new(active_ids)
@@ -178,14 +178,14 @@ defmodule Protean.Machine do
 
   defp exit_set(domain_id, active_nodes) do
     Enum.filter(active_nodes, fn node ->
-      StateNode.descendant?(node.id, domain_id)
+      Node.descendant?(node.id, domain_id)
     end)
   end
 
   defp effective_targets(transition_targets, idmap) do
     transition_targets
     |> Enum.map(fn id -> idmap[id] end)
-    |> Enum.flat_map(&StateNode.resolve_to_leaves/1)
+    |> Enum.flat_map(&Node.resolve_to_leaves/1)
   end
 
   defp transition_domain(transition, targets) do
@@ -195,16 +195,16 @@ defmodule Protean.Machine do
     if transition.internal && all_descendants_of?(source_id, target_ids) do
       source_id
     else
-      StateNode.common_ancestor_id([source_id | target_ids])
+      Node.common_ancestor_id([source_id | target_ids])
     end
   end
 
   defp loose_descendant?(id1, id2) do
-    id1 == id2 || StateNode.descendant?(id1, id2)
+    id1 == id2 || Node.descendant?(id1, id2)
   end
 
   defp all_descendants_of?(id, ids) do
-    Enum.all?(ids, &StateNode.descendant?(&1, id))
+    Enum.all?(ids, &Node.descendant?(&1, id))
   end
 
   @spec select_automatic_transitions(t, State.t()) :: [Transition.t()]
@@ -261,7 +261,7 @@ defmodule Protean.Machine do
     end)
   end
 
-  @spec active_nodes(t, State.t()) :: [StateNode.t()]
+  @spec active_nodes(t, State.t()) :: [Node.t()]
   defp active_nodes(machine, %State{value: value}), do: active_nodes(machine, value)
 
   defp active_nodes(machine, value) when is_list(value) do
@@ -270,14 +270,14 @@ defmodule Protean.Machine do
     |> Enum.uniq()
   end
 
-  @spec ancestors(t, StateNode.id()) :: [StateNode.t()]
+  @spec ancestors(t, Node.id()) :: [Node.t()]
   defp ancestors(%Machine{idmap: idmap}, id) do
     id
-    |> StateNode.ancestor_ids()
+    |> Node.ancestor_ids()
     |> Enum.map(&idmap[&1])
   end
 
-  @spec entry_actions(t, [StateNode.id()]) :: [Action.t()]
+  @spec entry_actions(t, [Node.id()]) :: [Action.t()]
   defp entry_actions(machine, ids) do
     machine
     |> entry_order(ids)

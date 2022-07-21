@@ -13,7 +13,7 @@ defmodule Protean.State do
   alias __MODULE__
   alias Protean.Action
   alias Protean.Machine
-  alias Protean.StateNode
+  alias Protean.Node
 
   defstruct [
     :value,
@@ -31,7 +31,7 @@ defmodule Protean.State do
           private: protean_state
         }
 
-  @type value :: [StateNode.id(), ...]
+  @type value :: [Node.id(), ...]
 
   @type context :: %{any => any}
 
@@ -53,13 +53,13 @@ defmodule Protean.State do
   @doc """
   TODO: Descriptor usage
   """
-  @spec matches?(t, StateNode.id()) :: boolean
+  @spec matches?(t, Node.id()) :: boolean
   @spec matches?(t, String.t()) :: boolean
   @spec matches?(t, atom) :: boolean
   def matches?(state, descriptor)
 
   def matches?(%State{value: value}, query) when is_list(query) do
-    Enum.any?(value, fn id -> id == query || StateNode.descendant?(id, query) end)
+    Enum.any?(value, fn id -> id == query || Node.descendant?(id, query) end)
   end
 
   def matches?(state, query) when is_binary(query) do

@@ -553,7 +553,7 @@ defmodule Protean.Interpreter do
 
     state = Machine.transition(machine, state, event)
     interpreter = execute(%{interpreter | state: state})
-    
+
     if reply_to = opts[:reply_to] do
       GenServer.reply(reply_to, interpreter.state)
     end
@@ -571,7 +571,7 @@ defmodule Protean.Interpreter do
       actions: actions,
       context: context
     } = state
-    
+
     bound_actions =
       Action.resolve_actions(actions, context, handler, Protean.metadata(state))
 
@@ -744,15 +744,15 @@ end
 ```
 
 ```elixir
-defmodule StateNode do
+defmodule Node do
   @doc """
   Returns true if the given complex node is in a final state given a list of
   currently active simple nodes.
   """
-  @spec in_final?(StateNode.complex(), [StateNode.simple(), ...]) :: boolean
+  @spec in_final?(Node.complex(), [Node.simple(), ...]) :: boolean
   def in_final?(node, active)
 
-  def in_final?(%StateNode{type: :compound} = node, active) do
+  def in_final?(%Node{type: :compound} = node, active) do
     # compound node is in final state if any of its children
     # are final states and are members of the active set
     Enum.any?(node.states, fn child ->
@@ -760,7 +760,7 @@ defmodule StateNode do
     end)
   end
 
-  def in_final?(%StateNode{type: :parallel} = node, active) do
+  def in_final?(%Node{type: :parallel} = node, active) do
     # parallel node is in final state if all of its children
     # are in final states
     Enum.all?(node.states, fn child ->
@@ -772,7 +772,7 @@ defmodule StateNode do
   Returns true if the given node is active given a list of currently active
   simple nodes.
   """
-  @spec is_active?(StateNode.t(), [StateNode.simple(), ...]) :: boolean
+  @spec is_active?(Node.t(), [Node.simple(), ...]) :: boolean
   def is_active?(node, active) do
     active
     |> Enum.flat_map(&ancestor_ids)
@@ -780,10 +780,10 @@ defmodule StateNode do
   end
 
   @doc """
-  Returns true if the given `StateNode` represents a final state.
+  Returns true if the given `Node` represents a final state.
   """
-  @spec is_final?(StateNode.t()) :: boolean
-  def is_final?(%StateNode{type: :final}), do: true
-  def is_final?(%StateNode{}), do: false
+  @spec is_final?(Node.t()) :: boolean
+  def is_final?(%Node{type: :final}), do: true
+  def is_final?(%Node{}), do: false
 end
 ```

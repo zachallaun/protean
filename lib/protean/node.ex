@@ -1,4 +1,4 @@
-defmodule Protean.StateNode do
+defmodule Protean.Node do
   @moduledoc false
 
   alias __MODULE__
@@ -20,23 +20,23 @@ defmodule Protean.StateNode do
   ]
 
   @typedoc """
-  A StateNode is a node in a nested state machine. See the type docs for
+  A Node is a node in a nested state machine. See the type docs for
   individual nodes for more details.
   """
   @type t :: atomic | final | compound | parallel
 
   @typedoc """
-  A leaf StateNode is one that cannot have child states.
+  A leaf Node is one that cannot have child states.
   """
   @type leaf :: atomic | final
 
   @typedoc """
-  A simple `StateNode` is one that cannot have child nodes.
+  A simple `Node` is one that cannot have child nodes.
   """
   @type simple :: atomic | final
 
   @typedoc """
-  A complex `StateNode` is one that has child nodes.
+  A complex `Node` is one that has child nodes.
   """
   @type complex :: compound | parallel
 
@@ -49,7 +49,7 @@ defmodule Protean.StateNode do
   @typedoc """
   An atomic node is a node without child states.
   """
-  @type atomic :: %StateNode{
+  @type atomic :: %Node{
           type: :atomic,
           id: id,
           initial: nil,
@@ -67,7 +67,7 @@ defmodule Protean.StateNode do
   a final node causes an event to be dispatched that a parent node can choose to
   handle.
   """
-  @type final :: %StateNode{
+  @type final :: %Node{
           type: :final,
           id: id,
           initial: nil,
@@ -84,7 +84,7 @@ defmodule Protean.StateNode do
   active. It must additionally define an `:initial` attribute, the id of the
   child state that should default to active if the compound state is entered.
   """
-  @type compound :: %StateNode{
+  @type compound :: %Node{
           type: :compound,
           id: id,
           initial: id,
@@ -100,7 +100,7 @@ defmodule Protean.StateNode do
   A parallel node defines children, all of which are entered when the parallel
   node is entered.
   """
-  @type parallel :: %StateNode{
+  @type parallel :: %Node{
           type: :parallel,
           id: id,
           initial: nil,
@@ -113,11 +113,11 @@ defmodule Protean.StateNode do
         }
 
   @doc """
-  Resolve a StateNode to its leaves (atomic or final) by either returning the
+  Resolve a Node to its leaves (atomic or final) by either returning the
   given node or following the node's children.
   """
   @spec resolve_to_leaves(t) :: [leaf]
-  def resolve_to_leaves(%StateNode{} = node) do
+  def resolve_to_leaves(%Node{} = node) do
     case node.type do
       :atomic ->
         [node]
@@ -137,7 +137,7 @@ defmodule Protean.StateNode do
   end
 
   @doc """
-  Given a StateNode id, return a list containing that id and all of its
+  Given a Node id, return a list containing that id and all of its
   ancestors.
   """
   @spec ancestor_ids(id) :: [id]
