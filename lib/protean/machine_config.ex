@@ -7,6 +7,7 @@ defmodule Protean.MachineConfig do
   alias Protean.Action
   alias Protean.Node
   alias Protean.Transition
+  alias Protean.Utilities
 
   @doc """
   Parses machine config into a `Node`.
@@ -106,7 +107,7 @@ defmodule Protean.MachineConfig do
     else
       transitions
       |> Enum.map(&parse_delayed_transition(&1, id))
-      |> unzip3()
+      |> Utilities.unzip3()
     end
   end
 
@@ -285,13 +286,4 @@ defmodule Protean.MachineConfig do
       raise "#{message} #{Enum.join(filtered, ", ")}: #{inspect(config)}"
     end
   end
-
-  defp unzip3(list),
-    do: unzip3(Enum.reverse(list), [], [], [])
-
-  defp unzip3([{el1, el2, el3} | reversed_list], l1, l2, l3),
-    do: unzip3(reversed_list, [el1 | l1], [el2 | l2], [el3 | l3])
-
-  defp unzip3([], l1, l2, l3),
-    do: {l1, l2, l3}
 end
