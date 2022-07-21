@@ -39,7 +39,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
     @impl true
     def pure("save_path", state, %{path: path}) do
-      Protean.Action.assign(state, :path, [state.value | path])
+      Protean.Action.assign(state, :path, [MapSet.to_list(state.value) | path])
     end
   end
 

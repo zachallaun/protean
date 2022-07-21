@@ -94,7 +94,7 @@ defmodule Protean.Machine do
     to_enter = entry_order(to_enter)
 
     value =
-      state.value
+      MapSet.to_list(state.value)
       |> then(&(&1 -- Enum.map(to_exit, fn node -> node.id end)))
       |> Enum.concat(target_ids)
       |> Enum.uniq()
@@ -113,17 +113,13 @@ defmodule Protean.Machine do
           {target_ids :: [Node.id()], to_exit :: [Node.t()], to_enter :: [Node.t()]}
   defp transition_result(machine, state, transition) do
     %{idmap: idmap} = machine
-    active = active_nodes(machine, state)
+    active = active_nodes(machine, state.value)
     target_ids = effective_target_ids(transition.target_ids, idmap)
     domain = transition_domain(transition, target_ids)
-
     to_exit = exit_set(domain, active)
-
     to_enter = entry_set(domain, target_ids, idmap)
 
-    value =
-      (state.value -- Enum.map(to_exit, & &1.id)) ++
-        target_ids
+    value = (MapSet.to_list(state.value) -- ids(to_exit)) ++ target_ids
 
     new_active = active_nodes(machine, value)
 
@@ -191,7 +187,7 @@ defmodule Protean.Machine do
     target_ids
     |> Enum.map(fn id -> idmap[id] end)
     |> Enum.flat_map(&Node.resolve_to_leaves/1)
-    |> Enum.map(& &1.id)
+    |> ids()
   end
 
   @spec transition_domain(Transition.t(), [Node.id()]) :: Node.id()
@@ -215,7 +211,7 @@ defmodule Protean.Machine do
 
   @spec select_automatic_transitions(t, State.t()) :: [Transition.t()]
   def select_automatic_transitions(machine, state) do
-    nodes = active_nodes(machine, state)
+    nodes = active_nodes(machine, state.value)
 
     case first_enabled_transition(nodes, machine, state, state.event, :automatic_transitions) do
       nil -> []
@@ -227,7 +223,7 @@ defmodule Protean.Machine do
   def select_transitions(machine, state, event) do
     # TODO: Handle conflicting transitions
     # TODO: order nodes correctly (specificity + document order)
-    nodes = active_nodes(machine, state)
+    nodes = active_nodes(machine, state.value)
 
     case first_enabled_transition(nodes, machine, state, event) do
       nil -> []
@@ -267,10 +263,8 @@ defmodule Protean.Machine do
     end)
   end
 
-  @spec active_nodes(t, State.t()) :: [Node.t()]
-  defp active_nodes(machine, %State{value: value}), do: active_nodes(machine, value)
-
-  defp active_nodes(machine, value) when is_list(value) do
+  @spec active_nodes(t, State.value()) :: [Node.t()]
+  defp active_nodes(machine, value) do
     value
     |> Enum.flat_map(&ancestors(machine, &1))
     |> Enum.uniq()
@@ -300,4 +294,6 @@ defmodule Protean.Machine do
   defp lookup_nodes(machine, ids) do
     Enum.map(ids, fn id -> machine.idmap[id] end)
   end
+
+  defp ids(nodes), do: Enum.map(nodes, & &1.id)
 end

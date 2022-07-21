@@ -31,7 +31,7 @@ defmodule Protean.State do
           private: protean_state
         }
 
-  @type value :: [Node.id(), ...]
+  @type value :: MapSet.t(Node.id())
 
   @type context :: %{any => any}
 
@@ -40,9 +40,8 @@ defmodule Protean.State do
           }
 
   @doc false
-  @spec new(value) :: t
-  def new(value) when is_list(value),
-    do: %State{value: value}
+  @spec new(Enumerable.t()) :: t
+  def new(value), do: %State{value: MapSet.new(value)}
 
   # Partial Access behaviour (not defining `pop/2`)
   @doc false
@@ -125,5 +124,5 @@ defmodule Protean.State do
 
   @doc false
   def assign_value(state, value),
-    do: %{state | value: value}
+    do: %{state | value: MapSet.new(value)}
 end
