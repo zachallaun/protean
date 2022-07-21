@@ -4,84 +4,101 @@ defmodule Protean.MachineConfigTest do
   alias Protean.Action
   alias Protean.MachineConfig
 
-  def delayed_transition_implicit do
-    [
-      initial: :a,
-      states: [
-        a: [
+  describe "delayed transition syntax:" do
+    test "single transition" do
+      [
+        [
           after: [
             delay: 2000,
-            target: :b
-          ],
-          on: [
-            goto_c: :c
+            target: "b"
           ]
         ],
-        b: [
+        [
+          entry: [
+            Action.send_event("$protean.after.2000-#", delay: 2000)
+          ],
+          exit: [
+            Action.cancel_event("$protean.after.2000-#")
+          ],
+          on: [
+            "$protean.after.2000-#": "b"
+          ]
+        ]
+      ]
+      |> assert_parsed_same()
+    end
+
+    test "multiple transitions with condition" do
+      [
+        [
           after: [
             [
               delay: 1000,
               when: "some_condition",
-              target: :c
+              target: "c"
             ],
             [
               delay: 2000,
-              target: :c
+              target: "c"
             ]
           ]
         ],
-        c: []
-      ]
-    ]
-  end
-
-  def delayed_transition_explicit do
-    [
-      initial: :a,
-      states: [
-        a: [
+        [
           entry: [
-            Action.send_event("$protean.after.2000-#a", delay: 2000)
+            Action.send_event("$protean.after.1000-#", delay: 1000),
+            Action.send_event("$protean.after.2000-#", delay: 2000)
           ],
           exit: [
-            Action.cancel_event("$protean.after.2000-#a")
+            Action.cancel_event("$protean.after.1000-#"),
+            Action.cancel_event("$protean.after.2000-#")
           ],
           on: [
-            "$protean.after.2000-#a": [
-              target: :b
-            ],
-            goto_c: :c
-          ]
-        ],
-        b: [
-          entry: [
-            Action.send_event("$protean.after.1000-#b", delay: 1000),
-            Action.send_event("$protean.after.2000-#b", delay: 2000)
-          ],
-          exit: [
-            Action.cancel_event("$protean.after.1000-#b"),
-            Action.cancel_event("$protean.after.2000-#b")
-          ],
-          on: [
-            "$protean.after.1000-#b": [
-              target: :c,
+            "$protean.after.1000-#": [
+              target: "c",
               when: "some_condition"
             ],
-            "$protean.after.2000-#b": [
-              target: :c
+            "$protean.after.2000-#": [
+              target: "c"
             ]
           ]
-        ],
-        c: []
+        ]
       ]
-    ]
+      |> assert_parsed_same()
+    end
   end
 
-  test "delayed transitions syntax" do
-    [explicit, implicit] =
-      [delayed_transition_explicit(), delayed_transition_implicit()]
-      |> Enum.map(&MachineConfig.parse!/1)
+  describe "invoke syntax:" do
+    test "tasks with anonymous functions" do
+      task_fun = fn -> :result end
 
-    assert explicit == implicit
+      [
+        [
+          invoke: [
+            id: "task_id",
+            task: task_fun,
+            done: "done_state",
+            error: "error_state"
+          ]
+        ],
+        [
+          entry: [
+            Action.Invoke.task("task_id", task_fun)
+          ],
+          exit: [
+            Action.Invoke.task_cancel("task_id")
+          ],
+          on: [
+            "$protean.invoke.done-task_id": "done_state",
+            "$protean.invoke.error-task_id": "error_state"
+          ]
+        ]
+      ]
+      |> assert_parsed_same()
+    end
+  end
+
+  defp assert_parsed_same(nodes) do
+    [parsed1, parsed2] = Enum.map(nodes, &MachineConfig.parse_node/1)
+    assert parsed1 == parsed2
   end
 end

@@ -20,6 +20,7 @@ defmodule Protean.MixProject do
 
   def application do
     [
+      mod: {Protean.Application, []},
       extra_applications: [:logger]
     ]
   end

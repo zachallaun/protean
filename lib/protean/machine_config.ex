@@ -9,6 +9,8 @@ defmodule Protean.MachineConfig do
   alias Protean.Transition
   alias Protean.Utilities
 
+  @root_id ["#"]
+
   @doc """
   Parses machine config into a `Node`.
   """
@@ -17,11 +19,23 @@ defmodule Protean.MachineConfig do
 
     {root, _order} =
       config
-      |> parse_node(["#"])
+      |> parse_node()
       |> set_order()
 
     {root, context}
   end
+
+  @doc false
+  def internal_event(:after, node_id, delay) do
+    @root_id ++ rest = Enum.reverse(node_id)
+    "$protean.after.#{delay}-#" <> Enum.join(rest, ".")
+  end
+
+  def internal_event(:invoke, :done, id),
+    do: "$protean.invoke.done-#{id}"
+
+  def internal_event(:invoke, :error, id),
+    do: "$protean.invoke.error-#{id}"
 
   defp set_order(node, order \\ 0)
 
@@ -51,6 +65,9 @@ defmodule Protean.MachineConfig do
     end
   end
 
+  @doc false
+  def parse_node(config), do: parse_node(config, @root_id)
+
   defp parse_node(config, id) do
     config
     |> node_type()
@@ -66,7 +83,7 @@ defmodule Protean.MachineConfig do
   end
 
   defp parse_node(:final, config, id) do
-    forbid!(config, [:states, :initial, :on, :always, :after])
+    forbid!(config, [:states, :initial, :on, :always, :after, :invoke])
 
     parse_node_common(:final, config, id)
   end
@@ -86,6 +103,7 @@ defmodule Protean.MachineConfig do
 
   defp parse_node_common(type, config, id) do
     {delay_entry, delay_exit, delay_transitions} = parse_delayed_transitions(config[:after], id)
+    {invoke_entry, invoke_exit, invoke_transitions} = parse_invokes(config[:invoke], id)
 
     %Node{
       type: type,
@@ -93,10 +111,42 @@ defmodule Protean.MachineConfig do
       states: parse_children(config[:states], id),
       initial: parse_initial(config[:initial], id),
       automatic_transitions: parse_automatic_transitions(config[:always], id),
-      transitions: delay_transitions ++ parse_transitions(config[:on], id),
-      entry: delay_entry ++ parse_actions(config[:entry]),
-      exit: delay_exit ++ parse_actions(config[:exit])
+      transitions: invoke_transitions ++ delay_transitions ++ parse_transitions(config[:on], id),
+      entry: invoke_entry ++ delay_entry ++ parse_actions(config[:entry]),
+      exit: invoke_exit ++ delay_exit ++ parse_actions(config[:exit])
     }
+  end
+
+  defp parse_invokes(nil, _id), do: {[], [], []}
+
+  defp parse_invokes(invokes, id) do
+    if Keyword.keyword?(invokes) do
+      parse_invokes([invokes], id)
+    else
+      {entry_actions, exit_actions, nested_transitions} =
+        invokes
+        |> Enum.map(&parse_invoke_config(Enum.into(&1, %{}), id))
+        |> Utilities.unzip3()
+
+      {entry_actions, exit_actions, Enum.concat(nested_transitions)}
+    end
+  end
+
+  defp parse_invoke_config(%{id: id, task: fun} = config, node_id) when is_function(fun) do
+    require!(config, [:id])
+
+    transitions =
+      [
+        config[:done] && {internal_event(:invoke, :done, id), config[:done]},
+        config[:error] && {internal_event(:invoke, :error, id), config[:error]}
+      ]
+      |> Enum.filter(&Function.identity/1)
+      |> Enum.map(&parse_transition(&1, node_id))
+
+    entry_action = parse_action(Action.Invoke.task(id, fun))
+    exit_action = parse_action(Action.Invoke.task_cancel(id))
+
+    {entry_action, exit_action, transitions}
   end
 
   defp parse_delayed_transitions(nil, _id), do: {[], [], []}
@@ -113,18 +163,13 @@ defmodule Protean.MachineConfig do
 
   defp parse_delayed_transition(config, id) do
     {delay, config} = Keyword.pop!(config, :delay)
-    event_name = delayed_transition_event_name(id, delay)
+    event_name = internal_event(:after, id, delay)
 
     entry_action = parse_action(Action.send_event(event_name, delay: delay))
     exit_action = parse_action(Action.cancel_event(event_name))
     transition = parse_transition(config ++ [on: event_name], id)
 
     {entry_action, exit_action, transition}
-  end
-
-  defp delayed_transition_event_name(id, delay) do
-    ["#" | rest] = Enum.reverse(id)
-    "$protean.after.#{delay}-#" <> Enum.join(rest, ".")
   end
 
   defp parse_children(nil, _id), do: nil
