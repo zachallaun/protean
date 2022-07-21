@@ -83,15 +83,35 @@ defmodule Protean.Machine do
   def take_transitions(_machine, state, []), do: state
 
   def take_transitions(machine, state, transitions) do
-    Enum.reduce(transitions, state, fn transition, state ->
-      apply_transition(machine, state, transition)
-    end)
+    [target_ids, to_exit, to_enter] =
+      transitions
+      |> Enum.map(&transition_result(machine, state, &1))
+      |> Utilities.unzip3()
+      |> Tuple.to_list()
+      |> Enum.map(fn items -> items |> Enum.concat() |> Enum.uniq() end)
+
+    to_exit = exit_order(to_exit)
+    to_enter = entry_order(to_enter)
+
+    value =
+      state.value
+      |> then(&(&1 -- Enum.map(to_exit, fn node -> node.id end)))
+      |> Enum.concat(target_ids)
+      |> Enum.uniq()
+
+    actions =
+      Enum.flat_map(to_exit, & &1.exit) ++
+        Enum.flat_map(transitions, & &1.actions) ++
+        Enum.flat_map(to_enter, & &1.entry)
+
+    state
+    |> State.assign_value(value)
+    |> State.put_actions(actions)
   end
 
-  # This function is fundamentally wrong, we need to return {transition, entry_set, exit_set}
-  # or something so that we can ensure that none of the transitions conflict with each other
-  # (they should have non-overlapping exit sets, otherwise we have to figure out which one "wins")
-  defp apply_transition(machine, state, transition) do
+  @spec transition_result(t, State.t(), Transition.t()) ::
+          {target_ids :: [Node.id()], to_exit :: [Node.t()], to_enter :: [Node.t()]}
+  defp transition_result(machine, state, transition) do
     %{idmap: idmap} = machine
     active = active_nodes(machine, state)
     target_ids = effective_target_ids(transition.target_ids, idmap)
@@ -124,30 +144,17 @@ defmodule Protean.Machine do
         to_enter
       end
 
-    actions =
-      Enum.flat_map(to_exit, & &1.exit) ++
-        transition.actions ++
-        Enum.flat_map(to_enter, & &1.entry)
-
-    state
-    |> Map.put(:value, value)
-    |> State.put_actions(actions)
+    {target_ids, to_exit, to_enter}
   end
 
-  defp entry_set(domain, target_ids, idmap) do
-    domain
-    |> get_entry_nodes(target_ids, idmap)
-    |> Enum.sort_by(& &1.order, :asc)
-  end
+  defp entry_set(domain_id, target_ids, idmap)
 
-  defp get_entry_nodes(domain_id, target_ids, idmap)
-
-  defp get_entry_nodes([], target_ids, idmap),
+  defp entry_set([], target_ids, idmap),
     do: entry_set(["#"], target_ids, idmap)
 
-  defp get_entry_nodes(_, [], _), do: []
+  defp entry_set(_, [], _), do: []
 
-  defp get_entry_nodes(domain_id, target_ids, idmap) do
+  defp entry_set(domain_id, target_ids, idmap) do
     case idmap[domain_id] do
       %{type: :atomic} ->
         []
@@ -162,13 +169,13 @@ defmodule Protean.Machine do
           end)
 
         if child do
-          [child | get_entry_nodes(child.id, target_ids, idmap)]
+          [child | entry_set(child.id, target_ids, idmap)]
         else
           []
         end
 
       %{type: :parallel} = parallel ->
-        parallel.states ++ Enum.map(parallel.states, &get_entry_nodes(&1, target_ids, idmap))
+        parallel.states ++ Enum.map(parallel.states, &entry_set(&1, target_ids, idmap))
 
         # nil ->
         #   IO.inspect(domain_id, label: "domain id")
@@ -177,9 +184,7 @@ defmodule Protean.Machine do
   end
 
   defp exit_set(domain, active_nodes) do
-    active_nodes
-    |> Enum.filter(&Node.descendant?(&1.id, domain))
-    |> Enum.sort_by(& &1.order, :desc)
+    Enum.filter(active_nodes, &Node.descendant?(&1.id, domain))
   end
 
   defp effective_target_ids(target_ids, idmap) do
@@ -281,17 +286,16 @@ defmodule Protean.Machine do
   @spec entry_actions(t, [Node.id()]) :: [Action.t()]
   defp entry_actions(machine, ids) do
     machine
-    |> entry_order(ids)
+    |> lookup_nodes(ids)
+    |> entry_order()
     |> Enum.flat_map(& &1.entry)
   end
 
-  defp entry_order(machine, ids), do: document_order(machine, ids)
+  defp entry_order(nodes),
+    do: Enum.sort_by(nodes, & &1.order, :asc)
 
-  defp document_order(machine, ids, sorter \\ :asc) do
-    machine
-    |> lookup_nodes(ids)
-    |> Enum.sort_by(& &1.order, sorter)
-  end
+  defp exit_order(nodes),
+    do: Enum.sort_by(nodes, & &1.order, :desc)
 
   defp lookup_nodes(machine, ids) do
     Enum.map(ids, fn id -> machine.idmap[id] end)

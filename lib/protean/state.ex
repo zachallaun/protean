@@ -122,4 +122,8 @@ defmodule Protean.State do
   @doc false
   def pop_actions(state),
     do: {actions(state), assign_actions(state)}
+
+  @doc false
+  def assign_value(state, value),
+    do: %{state | value: value}
 end
