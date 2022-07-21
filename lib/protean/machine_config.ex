@@ -25,18 +25,6 @@ defmodule Protean.MachineConfig do
     {root, context}
   end
 
-  @doc false
-  def internal_event(:after, node_id, delay) do
-    @root_id ++ rest = Enum.reverse(node_id)
-    "$protean.after.#{delay}-#" <> Enum.join(rest, ".")
-  end
-
-  def internal_event(:invoke, :done, id),
-    do: "$protean.invoke.done-#{id}"
-
-  def internal_event(:invoke, :error, id),
-    do: "$protean.invoke.error-#{id}"
-
   defp set_order(node, order \\ 0)
 
   defp set_order(%{states: nil} = node, order),
@@ -137,8 +125,8 @@ defmodule Protean.MachineConfig do
 
     transitions =
       [
-        config[:done] && {internal_event(:invoke, :done, id), config[:done]},
-        config[:error] && {internal_event(:invoke, :error, id), config[:error]}
+        config[:done] && {Utilities.internal_event(:invoke, :done, id), config[:done]},
+        config[:error] && {Utilities.internal_event(:invoke, :error, id), config[:error]}
       ]
       |> Enum.filter(&Function.identity/1)
       |> Enum.map(&parse_transition(&1, node_id))
@@ -163,7 +151,7 @@ defmodule Protean.MachineConfig do
 
   defp parse_delayed_transition(config, id) do
     {delay, config} = Keyword.pop!(config, :delay)
-    event_name = internal_event(:after, id, delay)
+    event_name = Utilities.internal_event(:after, id, delay)
 
     entry_action = parse_action(Action.send_event(event_name, delay: delay))
     exit_action = parse_action(Action.cancel_event(event_name))

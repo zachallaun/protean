@@ -1,6 +1,27 @@
 defmodule Protean.Utilities do
   @moduledoc false
 
+  @internal_prefix "$protean"
+
+  @doc """
+  Generate the event name for an internal Protean event.
+  """
+  def internal_event(:init) do
+    "#{@internal_prefix}.init"
+  end
+
+  def internal_event(:after, node_id, delay) do
+    human_id =
+      node_id
+      |> Enum.reverse()
+      |> Enum.join(".")
+
+    "#{@internal_prefix}.after.#{delay}-#{human_id}"
+  end
+
+  def internal_event(:invoke, :done, id), do: "#{@internal_prefix}.invoke.done-#{id}"
+  def internal_event(:invoke, :error, id), do: "#{@internal_prefix}.invoke.error-#{id}"
+
   @doc """
   Equivalent to `Enum.unzip/1` except for lists with 3-element tuples.
   """

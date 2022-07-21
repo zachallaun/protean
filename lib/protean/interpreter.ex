@@ -9,6 +9,7 @@ defmodule Protean.Interpreter do
   alias Protean.Action
   alias Protean.Machine
   alias Protean.State
+  alias Protean.Utilities
 
   defstruct [
     :machine,
