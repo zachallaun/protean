@@ -28,7 +28,7 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Machines/Interpreters
   - [ ] GenServers (non-Protean)
   - [ ] Autoforward events
-  - [ ] Tasks
+  - [x] Tasks
 - [ ] Actions
   - [x] Send event to self
   - [ ] Send event to service

@@ -102,7 +102,7 @@ defmodule Protean.TestCase do
         Protean.send_event(pid, event)
 
       {:send_async, {event, data}} ->
-        Protean.send_event_async(pid, event)
+        Protean.send_event_async(pid, {event, data})
 
       {:send_async, event} ->
         Protean.send_event_async(pid, event)
