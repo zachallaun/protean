@@ -31,8 +31,8 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [x] Tasks
 - [ ] Actions
   - [x] Send event to self
-  - [ ] Send event to service
-  - [ ] Send event to parent
+  - [x] Send event to service
+  - [x] Send event to parent
   - [x] Delayed sends
   - [ ] Spawn in assigns
   - [ ] Raise action (queues event in internal queue)
@@ -40,8 +40,7 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Forward action
   - [ ] Escalate action
   - [ ] Choose action / conditional actions
-  - [ ] Cancel event
-- [ ] Transitions
+- [x] Transitions
   - [x] Automatic transitions
   - [x] Delayed transitions (implemented as delayed sends to auto transition states)
   - [x] Correctly cancel non-sent actions when transitioning out
