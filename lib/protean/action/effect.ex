@@ -7,10 +7,11 @@ defmodule Protean.Action.Effect do
   alias Protean.Action
   alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
+  alias Protean.Machine
   alias Protean.State
 
   @doc "Invoked to handle side-effecting actions."
-  @callback effect(Action.name(), State.t(), State.context()) :: any
+  @callback effect(Action.name(), State.t(), Machine.event()) :: any
 
   defmodule Resolved do
     @moduledoc false
@@ -19,7 +20,7 @@ defmodule Protean.Action.Effect do
 
     defimpl Executable, for: __MODULE__ do
       def exec(%{action_name: action_name, handler: handler}, %{state: state} = interpreter) do
-        handler.effect(action_name, state, state.context)
+        handler.effect(action_name, state, state.event)
         interpreter
       end
     end

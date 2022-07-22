@@ -39,7 +39,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     ]
 
     @impl true
-    def pure("save_result", %{event: {_, result}} = state, _ctx) do
+    def pure("save_result", state, {_, result}) do
       Action.assign(state, :result, result)
     end
   end
@@ -92,7 +92,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     end
 
     @impl true
-    def pure("save_result", %{event: {_, result}} = state, _ctx) do
+    def pure("save_result", state, {_, result}) do
       Action.assign(state, :result, result)
     end
   end
@@ -167,7 +167,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     ]
 
     @impl true
-    def invoke("my_task", _state) do
+    def invoke("my_task", _state, _event) do
       fn -> :result end
     end
   end
@@ -209,7 +209,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     ]
 
     @impl true
-    def invoke("send_message_to_self", _state) do
+    def invoke("send_message_to_self", _state, _event) do
       me = self()
 
       fn ->

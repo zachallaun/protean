@@ -53,16 +53,16 @@ defmodule Protean do
   current state and send events to transition the state:
 
       iex> Protean.current(TrafficLight)
-      %Protean.State{value: [["green", "#"]], ...}
+      %Protean.State{value: MapSet<[["green", "#"]]>, ...}
 
       iex> Protean.send_event(TrafficLight, "NEXT")
-      %Protean.State{value: [["yellow", "#"]], ...}
+      %Protean.State{value: MapSet<[["yellow", "#"]]>, ...}
 
       iex> Protean.send_event(TrafficLight, "NEXT")
-      %Protean.State{value: [["red", "#"]], ...}
+      %Protean.State{value: MapSet<[["red", "#"]]>, ...}
 
       iex> Protean.send_event(TrafficLight, "UNKNOWN_EVENT")
-      %Protean.State{value: [["red", "#"]], ...}
+      %Protean.State{value: MapSet<[["red", "#"]]>, ...}
   """
 
   alias Protean.Interpreter

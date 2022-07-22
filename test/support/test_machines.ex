@@ -212,14 +212,14 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("direction_straight?", _state, %{direction: :straight}, _event), do: true
-    def condition("direction_straight?", _, _, _), do: false
+    def condition("direction_straight?", %{context: %{direction: :straight}}, _event), do: true
+    def condition("direction_straight?", _, _), do: false
 
-    def condition("direction_left?", _state, %{direction: :left}, _event), do: true
-    def condition("direction_left?", _, _, _), do: false
+    def condition("direction_left?", %{context: %{direction: :left}}, _event), do: true
+    def condition("direction_left?", _, _), do: false
 
-    def condition("direction_right?", _state, %{direction: :right}, _event), do: true
-    def condition("direction_right?", _, _, _), do: false
+    def condition("direction_right?", %{context: %{direction: :right}}, _event), do: true
+    def condition("direction_right?", _, _), do: false
   end
 
   def silly_direction_machine do
@@ -260,11 +260,11 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def pure("entering_a", state, %{acc: acc}) do
+    def pure("entering_a", %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["entering_a" | acc])
     end
 
-    def pure("exiting_a", state, %{acc: acc}) do
+    def pure("exiting_a", %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["exiting_a" | acc])
     end
   end
@@ -304,7 +304,7 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("asked_nicely", _state, _context, {_, :please}), do: true
+    def condition("asked_nicely", _state, {_, :please}), do: true
   end
 
   def higher_order_guard_machine_1 do
@@ -342,7 +342,7 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def condition("asked_nicely", _state, _context, {_, :please}), do: true
+    def condition("asked_nicely", _state, {_, :please}), do: true
   end
 
   def higher_order_guard_machine_2 do
@@ -396,7 +396,8 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def pure(action_name, state, %{acc: acc}) do
+    def pure(action_name, state, _event) do
+      %{acc: acc} = state.context
       Action.assign(state, :acc, [action_name | acc])
     end
   end

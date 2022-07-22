@@ -3,6 +3,7 @@ defmodule Protean.Transition.Guard do
   Defines behaviour for guarded transition handler modules.
   """
 
+  alias Protean.Action
   alias Protean.Machine
   alias Protean.State
 
@@ -10,14 +11,9 @@ defmodule Protean.Transition.Guard do
   @type guard :: term
 
   @doc """
-  Determines whether a transition should take place given the current machien state.
+  Determines whether a transition should take place given the current machine state.
   """
-  @callback condition(
-              guard_name :: String.t(),
-              state :: State.t(),
-              context :: State.context(),
-              event :: Machine.event()
-            ) :: boolean
+  @callback condition(Action.name(), State.t(), Machine.event()) :: boolean
 
   defprotocol Guards do
     @spec allows?(t, State.t(), Machine.event(), module) :: boolean
@@ -26,13 +22,13 @@ defmodule Protean.Transition.Guard do
 
   defimpl Guards, for: BitString do
     def allows?(name, state, event, handler) do
-      handler.condition(name, state, state.context, event)
+      handler.condition(name, state, event)
     end
   end
 
   defimpl Guards, for: Function do
     def allows?(guard_fun, state, event, _handler) do
-      guard_fun.(state, state.context, event)
+      guard_fun.(state, event)
     end
   end
 

@@ -8,8 +8,10 @@ defmodule Protean.Action.Invoke do
   """
 
   alias __MODULE__
+  alias Protean.Action
   alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
+  alias Protean.Machine
   alias Protean.State
   alias Protean.Utilities
 
@@ -17,7 +19,7 @@ defmodule Protean.Action.Invoke do
   Called with handler name and machine state. Returns a child spec usable by the invoke type used
   to register the handler name.
   """
-  @callback invoke(String.t(), State.t()) :: any
+  @callback invoke(Action.name(), State.t(), Machine.event()) :: any
 
   defmodule Resolved do
     @enforce_keys [:id, :child_spec_fun]
@@ -38,8 +40,6 @@ defmodule Protean.Action.Invoke do
               &Map.put(&1, id, %{id: id, pid: child, ref: ref, autoforward: false})
             )
         end
-
-        # TODO:
       end
     end
   end
@@ -75,7 +75,7 @@ defmodule Protean.Action.Invoke do
     defimpl Resolvable, for: __MODULE__ do
       def resolve(%{id: id, task: task}, state, handler) when is_binary(task) do
         task
-        |> handler.invoke(state)
+        |> handler.invoke(state, state.event)
         |> resolved(id)
       end
 

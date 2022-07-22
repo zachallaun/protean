@@ -52,12 +52,12 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     ]
 
     @impl true
-    def pure(action_name, state, %{acc: acc}) do
+    def pure(action_name, %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, [action_name | acc])
     end
 
     @impl true
-    def condition("allow?", _state, %{allow: true}, _event), do: true
+    def condition("allow?", %{context: %{allow: true}}, _event), do: true
   end
 
   @moduletag machine: TestMachine

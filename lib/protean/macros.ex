@@ -138,10 +138,10 @@ defmodule Protean.Macros do
       def effect(_, _, _), do: nil
 
       @impl Protean.Action.Invoke
-      def invoke(_, _), do: nil
+      def invoke(_, _, _), do: nil
 
       @impl Protean.Transition.Guard
-      def condition(_, _, _, _), do: false
+      def condition(_, _, _), do: false
     end
   end
 

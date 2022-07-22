@@ -6,10 +6,11 @@ defmodule Protean.Action.Pure do
 
   alias Protean.Action
   alias Protean.Action.Protocol.Resolvable
+  alias Protean.Machine
   alias Protean.State
 
   @doc "Invoked to handle pure actions."
-  @callback pure(Action.name(), State.t(), State.context()) :: State.t() | nil
+  @callback pure(Action.name(), State.t(), Machine.event()) :: State.t() | nil
 
   defmodule Unresolved do
     @moduledoc false
@@ -18,7 +19,7 @@ defmodule Protean.Action.Pure do
 
     defimpl Resolvable, for: __MODULE__ do
       def resolve(%{action_name: action_name}, state, handler) do
-        with %State{} = state <- handler.pure(action_name, state, state.context) do
+        with %State{} = state <- handler.pure(action_name, state, state.event) do
           {nil, State.actions(state)}
         end
       end

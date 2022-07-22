@@ -4,7 +4,7 @@ defmodule Protean.Action do
   are data descriptors of things that should happen in response to state machine transitions.
 
   ### Pure and Effect
-  TODO explain pure/4 and effect/4 callbacks
+  TODO explain pure/3 and effect/3 callbacks
 
   ### Resolution and Execution
 
