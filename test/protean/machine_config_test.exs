@@ -15,10 +15,10 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.send_event("$protean.after.2000-#", delay: 2000)
+            Action.Invoke.delayed_send("$protean.after.2000-#", 2000)
           ],
           exit: [
-            Action.cancel_event("$protean.after.2000-#")
+            Action.Invoke.cancel("$protean.after.2000-#")
           ],
           on: [
             "$protean.after.2000-#": "b"
@@ -45,12 +45,12 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.send_event("$protean.after.1000-#", delay: 1000),
-            Action.send_event("$protean.after.2000-#", delay: 2000)
+            Action.Invoke.delayed_send("$protean.after.1000-#", 1000),
+            Action.Invoke.delayed_send("$protean.after.2000-#", 2000)
           ],
           exit: [
-            Action.cancel_event("$protean.after.1000-#"),
-            Action.cancel_event("$protean.after.2000-#")
+            Action.Invoke.cancel("$protean.after.1000-#"),
+            Action.Invoke.cancel("$protean.after.2000-#")
           ],
           on: [
             "$protean.after.1000-#": [
@@ -85,7 +85,7 @@ defmodule Protean.MachineConfigTest do
             Action.Invoke.task("task_id", task_fun)
           ],
           exit: [
-            Action.Invoke.cancel_invoke("task_id")
+            Action.Invoke.cancel("task_id")
           ],
           on: [
             "$protean.invoke.done-task_id": "done_state",

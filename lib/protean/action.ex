@@ -71,13 +71,6 @@ defmodule Protean.Action do
   def send_event(%State{} = state, event, opts),
     do: State.put_actions(state, [send_event(event, opts)])
 
-  @doc "TODO"
-  def cancel_event(id),
-    do: %Action.CancelEvent.Unresolved{id: id}
-
-  def cancel_event(%State{} = state, id),
-    do: State.put_actions(state, [cancel_event(id)])
-
   @doc false
   @spec resolve(unresolved, State.t(), module) :: {[resolved], [unresolved]}
   def resolve(action, state, handler) do

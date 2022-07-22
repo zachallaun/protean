@@ -60,51 +60,66 @@ defmodule Protean.Action.Invoke do
   defmodule Unresolved.Task do
     defstruct [
       :id,
-      :task
+      :task,
+      :event_name
     ]
 
     defimpl Resolvable, for: __MODULE__ do
-      def resolve(%{id: id, task: task}, state, handler) when is_binary(task) do
+      def resolve(%{id: id, task: task, event_name: event_name}, state, handler)
+          when is_binary(task) do
         task
         |> handler.invoke(state, state.event)
-        |> resolved(id)
+        |> resolved(id, event_name)
       end
 
-      def resolve(%{id: id, task: task}, _state, _handler) do
-        resolved(task, id)
+      def resolve(%{id: id, task: task, event_name: event_name}, _state, _handler) do
+        resolved(task, id, event_name)
       end
 
-      defp resolved(task, id) do
+      defp resolved(task, id, event_name) do
         %Invoke.Resolved{
           id: id,
           child_spec_fun: fn pid ->
-            Task.child_spec(fn -> Unresolved.Task.run_task(task, id, pid) end)
+            Task.child_spec(fn -> Unresolved.Task.run_task(task, pid, event_name) end)
           end
         }
       end
     end
 
     @doc false
-    def run_task({m, f, a}, id, send_to) do
+    def run_task({m, f, a}, to, event_name) do
       apply(m, f, a)
-      |> Invoke.send_done_event(id, send_to)
+      |> send_result_as_event(to, event_name)
     end
 
-    def run_task(f, id, send_to) when is_function(f) do
+    def run_task(f, to, event_name) when is_function(f) do
       f.()
-      |> Invoke.send_done_event(id, send_to)
+      |> send_result_as_event(to, event_name)
+    end
+
+    defp send_result_as_event(result, to, event_name) do
+      Protean.send_event(to, {event_name, result})
     end
   end
 
-  def task(id, task),
-    do: %Unresolved.Task{id: id, task: task}
+  def task(id, task) do
+    %Unresolved.Task{
+      id: id,
+      task: task,
+      event_name: Utilities.internal_event(:invoke, :done, id)
+    }
+  end
 
-  def cancel_invoke(id),
-    do: %Resolved.Cancel{id: id}
+  def delayed_send(event_name, delay) do
+    %Unresolved.Task{
+      id: event_name,
+      event_name: event_name,
+      task: {__MODULE__, :delay, [delay]}
+    }
+  end
+
+  def cancel(id), do: %Resolved.Cancel{id: id}
 
   @doc false
-  def send_done_event(result, id, to) do
-    event = {Utilities.internal_event(:invoke, :done, id), result}
-    Protean.send_event(to, event)
-  end
+  def delay(milliseconds), do: :timer.sleep(milliseconds)
 end

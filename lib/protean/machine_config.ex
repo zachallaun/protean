@@ -132,7 +132,7 @@ defmodule Protean.MachineConfig do
       |> Enum.map(&parse_transition(&1, node_id))
 
     entry_action = parse_action(Action.Invoke.task(id, task))
-    exit_action = parse_action(Action.Invoke.cancel_invoke(id))
+    exit_action = parse_action(Action.Invoke.cancel(id))
 
     {entry_action, exit_action, transitions}
   end
@@ -153,8 +153,8 @@ defmodule Protean.MachineConfig do
     {delay, config} = Keyword.pop!(config, :delay)
     event_name = Utilities.internal_event(:after, id, delay)
 
-    entry_action = parse_action(Action.send_event(event_name, delay: delay))
-    exit_action = parse_action(Action.cancel_event(event_name))
+    entry_action = parse_action(Action.Invoke.delayed_send(event_name, delay))
+    exit_action = parse_action(Action.Invoke.cancel(event_name))
     transition = parse_transition(config ++ [on: event_name], id)
 
     {entry_action, exit_action, transition}
