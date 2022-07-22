@@ -182,4 +182,52 @@ defmodule ProteanIntegration.InvokedTaskTest do
       )
     end
   end
+
+  defmodule CanceledTask do
+    use Protean
+
+    @machine [
+      initial: "init",
+      states: [
+        init: [
+          invoke: [
+            task: "send_message_to_self",
+            done: "sent"
+          ],
+          on: [
+            cancel: "canceled"
+          ]
+        ],
+        canceled: [
+          on: [
+            message: "sent"
+          ]
+        ],
+        # shouldn't get here
+        send: []
+      ]
+    ]
+
+    @impl true
+    def invoke("send_message_to_self", _state) do
+      me = self()
+
+      fn ->
+        :timer.sleep(30)
+        Protean.send_event(me, "message")
+      end
+    end
+  end
+
+  describe "CanceledTask:" do
+    @describetag machine: CanceledTask
+
+    test "transitioning out of invoking state should cancel task", %{machine: machine} do
+      assert_protean(machine,
+        send: "cancel",
+        sleep: 50,
+        matches: "canceled"
+      )
+    end
+  end
 end
