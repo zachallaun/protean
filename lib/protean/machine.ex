@@ -27,20 +27,6 @@ defmodule Protean.Machine do
           initial_context: State.context()
         }
 
-  @typedoc "An event name used in a machine configuration and when sending events to a machine."
-  @type event_name :: String.t()
-
-  @typedoc "Data payload sent along with an event."
-  @type event_data :: term
-
-  @typedoc """
-  The full representation of an event. `t:sendable_event()` is normalized to this form.
-  """
-  @type event :: {event_name, event_data}
-
-  @typedoc "An event that can be sent to a machine to trigger a transition."
-  @type sendable_event :: event | event_name
-
   def new(config, opts \\ []) do
     {root, context} = MachineConfig.parse!(config)
     idmap = Utilities.Tree.tree_reduce(root, &idmap_reducer/2, %{})
@@ -219,7 +205,7 @@ defmodule Protean.Machine do
     end
   end
 
-  @spec select_transitions(t, State.t(), event) :: [Transition.t()]
+  @spec select_transitions(t, State.t(), Protean.event()) :: [Transition.t()]
   def select_transitions(machine, state, event) do
     # TODO: Handle conflicting transitions
     # TODO: order nodes correctly (specificity + document order)
@@ -235,21 +221,13 @@ defmodule Protean.Machine do
   Given a machine, a machine state, and an event, transition to the next state
   if the machine defines a transition for the given state and event.
   """
-  @spec transition(t, State.t(), sendable_event) :: State.t()
+  @spec transition(t, State.t(), Protean.sendable_event()) :: State.t()
   def transition(machine, state, event) do
-    with event <- normalize_event(event),
+    with event <- Protean.event(event),
          transitions <- select_transitions(machine, state, event) do
       take_transitions(machine, state, transitions)
     end
   end
-
-  @doc """
-  Normalizes any valid `t:sendable_event()` to a `t:event()`. Event data will default to `nil` if
-  not provided with the event.
-  """
-  @spec normalize_event(sendable_event) :: event
-  def normalize_event({name, data}), do: {name, data}
-  def normalize_event(name), do: {name, nil}
 
   defp first_enabled_transition(nodes, machine, state, event, attribute \\ :transitions) do
     nodes

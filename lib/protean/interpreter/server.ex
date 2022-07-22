@@ -8,7 +8,6 @@ defmodule Protean.Interpreter.Server do
   use GenServer
 
   alias Protean.Interpreter
-  alias Protean.Machine
   alias Protean.State
 
   @type server :: GenServer.server()
@@ -35,17 +34,17 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send_event(server, Machine.sendable_event()) :: State.t()
+  @spec send_event(server, Protean.sendable_event()) :: State.t()
   def send_event(pid, event) do
-    GenServer.call(pid, {:event, Machine.normalize_event(event)})
+    GenServer.call(pid, {:event, Protean.event(event)})
   end
 
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_event_async(server, Machine.sendable_event()) :: :ok
+  @spec send_event_async(server, Protean.sendable_event()) :: :ok
   def send_event_async(pid, event) do
-    GenServer.cast(pid, {:event, Machine.normalize_event(event)})
+    GenServer.cast(pid, {:event, Protean.event(event)})
     :ok
   end
 
@@ -53,11 +52,11 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
   reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_event_after(server, Machine.sendable_event(), non_neg_integer) :: reference
+  @spec send_event_after(server, Protean.sendable_event(), non_neg_integer) :: reference
   def send_event_after(pid, event, time) do
     pid
     |> GenServer.whereis()
-    |> Process.send_after({:event, Machine.normalize_event(event)}, time)
+    |> Process.send_after({:event, Protean.event(event)}, time)
   end
 
   @doc """

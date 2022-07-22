@@ -12,7 +12,6 @@ defmodule Protean.State do
 
   alias __MODULE__
   alias Protean.Action
-  alias Protean.Machine
   alias Protean.Node
 
   defstruct [
@@ -26,7 +25,7 @@ defmodule Protean.State do
 
   @type t :: %State{
           value: value,
-          event: Machine.event() | nil,
+          event: Protean.event() | nil,
           context: context,
           private: protean_state
         }

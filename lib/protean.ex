@@ -68,8 +68,18 @@ defmodule Protean do
   alias Protean.Action
   alias Protean.Interpreter
   alias Protean.Interpreter.Server
-  alias Protean.Machine
   alias Protean.State
+
+  @typedoc """
+  A normalized event. Any events received from Protean will be of this form.
+  """
+  @type event :: {name :: String.t(), payload :: any}
+
+  @typedoc """
+  A sendable event. Events sent to Protean that match this type will be "desugared" to
+  `t:event`.
+  """
+  @type sendable_event :: {String.t(), any} | {atom, any} | String.t() | atom
 
   @doc """
   Used to define invoked services at runtime. Returns a value or child spec usable by the invoke
@@ -98,7 +108,7 @@ defmodule Protean do
         {__MODULE__, :run_task, [data]}
       end
   """
-  @callback invoke(Action.name(), State.t(), Machine.event()) :: any
+  @callback invoke(Action.name(), State.t(), event) :: any
 
   @doc """
   Used to modify machine context and trigger additional actions. Returns the machine state.
@@ -134,7 +144,7 @@ defmodule Protean do
         |> Protean.Action.assign(:last_received_data, data)
       end
   """
-  @callback pure(Action.name(), State.t(), Machine.event()) :: State.t() | nil
+  @callback pure(Action.name(), State.t(), event) :: State.t() | nil
 
   @doc """
   Used to perform arbitrary side-effects.
@@ -166,7 +176,7 @@ defmodule Protean do
         PubSub.broadcast(topic, "user:\#{user.id}", {:user_update, user})
       end
   """
-  @callback effect(Action.name(), State.t(), Machine.event()) :: any
+  @callback effect(Action.name(), State.t(), event) :: any
 
   @doc """
   Used to determine whether a transition should take place.
@@ -197,7 +207,7 @@ defmodule Protean do
         User.changeset(%User{}, user).valid?
       end
   """
-  @callback condition(Action.name(), State.t(), Machine.event()) :: boolean
+  @callback condition(Action.name(), State.t(), event) :: boolean
 
   defmacro __using__(opts) do
     unless __CALLER__.module do
@@ -209,6 +219,13 @@ defmodule Protean do
       :ok
     end
   end
+
+  @doc "Normalizes a `t:sendable_event` to a `t:event`."
+  @spec event(sendable_event) :: event
+  def event(name) when is_atom(name), do: {to_string(name), nil}
+  def event(name) when is_binary(name), do: {name, nil}
+  def event({name, payload}) when is_atom(name), do: {to_string(name), payload}
+  def event({name, payload}) when is_binary(name), do: {name, payload}
 
   @doc "TODO"
   defdelegate send_event(pid, event), to: Server

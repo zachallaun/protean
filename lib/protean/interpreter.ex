@@ -45,7 +45,7 @@ defmodule Protean.Interpreter do
 
   @type metadata :: %{
           state: %{value: State.value()},
-          event: Machine.event()
+          event: Protean.event()
         }
 
   # Partial Access behaviour (not defining `pop/2`)
@@ -103,9 +103,9 @@ defmodule Protean.Interpreter do
   Send an event to a running interpreter. This will execute any transitions, actions, and side-
   effects associated with the current machine state and this event.
   """
-  @spec send_event(t, Machine.sendable_event()) :: t
+  @spec send_event(t, Protean.sendable_event()) :: t
   def send_event(%Interpreter{running: true} = interpreter, event) do
-    event = Machine.normalize_event(event)
+    event = Protean.event(event)
 
     interpreter
     |> autoforward_event(event)
@@ -218,12 +218,12 @@ defmodule Protean.Interpreter do
     Machine.select_automatic_transitions(machine, state)
   end
 
-  @spec select_transitions(t, Machine.event()) :: [Transition.t()]
+  @spec select_transitions(t, Protean.event()) :: [Transition.t()]
   defp select_transitions(%{machine: machine, state: state}, event) do
     Machine.select_transitions(machine, state, event)
   end
 
-  @spec autoforward_event(t, Machine.event()) :: t
+  @spec autoforward_event(t, Protean.event()) :: t
   defp autoforward_event(%Interpreter{invoked: invoked} = interpreter, event) do
     invoked
     |> Map.values()
@@ -235,7 +235,7 @@ defmodule Protean.Interpreter do
   defp autoforward?(%{autoforward: true}), do: true
   defp autoforward?(_invoke), do: false
 
-  @spec autoforward_to(invoked_service, Machine.event(), t) :: t
+  @spec autoforward_to(invoked_service, Protean.event(), t) :: t
   defp autoforward_to(%{pid: pid}, event, interpreter) do
     # TODO: do we need to handle failures here? can add to internal queue
     # if errors occur.

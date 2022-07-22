@@ -3,14 +3,13 @@ defmodule Protean.Transition.Guard do
   Defines behaviour for guarded transition handler modules.
   """
 
-  alias Protean.Machine
   alias Protean.State
 
   @typedoc "Any type that implements the `Protean.Transition.Guard.Guards` protocol."
   @type guard :: term
 
   defprotocol Guards do
-    @spec allows?(t, State.t(), Machine.event(), module) :: boolean
+    @spec allows?(t, State.t(), Protean.event(), module) :: boolean
     def allows?(guard, state, event, handler)
   end
 
