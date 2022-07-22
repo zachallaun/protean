@@ -36,8 +36,9 @@ defmodule Protean.Macros do
 
   defmacro __using__(opts) do
     quote generated: true, location: :keep do
-      @behaviour Protean.Action.Pure
       @behaviour Protean.Action.Effect
+      @behaviour Protean.Action.Invoke
+      @behaviour Protean.Action.Pure
       @behaviour Protean.Transition.Guard
 
       Module.put_attribute(__MODULE__, Protean.Options, unquote(Macro.escape(opts)))
@@ -135,6 +136,9 @@ defmodule Protean.Macros do
 
       @impl Protean.Action.Effect
       def effect(_, _, _), do: nil
+
+      @impl Protean.Action.Invoke
+      def invoke(_, _), do: nil
 
       @impl Protean.Transition.Guard
       def condition(_, _, _, _), do: false

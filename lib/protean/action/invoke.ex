@@ -10,9 +10,14 @@ defmodule Protean.Action.Invoke do
   alias __MODULE__
   alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
+  alias Protean.State
   alias Protean.Utilities
 
-  require Logger
+  @doc """
+  Called with handler name and machine state. Returns a child spec usable by the invoke type used
+  to register the handler name.
+  """
+  @callback invoke(String.t(), State.t()) :: any
 
   defmodule Resolved do
     @enforce_keys [:id, :child_spec_fun]
@@ -68,7 +73,17 @@ defmodule Protean.Action.Invoke do
     ]
 
     defimpl Resolvable, for: __MODULE__ do
+      def resolve(%{id: id, task: task}, state, handler) when is_binary(task) do
+        task
+        |> handler.invoke(state)
+        |> resolved(id)
+      end
+
       def resolve(%{id: id, task: task}, _state, _handler) do
+        resolved(task, id)
+      end
+
+      defp resolved(task, id) do
         %Invoke.Resolved{
           id: id,
           child_spec_fun: fn pid ->

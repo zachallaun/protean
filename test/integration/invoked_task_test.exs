@@ -149,4 +149,37 @@ defmodule ProteanIntegration.InvokedTaskTest do
       assert msg =~ "error"
     end
   end
+
+  defmodule ResolvedTaskInvoke do
+    use Protean
+
+    @machine [
+      initial: "init",
+      states: [
+        init: [
+          invoke: [
+            task: "my_task",
+            done: "success"
+          ]
+        ],
+        success: []
+      ]
+    ]
+
+    @impl true
+    def invoke("my_task", _state) do
+      fn -> :result end
+    end
+  end
+
+  describe "ResolvedTaskInvoke:" do
+    @describetag machine: ResolvedTaskInvoke
+
+    test "tasks can be resolved by handlers", %{machine: machine} do
+      assert_protean(machine,
+        sleep: 30,
+        matches: "success"
+      )
+    end
+  end
 end
