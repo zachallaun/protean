@@ -4,14 +4,8 @@ defmodule Protean.Action.Effect do
   """
 
   alias __MODULE__
-  alias Protean.Action
   alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
-  alias Protean.Machine
-  alias Protean.State
-
-  @doc "Invoked to handle side-effecting actions."
-  @callback effect(Action.name(), State.t(), Machine.event()) :: any
 
   defmodule Resolved do
     @moduledoc false

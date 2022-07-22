@@ -8,18 +8,9 @@ defmodule Protean.Action.Invoke do
   """
 
   alias __MODULE__
-  alias Protean.Action
   alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
-  alias Protean.Machine
-  alias Protean.State
   alias Protean.Utilities
-
-  @doc """
-  Called with handler name and machine state. Returns a child spec usable by the invoke type used
-  to register the handler name.
-  """
-  @callback invoke(Action.name(), State.t(), Machine.event()) :: any
 
   defmodule Resolved do
     @enforce_keys [:id, :child_spec_fun]

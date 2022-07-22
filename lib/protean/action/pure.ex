@@ -4,13 +4,8 @@ defmodule Protean.Action.Pure do
   additional actions.
   """
 
-  alias Protean.Action
   alias Protean.Action.Protocol.Resolvable
-  alias Protean.Machine
   alias Protean.State
-
-  @doc "Invoked to handle pure actions."
-  @callback pure(Action.name(), State.t(), Machine.event()) :: State.t() | nil
 
   defmodule Unresolved do
     @moduledoc false
