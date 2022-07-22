@@ -131,9 +131,13 @@ defmodule Protean.Interpreter.Server do
     {:noreply, Interpreter.send_event(interpreter, event)}
   end
 
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, interpreter) do
+    {:noreply, Interpreter.notify_process_down(interpreter, ref)}
+  end
+
   def handle_info(anything, interpreter) do
     require Logger
-    Logger.info("got something: #{inspect(anything)}")
+    Logger.info("Unexpected message: #{inspect(anything)}")
     {:noreply, interpreter}
   end
 

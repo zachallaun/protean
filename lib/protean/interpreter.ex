@@ -29,11 +29,14 @@ defmodule Protean.Interpreter do
           invoked: invoked
         }
 
-  @type invoked :: %{any => invoked_service}
+  @type invoked :: %{invoked_id => invoked_service}
   @type invoked_service :: %{
+          id: invoked_id,
           pid: GenServer.server(),
+          ref: reference,
           autoforward: boolean
         }
+  @type invoked_id :: String.t()
 
   @type options :: [option]
   @type option ::
@@ -110,6 +113,27 @@ defmodule Protean.Interpreter do
   end
 
   def send_event(interpreter, _event), do: interpreter
+
+  @doc false
+  @spec notify_process_down(t, reference) :: t
+  def notify_process_down(%Interpreter{} = interpreter, ref) do
+    case get_invoked_by_ref(interpreter, ref) do
+      %{id: id} ->
+        interpreter
+        |> update_in([:invoked], &Map.delete(&1, id))
+        |> add_internal({Utilities.internal_event(:invoke, :error, id), nil})
+        |> run_interpreter()
+
+      nil ->
+        nil
+    end
+  end
+
+  defp get_invoked_by_ref(%{invoked: invoked}, ref) do
+    invoked
+    |> Map.values()
+    |> Enum.find(fn %{ref: ^ref} = i -> i end)
+  end
 
   @doc """
   Sets the context of the current state.

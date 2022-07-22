@@ -108,4 +108,45 @@ defmodule ProteanIntegration.InvokedTaskTest do
       )
     end
   end
+
+  defmodule ErrorRaisingTasks do
+    use Protean
+
+    @machine [
+      initial: "init",
+      states: [
+        init: [
+          invoke: [
+            task: {__MODULE__, :raise_error, []},
+            done: "success",
+            error: "failure"
+          ]
+        ],
+        success: [],
+        failure: []
+      ]
+    ]
+
+    def raise_error do
+      raise "any error"
+    end
+  end
+
+  describe "ErrorRaisingTasks:" do
+    import ExUnit.CaptureLog
+
+    @describetag machine: ErrorRaisingTasks
+
+    test "Error transition taken when task raises", %{machine: machine} do
+      msg =
+        capture_log(fn ->
+          assert_protean(machine,
+            sleep: 30,
+            matches: "failure"
+          )
+        end)
+
+      assert msg =~ "error"
+    end
+  end
 end
