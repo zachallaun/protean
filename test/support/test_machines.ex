@@ -29,7 +29,7 @@ defmodule TestMachines do
           machine: machine,
           handler: module,
           initial: Machine.initial_state(machine),
-          interpreter: Interpreter.new(machine, module)
+          interpreter: Interpreter.new(machine: machine, handler: module)
         }
     end
   end

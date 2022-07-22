@@ -12,7 +12,7 @@ defmodule Protean.InterpreterTest do
     @describetag machine: :pure_machine_1
 
     test "can be created and started", %{machine: machine, handler: handler} do
-      interpreter = Interpreter.new(machine, handler)
+      interpreter = Interpreter.new(machine: machine, handler: handler)
       assert !Interpreter.running?(interpreter)
       assert interpreter |> Interpreter.start() |> Interpreter.running?()
     end

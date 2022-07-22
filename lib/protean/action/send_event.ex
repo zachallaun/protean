@@ -6,6 +6,9 @@ defmodule Protean.Action.SendEvent do
   alias Protean.Action.Protocol.Resolvable
   alias Protean.Interpreter.Server
 
+  def to(%{parent: parent}, :parent), do: parent
+  def to(_interpreter, to), do: to
+
   defmodule Resolved.Immediate do
     @moduledoc false
 
@@ -13,7 +16,10 @@ defmodule Protean.Action.SendEvent do
 
     defimpl Executable, for: __MODULE__ do
       def exec(%{event: event, to: to}, interpreter) do
-        Server.send_event_async(to, event)
+        interpreter
+        |> SendEvent.to(to)
+        |> Server.send_event_async(event)
+
         interpreter
       end
     end
@@ -26,7 +32,10 @@ defmodule Protean.Action.SendEvent do
 
     defimpl Executable, for: __MODULE__ do
       def exec(%{event: event, to: to, delay: delay}, interpreter) do
-        Server.send_event_after(to, event, delay)
+        interpreter
+        |> SendEvent.to(to)
+        |> Server.send_event_after(event, delay)
+
         interpreter
       end
     end

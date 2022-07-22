@@ -15,6 +15,7 @@ defmodule Protean.Interpreter do
     :machine,
     :state,
     :handler,
+    :parent,
     running: false,
     internal_queue: :queue.new(),
     invoked: %{}
@@ -42,6 +43,7 @@ defmodule Protean.Interpreter do
   @type option ::
           {:machine, Machine.t()}
           | {:handler, module}
+          | {:parent, GenServer.server()}
 
   @type metadata :: %{
           state: %{value: State.value()},
@@ -55,19 +57,18 @@ defmodule Protean.Interpreter do
   def get_and_update(interpreter, key, fun), do: Map.get_and_update(interpreter, key, fun)
 
   @doc """
-  Create a new `Interpreter` from a `Machine` and handler module. The returned interpreter will
-  still need to be started; see `start/1`.
+  Create a new `Interpreter`. The returned interpreter will still need to be started, which could
+  result in additional side-effects. See `start/1`.
   """
   @spec new(options) :: Interpreter.t()
-  @spec new(Machine.t(), module) :: Interpreter.t()
-  def new(opts),
-    do: new(Keyword.fetch!(opts, :machine), Keyword.fetch!(opts, :handler))
+  def new(opts) do
+    machine = Keyword.fetch!(opts, :machine)
 
-  def new(machine, handler) do
     %Interpreter{
       machine: machine,
       state: Machine.initial_state(machine),
-      handler: handler
+      handler: Keyword.fetch!(opts, :handler),
+      parent: Keyword.get(opts, :parent)
     }
   end
 
