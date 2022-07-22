@@ -95,6 +95,31 @@ defmodule Protean.MachineConfigTest do
       ]
       |> assert_parsed_same()
     end
+
+    test "procs" do
+      [
+        [
+          invoke: [
+            id: "proc_id",
+            proc: Anything,
+            done: "done_state",
+            error: "error_state"
+          ]
+        ],
+        [
+          entry: [
+            Action.Invoke.proc("proc_id", Anything)
+          ],
+          exit: [
+            Action.Invoke.cancel("proc_id")
+          ],
+          on: [
+            "$protean.invoke.done-proc_id": "done_state",
+            "$protean.invoke.error-proc_id": "error_state"
+          ]
+        ]
+      ]
+    end
   end
 
   defp assert_parsed_same(nodes) do

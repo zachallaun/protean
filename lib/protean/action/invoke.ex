@@ -57,6 +57,19 @@ defmodule Protean.Action.Invoke do
     end
   end
 
+  defmodule Unresolved.Process do
+    defstruct [:id, :proc]
+
+    defimpl Resolvable, for: __MODULE__ do
+      def resolve(%{id: id, proc: proc}, _state, _handler) when is_atom(proc) do
+        %Invoke.Resolved{
+          id: id,
+          child_spec_fun: fn parent -> {proc, [parent: parent]} end
+        }
+      end
+    end
+  end
+
   defmodule Unresolved.Task do
     defstruct [
       :id,
@@ -100,6 +113,13 @@ defmodule Protean.Action.Invoke do
     defp send_result_as_event(result, to, event_name) do
       Protean.send_event(to, {event_name, result})
     end
+  end
+
+  def proc(id, proc) do
+    %Unresolved.Process{
+      id: id,
+      proc: proc
+    }
   end
 
   def task(id, task) do
