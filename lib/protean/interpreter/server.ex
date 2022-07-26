@@ -50,7 +50,10 @@ defmodule Protean.Interpreter.Server do
   """
   @spec send_event_async(server, Protean.sendable_event()) :: :ok
   def send_event_async(pid, event) do
-    GenServer.cast(pid, {:event, Protean.event(event)})
+    pid
+    |> GenServer.whereis()
+    |> send(Protean.event(event))
+
     :ok
   end
 
@@ -62,7 +65,7 @@ defmodule Protean.Interpreter.Server do
   def send_event_after(pid, event, time) do
     pid
     |> GenServer.whereis()
-    |> Process.send_after({:event, Protean.event(event)}, time)
+    |> Process.send_after(Protean.event(event), time)
   end
 
   @doc """
@@ -132,7 +135,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_info({:event, event}, interpreter) do
+  def handle_info({event_name, _} = event, interpreter) when is_binary(event_name) do
     {:noreply, Interpreter.send_event(interpreter, event)}
   end
 

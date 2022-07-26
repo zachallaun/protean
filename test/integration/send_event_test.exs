@@ -31,7 +31,7 @@ defmodule ProteanIntegration.SendEventTest do
     test "sending event to: :parent", %{machine: machine} do
       Protean.send_event(machine, {"echo", :echo_back})
 
-      assert_receive {:"$gen_cast", {:event, {"echo", :echo_back}}}
+      assert_receive {"echo", :echo_back}
     end
   end
 end
