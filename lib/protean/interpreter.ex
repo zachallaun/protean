@@ -116,18 +116,18 @@ defmodule Protean.Interpreter do
   def send_event(interpreter, _event), do: interpreter
 
   @doc false
-  @spec notify_process_down(t, reference) :: t
-  def notify_process_down(%Interpreter{} = interpreter, ref) do
-    case get_invoked_by_ref(interpreter, ref) do
-      %{id: id} ->
-        interpreter
-        |> update_in([:invoked], &Map.delete(&1, id))
-        |> add_internal({Utilities.internal_event(:invoke, :error, id), nil})
-        |> run_interpreter()
+  @spec notify_process_down(t, ref: reference) :: t
+  @spec notify_process_down(t, id: invoked_id) :: t
+  def notify_process_down(%Interpreter{} = interpreter, ref: ref) do
+    invoked = get_invoked_by_ref(interpreter, ref)
+    notify_process_down(interpreter, id: invoked[:id])
+  end
 
-      nil ->
-        nil
-    end
+  def notify_process_down(%Interpreter{} = interpreter, id: id) do
+    interpreter
+    |> update_in([:invoked], &Map.delete(&1, id))
+    |> add_internal({Utilities.internal_event(:invoke, :error, id), nil})
+    |> run_interpreter()
   end
 
   defp get_invoked_by_ref(%{invoked: invoked}, ref) do

@@ -59,7 +59,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     assert_protean(machine,
       sleep: 40,
       matches: "b",
-      sleep: 30,
+      sleep: 40,
       matches: "c"
     )
   end
@@ -75,11 +75,9 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   test "short-circuited transitions don't execute actions", %{machine: machine} do
     assert_protean(machine,
       context: [path: [[["a", "#"]]]],
-      sleep: 40,
-      context: [path: [[["b", "#"]], [["a", "#"]]]],
       send: "goto_d",
       sleep: 40,
-      context: [path: [[["d", "#"]], [["b", "#"]], [["a", "#"]]]]
+      context: [path: [[["d", "#"]], [["a", "#"]]]]
     )
   end
 

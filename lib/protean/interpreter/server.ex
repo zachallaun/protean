@@ -140,7 +140,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, interpreter) do
-    {:noreply, Interpreter.notify_process_down(interpreter, ref)}
+    {:noreply, Interpreter.notify_process_down(interpreter, ref: ref)}
   end
 
   def handle_info(anything, interpreter) do

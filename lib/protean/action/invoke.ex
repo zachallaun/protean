@@ -10,6 +10,7 @@ defmodule Protean.Action.Invoke do
   alias __MODULE__
   alias Protean.Action.Protocol.Executable
   alias Protean.Action.Protocol.Resolvable
+  alias Protean.Interpreter
   alias Protean.Utilities
 
   defmodule Resolved do
@@ -30,6 +31,9 @@ defmodule Protean.Action.Invoke do
               interpreter.invoked,
               &Map.put(&1, id, %{id: id, pid: child, ref: ref, autoforward: false})
             )
+
+          {:error, _} ->
+            Interpreter.notify_process_down(interpreter, id: id)
         end
       end
     end
@@ -99,7 +103,6 @@ defmodule Protean.Action.Invoke do
       end
     end
 
-    @doc false
     def run_task({m, f, a}, to, event_name) do
       apply(m, f, a)
       |> send_result_as_event(to, event_name)
@@ -133,13 +136,10 @@ defmodule Protean.Action.Invoke do
   def delayed_send(event_name, delay) do
     %Unresolved.Task{
       id: event_name,
-      event_name: event_name,
-      task: {__MODULE__, :delay, [delay]}
+      task: {:timer, :sleep, [delay]},
+      event_name: event_name
     }
   end
 
   def cancel(id), do: %Resolved.Cancel{id: id}
-
-  @doc false
-  def delay(milliseconds), do: :timer.sleep(milliseconds)
 end

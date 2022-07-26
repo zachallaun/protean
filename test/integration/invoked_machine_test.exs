@@ -1,5 +1,7 @@
 defmodule ProteanIntegration.InvokedMachineTest do
-  use Protean.TestCase, async: true
+  use Protean.TestCase
+
+  import ExUnit.CaptureLog
 
   defmodule Parent do
     use Protean
@@ -58,6 +60,130 @@ defmodule ProteanIntegration.InvokedMachineTest do
         sleep: 30,
         matches: "relax"
       )
+    end
+  end
+
+  defmodule Crashes do
+    use Protean
+
+    @machine [
+      initial: "can_crash",
+      states: [
+        can_crash: [
+          on: [
+            go_boom: [
+              actions: ["crash"]
+            ]
+          ]
+        ]
+      ]
+    ]
+
+    @impl Protean
+    def effect("crash", _, _) do
+      raise "boom"
+    end
+  end
+
+  defmodule InvokeCrashes do
+    use Protean
+
+    @machine [
+      initial: "init",
+      states: [
+        init: [
+          invoke: [
+            id: "crashes",
+            proc: ProteanIntegration.InvokedMachineTest.Crashes,
+            error: [
+              actions: ["save_event"],
+              target: "invoke_crashed"
+            ]
+          ],
+          on: [
+            make_it_crash: [
+              actions: [Protean.Action.send_event("go_boom", to: "crashes")]
+            ]
+          ]
+        ],
+        invoke_crashed: []
+      ]
+    ]
+
+    @impl Protean
+    def effect("save_event", state, event) do
+      Protean.Action.assign(state, :crash_event, event)
+    end
+  end
+
+  describe "invoked machine crashes" do
+    @describetag machine: InvokeCrashes
+
+    test "trigger error transition", %{machine: machine} do
+      error_message =
+        capture_log(fn ->
+          assert_protean(machine,
+            send: "make_it_crash",
+            sleep: 30,
+            matches: "invoke_crashed"
+          )
+        end)
+
+      assert error_message =~ "boom"
+    end
+  end
+
+  defmodule ImmediatelyCrashes do
+    use Protean
+
+    @machine [
+      initial: "crash_now",
+      states: [
+        crash_now: [
+          always: [
+            actions: ["crash"]
+          ]
+        ]
+      ]
+    ]
+
+    @impl Protean
+    def effect("crash", _, _) do
+      raise "boom"
+    end
+  end
+
+  defmodule InvokeImmediatelyCrashes do
+    use Protean
+
+    @machine [
+      initial: "init",
+      states: [
+        init: [
+          invoke: [
+            id: "crashes",
+            proc: ProteanIntegration.InvokedMachineTest.ImmediatelyCrashes,
+            error: [
+              target: "invoke_crashed"
+            ]
+          ]
+        ],
+        invoke_crashed: []
+      ]
+    ]
+  end
+
+  describe "invoked machine immediately crashes" do
+    @describetag machine: InvokeImmediatelyCrashes
+
+    @tag here: true
+    test "trigger error transition", %{machine: machine} do
+      capture_log(fn ->
+        assert_protean(machine,
+          sleep: 30,
+          matches: "invoke_crashed"
+        )
+      end)
     end
   end
 end
