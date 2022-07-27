@@ -33,11 +33,11 @@ defmodule Counter do
         on: [
           INC: [
             actions: ["increment"],
-            when: {:not, "at_max"}
+            when: [not: "at_max"]
           ],
           DEC: [
             actions: ["decrement"],
-            when: {:not, "at_min"}
+            when: [not: "at_min"]
           ],
           SET: [
             actions: ["set_min_or_max"]
