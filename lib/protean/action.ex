@@ -52,6 +52,9 @@ defmodule Protean.Action do
   def assign(%State{} = state, key, value),
     do: State.put_actions(state, [assign(key, value)])
 
+  def assign(%State{} = state, update_fun) when is_function(update_fun),
+    do: State.put_actions(state, [assign(update_fun)])
+
   def assign(%State{} = state, assigns),
     do: State.put_actions(state, [assign(assigns)])
 
@@ -70,6 +73,13 @@ defmodule Protean.Action do
 
   def send_event(%State{} = state, event, opts),
     do: State.put_actions(state, [send_event(event, opts)])
+
+  @doc "TODO"
+  def choose(actions) when is_list(actions),
+    do: %Action.Choose.Unresolved{actions: actions}
+
+  def choose(%State{} = state, actions),
+    do: State.put_actions(state, [choose(actions)])
 
   @doc false
   @spec resolve(unresolved, State.t(), module) :: {[resolved], [unresolved]}

@@ -25,8 +25,8 @@ If the result of this project is generally useful, that's great! Usefulness, how
 ## Todo
 
 - [ ] Invoked services
-  - [ ] Machines/Interpreters
-  - [ ] GenServers (non-Protean)
+  - [x] Machines/Interpreters
+  - [x] GenServers (non-Protean)
   - [ ] Autoforward events
   - [x] Tasks
 - [ ] Actions
@@ -39,7 +39,7 @@ If the result of this project is generally useful, that's great! Usefulness, how
   - [ ] Respond action
   - [ ] Forward action
   - [ ] Escalate action
-  - [ ] Choose action / conditional actions
+  - [x] Choose action
 - [x] Transitions
   - [x] Automatic transitions
   - [x] Delayed transitions (implemented as delayed sends to auto transition states)
