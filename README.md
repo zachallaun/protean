@@ -8,7 +8,7 @@ Protean is an experimental Elixir library for managing state and side-effects th
 
 **What are statecharts?** They are an extension to finite state machines that allow you to model complex behavior in a declarative, data-driven manner. They include nested and parallel states, enhanced/augmented state (through context), side-effects (through actions), process management (through invoke), and more. To learn more about statecharts, I recommend [statecharts.dev](https://statecharts.dev/).
 
-## Goals of Protean
+## Goals
 
 This project is currently an exploration of statecharts as they fit into the context of Elixir and OTP. XState adopted the actor model in its implementation, so Elixir seemed like a natural fit. However, it may be that Elixir/OTP makes these abstractions unnecessary.
 
@@ -100,6 +100,10 @@ Enum.each(1..20, fn _ -> Protean.send_event(pid, "INC") end)
 Protean.current(pid).context
 # %{count: 10, min: nil, max: 10}
 ```
+
+## Documentation
+
+Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html). Things are changing pretty regularly, however, and some documentation is certainly out-of-sync.
 
 ## Todo
 
