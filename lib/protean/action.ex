@@ -68,6 +68,16 @@ defmodule Protean.Action do
     do: %Action.Assign.Unresolved{merge: Enum.into(assigns, %{})}
 
   @doc "TODO"
+  def assign_in(%State{} = state, path, fun_or_value),
+    do: State.put_actions(state, [assign_in(path, fun_or_value)])
+
+  def assign_in(path, update_fun) when is_function(update_fun),
+    do: assign(fn %{context: context} -> update_in(context, path, update_fun) end)
+
+  def assign_in(path, value),
+    do: assign(fn %{context: context} -> put_in(context, path, value) end)
+
+  @doc "TODO"
   def send_event(event, opts \\ []),
     do: %Action.SendEvent.Unresolved{event: event, to: opts[:to], delay: opts[:delay]}
 

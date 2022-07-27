@@ -23,9 +23,17 @@ defmodule Protean.Action.Assign do
     defstruct [:function]
 
     defimpl Executable, for: __MODULE__ do
-      def exec(%{function: function}, %{state: state} = interpreter) do
-        updates = function.(state, state.context, state.event)
+      def exec(%{function: fun}, %{state: state} = interpreter) do
+        updates = apply_function(fun, state)
         update_in(interpreter.state, &State.assign(&1, updates))
+      end
+
+      defp apply_function(fun, state) do
+        case Function.info(fun, :arity) do
+          {_, 0} -> fun.()
+          {_, 1} -> fun.(state)
+          {_, 2} -> fun.(state, state.event)
+        end
       end
     end
   end
