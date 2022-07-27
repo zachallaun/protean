@@ -41,6 +41,9 @@ defmodule Counter do
           ],
           SET: [
             actions: ["set_min_or_max"]
+          ],
+          LOG: [
+            actions: ["log"]
           ]
         ]
       ]
@@ -53,6 +56,12 @@ defmodule Counter do
 
   def pure("set_min_or_max", state, {"SET", {key, val}}) do
     Action.assign(state, key, val)
+  end
+
+  @impl Protean
+  def effect("log", state, {_, attribute}) do
+    %{context: context} = state
+    IO.puts("#{attribute}: #{context[attribute]}")
   end
 
   @impl Protean
@@ -97,8 +106,8 @@ Protean.send_event(pid, {"SET", {:max, 10}})
 
 Enum.each(1..20, fn _ -> Protean.send_event(pid, "INC") end)
 
-Protean.current(pid).context
-# %{count: 10, min: nil, max: 10}
+Protean.send_event(pid, {"LOG", :count})
+# count: 10
 ```
 
 ## Documentation
