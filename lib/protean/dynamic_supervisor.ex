@@ -12,13 +12,13 @@ defmodule Protean.DynamicSupervisor do
   def start_child(spec) do
     DynamicSupervisor.start_child(__MODULE__, spec)
   catch
-    :exit, {:noproc, _} -> error_noproc!()
+    :exit, {:noproc, _} = error -> error_noproc!(error)
   end
 
   def terminate_child(pid) do
     DynamicSupervisor.terminate_child(__MODULE__, pid)
   catch
-    :exit, {:noproc, _} -> error_noproc!()
+    :exit, {:noproc, _} = error -> error_noproc!(error)
   end
 
   @impl true
@@ -26,12 +26,14 @@ defmodule Protean.DynamicSupervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  defp error_noproc! do
+  defp error_noproc!(error) do
     require Logger
 
     Logger.error("""
     Child processes started with `:invoke` require that `Protean` has been started. Are you sure \
     that `Protean` has been started under your supervision tree?\
     """)
+
+    exit(error)
   end
 end

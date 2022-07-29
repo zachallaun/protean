@@ -49,9 +49,9 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter asyncronously.
   """
   @spec send_event_async(server, Protean.sendable_event()) :: :ok
-  def send_event_async(pid, event) do
-    pid
-    |> GenServer.whereis()
+  def send_event_async(server, event) do
+    server
+    |> resolve_server_to_pid()
     |> send(Protean.event(event))
 
     :ok
@@ -62,9 +62,9 @@ defmodule Protean.Interpreter.Server do
   reference that can be canceled with `Process.cancel_timer/1`.
   """
   @spec send_event_after(server, Protean.sendable_event(), non_neg_integer()) :: reference()
-  def send_event_after(pid, event, time) do
-    pid
-    |> GenServer.whereis()
+  def send_event_after(server, event, time) do
+    server
+    |> resolve_server_to_pid()
     |> Process.send_after(Protean.event(event), time)
   end
 
@@ -96,6 +96,14 @@ defmodule Protean.Interpreter.Server do
     :ok
   end
 
+  @doc false
+  def ping(pid) do
+    GenServer.call(pid, :ping)
+  end
+
+  defp resolve_server_to_pid(ref) when is_reference(ref), do: ref
+  defp resolve_server_to_pid(server), do: GenServer.whereis(server)
+
   # GenServer callbacks
 
   @impl true
@@ -112,6 +120,10 @@ defmodule Protean.Interpreter.Server do
   @impl true
   def handle_call(:current_state, _from, interpreter) do
     reply_with_state(interpreter)
+  end
+
+  def handle_call(:ping, _from, interpreter) do
+    {:reply, :ok, interpreter}
   end
 
   def handle_call({:event, event}, _from, interpreter) do

@@ -35,7 +35,8 @@ defmodule Protean.Interpreter do
           id: invoked_id,
           pid: GenServer.server(),
           ref: reference(),
-          autoforward: boolean()
+          autoforward: boolean(),
+          interpreter_alias: reference()
         }
   @type invoked_id :: String.t()
 

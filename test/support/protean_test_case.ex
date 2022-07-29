@@ -64,7 +64,6 @@ defmodule Protean.TestCase do
   end
 
   setup context do
-    start_supervised(Protean)
     setup_context(context)
   end
 
@@ -87,7 +86,7 @@ defmodule Protean.TestCase do
     context_to_add
   end
 
-  defp setup_context(_other), do: nil
+  defp setup_context(_other), do: :ok
 
   @doc """
   Runs through a list of instructions in order, sending events to and making assertions on the
@@ -132,6 +131,8 @@ defmodule Protean.TestCase do
   defp setup_machine({module, opts}) do
     {:ok, pid} = module.start_link(opts)
     ref = Process.monitor(pid)
+
+    :ok = Protean.ping(pid)
 
     {%{machine: pid, ref: ref}, fn -> Process.exit(pid, :normal) end}
   end

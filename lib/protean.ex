@@ -175,7 +175,8 @@ defmodule Protean do
   def child_spec(opts) do
     %{
       id: __MODULE__,
-      start: {__MODULE__, :start_link, [opts]}
+      start: {__MODULE__, :start_link, [opts]},
+      type: :supervisor
     }
   end
 
@@ -209,6 +210,9 @@ defmodule Protean do
 
   @doc "TODO"
   defdelegate stop(pid, reason), to: Server
+
+  @doc false
+  defdelegate ping(pid), to: Server
 
   @doc "TODO"
   @spec matches?(State.t(), descriptor :: any()) :: boolean()

@@ -23,13 +23,21 @@ defmodule Protean.Action.Invoke do
 
     defimpl Executable do
       def exec(%{id: id, child_spec_fun: child_spec_fun}, interpreter) do
-        case Protean.DynamicSupervisor.start_child(child_spec_fun.(self())) do
+        self_alias = :erlang.alias()
+
+        case Protean.DynamicSupervisor.start_child(child_spec_fun.(self_alias)) do
           {:ok, child} ->
             ref = Process.monitor(child)
 
             update_in(
               interpreter.invoked,
-              &Map.put(&1, id, %{id: id, pid: child, ref: ref, autoforward: false})
+              &Map.put(&1, id, %{
+                id: id,
+                pid: child,
+                ref: ref,
+                autoforward: false,
+                interpreter_alias: self_alias
+              })
             )
 
           {:error, _} ->
@@ -114,7 +122,7 @@ defmodule Protean.Action.Invoke do
     end
 
     defp send_result_as_event(result, to, event_name) do
-      Protean.send_event(to, {event_name, result})
+      send(to, {event_name, result})
     end
   end
 

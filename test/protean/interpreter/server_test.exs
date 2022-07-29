@@ -20,10 +20,11 @@ defmodule Protean.Interpreter.ServerTest do
     ]
   end
 
-  @tag machine: TestMachine
-  test "server can be started and stopped", %{machine: server, ref: ref} do
-    assert Server.matches?(server, :a)
-    assert :ok = Server.stop(server)
+  test "server can be started and stopped" do
+    {:ok, pid} = TestMachine.start_link()
+    ref = Process.monitor(pid)
+    assert Server.matches?(pid, :a)
+    assert :ok = Server.stop(pid)
     assert_receive {:DOWN, ^ref, :process, _, :normal}
   end
 

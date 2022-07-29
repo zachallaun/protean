@@ -138,15 +138,12 @@ defmodule ProteanIntegration.InvokedTaskTest do
     @describetag machine: ErrorRaisingTasks
 
     test "Error transition taken when task raises", %{machine: machine} do
-      msg =
-        capture_log(fn ->
-          assert_protean(machine,
-            sleep: 40,
-            matches: "failure"
-          )
-        end)
-
-      assert msg =~ "error"
+      capture_log(fn ->
+        assert_protean(machine,
+          sleep: 50,
+          matches: "failure"
+        )
+      end)
     end
   end
 

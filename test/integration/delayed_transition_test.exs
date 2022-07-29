@@ -13,21 +13,21 @@ defmodule ProteanIntegration.DelayedTransitionTest do
         a: [
           entry: ["save_path"],
           after: [
-            delay: 30,
+            delay: 50,
             target: "b"
           ]
         ],
         b: [
           entry: ["save_path"],
           after: [
-            delay: 30,
+            delay: 10,
             target: "c"
           ]
         ],
         c: [
           entry: ["save_path"],
           on: [
-            "$protean.after.30-#.a": [
+            "$protean.after.50-#.a": [
               actions: ["blow_up"]
             ]
           ]
@@ -57,9 +57,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
   test "takes automatic delayed transitions", %{machine: machine} do
     assert_protean(machine,
-      sleep: 40,
-      matches: "b",
-      sleep: 40,
+      sleep: 100,
       matches: "c"
     )
   end
@@ -67,7 +65,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   test "delayed transitions can be short-circuited by transitioning early", %{machine: machine} do
     assert_protean(machine,
       send: "goto_c",
-      sleep: 40,
+      sleep: 50,
       matches: "c"
     )
   end
@@ -76,7 +74,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     assert_protean(machine,
       context: [path: [[["a", "#"]]]],
       send: "goto_d",
-      sleep: 40,
+      sleep: 50,
       context: [path: [[["d", "#"]], [["a", "#"]]]]
     )
   end
@@ -84,7 +82,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   test "short-circuited transitions don't still send event", %{machine: machine} do
     assert_protean(machine,
       send: "goto_c",
-      sleep: 40
+      sleep: 50
     )
   end
 end
