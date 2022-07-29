@@ -58,7 +58,7 @@ defmodule Protean.Node do
           transitions: [Transition.t()],
           entry: [Action.t()],
           exit: [Action.t()],
-          order: non_neg_integer | nil
+          order: non_neg_integer() | nil
         }
 
   @typedoc """
@@ -76,7 +76,7 @@ defmodule Protean.Node do
           transitions: [],
           entry: [Action.t()],
           exit: [Action.t()],
-          order: non_neg_integer | nil
+          order: non_neg_integer() | nil
         }
 
   @typedoc """
@@ -93,7 +93,7 @@ defmodule Protean.Node do
           transitions: [Transition.t()],
           entry: [Action.t()],
           exit: [Action.t()],
-          order: non_neg_integer | nil
+          order: non_neg_integer() | nil
         }
 
   @typedoc """
@@ -109,7 +109,7 @@ defmodule Protean.Node do
           transitions: [Transition.t()],
           entry: [Action.t()],
           exit: [Action.t()],
-          order: non_neg_integer | nil
+          order: non_neg_integer() | nil
         }
 
   @doc """
@@ -148,60 +148,11 @@ defmodule Protean.Node do
   Tests whether `descendant_id` is in fact a descendant of `ancestor_id`.
   Returns false if they are the same node.
   """
-  @spec descendant?(id, id) :: boolean
+  @spec descendant?(id, id) :: boolean()
   def descendant?(descendant_id, ancestor_id) do
     descendant_id != ancestor_id && common_ancestor_id(descendant_id, ancestor_id) == ancestor_id
   end
 
-  # ["a2" "a" "#"]
-  # ["a1" "a" "#"]
-  #      ["a" "#"]
-  # => ["#"]
-  #
-  # ["#" "a" "a2"]
-  # ["#" "a" "a1"]
-  # ["#" "a"]
-  #
-  # truncate to shortest length - 1
-  # ["#"]
-  # ["#"]
-  # ["#"]
-  #
-  # all same, put in acc: ["#"]
-  # all empty, return acc
-  #
-  #
-  #
-  # ["d1" "c" "b" "a" "#"]
-  # ["d2" "c" "b" "a" "#"]
-  #      ["c" "b" "a" "#"]
-  #      ["c" "Z" "a" "#"]
-  #
-  # reverse
-  # [# a b c d1]
-  # [# a b c d2]
-  # [# a b c]
-  # [# a Z c]
-  #
-  # truncate to shortest - 1
-  # [# a b]
-  # [# a b]
-  # [# a b]
-  # [# a Z]
-  #
-  # all same, put in acc: [#]
-  # all same, put in acc: [a #]
-  # diff, return acc
-  #
-  # [# a b c d1]
-  # [# a b c d2]
-  # [# a]
-  # [# a b2]
-  #
-  # acc: []
-  # all same, put in acc: ["#"]
-  # all same, put in acc: ["a"]
-  #
   def common_ancestor_id(ids) do
     shortest = ids |> Enum.map(&Enum.count/1) |> Enum.min()
 

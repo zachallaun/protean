@@ -29,10 +29,10 @@ defmodule Protean.Action do
   @type name :: String.t()
 
   @typedoc "Must implement the `Protean.Action.Protocol.Executable` protocol."
-  @type resolved :: any
+  @type resolved :: any()
 
   @typedoc "Must implement the `Protean.Action.Protocol.Resolvable` protocol."
-  @type unresolved :: any
+  @type unresolved :: any()
 
   @doc "TODO"
   def pure(action_name) when is_binary(action_name),
@@ -92,7 +92,7 @@ defmodule Protean.Action do
     do: State.put_actions(state, [choose(actions)])
 
   @doc false
-  @spec resolve(unresolved, State.t(), module) :: {[resolved], [unresolved]}
+  @spec resolve(unresolved, State.t(), module()) :: {[resolved], [unresolved]}
   def resolve(action, state, handler) do
     case Resolvable.resolve(action, state, handler) do
       nil -> {[], []}

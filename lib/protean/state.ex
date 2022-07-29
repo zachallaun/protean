@@ -27,14 +27,14 @@ defmodule Protean.State do
           value: value,
           event: Protean.event() | nil,
           context: context,
-          private: protean_state
+          private: private_state
         }
 
   @type value :: MapSet.t(Node.id())
 
   @type context :: %{any => any}
 
-  @opaque protean_state :: %{
+  @opaque private_state :: %{
             actions: [Action.unresolved()]
           }
 
@@ -51,9 +51,9 @@ defmodule Protean.State do
   @doc """
   TODO: Descriptor usage
   """
-  @spec matches?(t, Node.id()) :: boolean
-  @spec matches?(t, String.t()) :: boolean
-  @spec matches?(t, atom) :: boolean
+  @spec matches?(t, Node.id()) :: boolean()
+  @spec matches?(t, String.t()) :: boolean()
+  @spec matches?(t, atom()) :: boolean()
   def matches?(state, descriptor)
 
   def matches?(%State{value: value}, query) when is_list(query) do

@@ -20,7 +20,7 @@ defmodule Protean.Transition do
           target_ids: [Node.id()] | nil,
           event_descriptor: event_descriptor,
           guard: Transition.Guard.guard(),
-          internal: boolean,
+          internal: boolean(),
           actions: [Action.t()]
         }
 
@@ -69,12 +69,12 @@ defmodule Protean.Transition do
   @doc """
   Checks whether the transition is enabled for the given event.
   """
-  @spec enabled?(t, Protean.event() | nil, State.t(), handler :: module) :: boolean
+  @spec enabled?(t, Protean.event() | nil, State.t(), handler :: module()) :: boolean()
   def enabled?(transition, event, state, handler) do
     responds_to?(transition, event) && guard_allows?(transition, state, event, handler)
   end
 
-  @spec responds_to?(t, Protean.event() | nil) :: boolean
+  @spec responds_to?(t, Protean.event() | nil) :: boolean()
   defp responds_to?(%Transition{event_descriptor: nil}, _event), do: true
 
   defp responds_to?(transition, {event_name, _}),
@@ -83,7 +83,7 @@ defmodule Protean.Transition do
   @doc """
   Checks whether an event descriptor matches an event name.
   """
-  @spec event_descriptor_match?(event_descriptor, String.t()) :: boolean
+  @spec event_descriptor_match?(event_descriptor, String.t()) :: boolean()
   def event_descriptor_match?(descriptor, name) do
     name_parts = String.split(name, ".")
     any_components_match?(descriptor, name_parts)

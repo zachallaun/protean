@@ -6,10 +6,10 @@ defmodule Protean.Transition.Guard do
   alias Protean.State
 
   @typedoc "Any type that implements the `Protean.Transition.Guard.Guards` protocol."
-  @type guard :: term
+  @type guard :: any()
 
   defprotocol Guards do
-    @spec allows?(t, State.t(), Protean.event(), module) :: boolean
+    @spec allows?(t, State.t(), Protean.event(), module()) :: boolean
     def allows?(guard, state, event, handler)
   end
 

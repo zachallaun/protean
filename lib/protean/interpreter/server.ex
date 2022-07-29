@@ -61,7 +61,7 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
   reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_event_after(server, Protean.sendable_event(), non_neg_integer) :: reference
+  @spec send_event_after(server, Protean.sendable_event(), non_neg_integer()) :: reference()
   def send_event_after(pid, event, time) do
     pid
     |> GenServer.whereis()
@@ -80,7 +80,7 @@ defmodule Protean.Interpreter.Server do
   Get the current machine state and check whether it matches the given descriptor. See
   `Protean.State.matches?/2` for descriptor usage.
   """
-  @spec matches?(server, descriptor :: any) :: boolean
+  @spec matches?(server, descriptor :: any()) :: boolean()
   def matches?(pid, pattern) do
     pid
     |> current()
@@ -90,7 +90,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Stop the service, terminating the process.
   """
-  @spec stop(server, reason :: term) :: :ok
+  @spec stop(server, reason :: any()) :: :ok
   def stop(pid, reason \\ :normal) do
     GenServer.stop(pid, reason)
     :ok

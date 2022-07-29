@@ -22,7 +22,7 @@ defmodule Protean.Machine do
   @typedoc "A full Protean machine configuration."
   @type t :: %Machine{
           root: Node.t(),
-          handler: module,
+          handler: module(),
           idmap: %{Node.id() => Node.t()},
           initial_context: State.context()
         }

@@ -15,7 +15,7 @@ defprotocol Protean.Action.Protocol.Resolvable do
 
   @type zero_or_more_unresolved :: Action.unresolved() | [Action.unresolved()] | nil
 
-  @spec resolve(Action.unresolved(), State.t(), module) ::
+  @spec resolve(Action.unresolved(), State.t(), module()) ::
           zero_or_more_resolved | {zero_or_more_resolved, zero_or_more_unresolved}
   def resolve(unresolved, state, handler)
 end

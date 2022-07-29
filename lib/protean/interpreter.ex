@@ -24,8 +24,8 @@ defmodule Protean.Interpreter do
   @type t :: %Interpreter{
           machine: Machine.t(),
           state: State.t(),
-          handler: module,
-          running: boolean,
+          handler: module(),
+          running: boolean(),
           internal_queue: :queue.queue(),
           invoked: invoked
         }
@@ -34,15 +34,15 @@ defmodule Protean.Interpreter do
   @type invoked_service :: %{
           id: invoked_id,
           pid: GenServer.server(),
-          ref: reference,
-          autoforward: boolean
+          ref: reference(),
+          autoforward: boolean()
         }
   @type invoked_id :: String.t()
 
   @type options :: [option]
   @type option ::
           {:machine, Machine.t()}
-          | {:handler, module}
+          | {:handler, module()}
           | {:parent, GenServer.server()}
 
   @type metadata :: %{
@@ -73,7 +73,7 @@ defmodule Protean.Interpreter do
   end
 
   @doc "Whether the interpreter has been started and can accept events."
-  @spec running?(t) :: boolean
+  @spec running?(t) :: boolean()
   def running?(%Interpreter{running: true}), do: true
   def running?(%Interpreter{running: false}), do: false
 
@@ -116,7 +116,7 @@ defmodule Protean.Interpreter do
   def send_event(interpreter, _event), do: interpreter
 
   @doc false
-  @spec notify_process_down(t, ref: reference) :: t
+  @spec notify_process_down(t, ref: reference()) :: t
   @spec notify_process_down(t, id: invoked_id) :: t
   def notify_process_down(%Interpreter{} = interpreter, ref: ref) do
     invoked = get_invoked_by_ref(interpreter, ref)
@@ -232,7 +232,7 @@ defmodule Protean.Interpreter do
     |> Enum.reduce(interpreter, &autoforward_to(&1, event, &2))
   end
 
-  @spec autoforward?(invoked_service) :: boolean
+  @spec autoforward?(invoked_service) :: boolean()
   defp autoforward?(%{autoforward: true}), do: true
   defp autoforward?(_invoke), do: false
 
@@ -244,13 +244,13 @@ defmodule Protean.Interpreter do
     interpreter
   end
 
-  @spec select_invokes(t) :: [any]
+  @spec select_invokes(t) :: [any()]
   defp select_invokes(_interpreter) do
     # TODO
     []
   end
 
-  @spec invoke(t, [any]) :: t
+  @spec invoke(t, [any()]) :: t
   defp invoke(interpreter, _to_invoke) do
     # TODO
     interpreter
