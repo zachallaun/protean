@@ -11,7 +11,7 @@ defmodule Protean.Action.Assign do
 
     defstruct [:merge]
 
-    defimpl Executable, for: __MODULE__ do
+    defimpl Executable do
       def exec(%{merge: context}, interpreter),
         do: update_in(interpreter.state, &State.assign(&1, context))
     end
@@ -22,7 +22,7 @@ defmodule Protean.Action.Assign do
 
     defstruct [:function]
 
-    defimpl Executable, for: __MODULE__ do
+    defimpl Executable do
       def exec(%{function: fun}, %{state: state} = interpreter) do
         updates = apply_function(fun, state)
         update_in(interpreter.state, &State.assign(&1, updates))
@@ -43,7 +43,7 @@ defmodule Protean.Action.Assign do
 
     defstruct [:merge, :function]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(%{merge: merge, function: nil}, _state, _handler),
         do: %Assign.Resolved.Merge{merge: merge}
 

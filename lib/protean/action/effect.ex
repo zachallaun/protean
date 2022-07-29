@@ -12,7 +12,7 @@ defmodule Protean.Action.Effect do
 
     defstruct [:action_name, :handler]
 
-    defimpl Executable, for: __MODULE__ do
+    defimpl Executable do
       def exec(%{action_name: action_name, handler: handler}, %{state: state} = interpreter) do
         handler.effect(action_name, state, state.event)
         interpreter
@@ -25,7 +25,7 @@ defmodule Protean.Action.Effect do
 
     defstruct [:action_name]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(%{action_name: action_name}, _state, handler),
         do: %Effect.Resolved{action_name: action_name, handler: handler}
     end

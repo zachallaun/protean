@@ -21,7 +21,7 @@ defmodule Protean.Action.Invoke do
       :child_spec_fun
     ]
 
-    defimpl Executable, for: __MODULE__ do
+    defimpl Executable do
       def exec(%{id: id, child_spec_fun: child_spec_fun}, interpreter) do
         case Protean.DynamicSupervisor.start_child(child_spec_fun.(self())) do
           {:ok, child} ->
@@ -42,11 +42,11 @@ defmodule Protean.Action.Invoke do
   defmodule Resolved.Cancel do
     defstruct [:id]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(self, _state, _handler), do: self
     end
 
-    defimpl Executable, for: __MODULE__ do
+    defimpl Executable do
       def exec(%{id: id}, interpreter) do
         case interpreter.invoked[id] do
           %{pid: pid, ref: ref} ->
@@ -64,7 +64,7 @@ defmodule Protean.Action.Invoke do
   defmodule Unresolved.Process do
     defstruct [:id, :proc]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(%{id: id, proc: proc}, _state, _handler) when is_atom(proc) do
         %Invoke.Resolved{
           id: id,
@@ -81,7 +81,7 @@ defmodule Protean.Action.Invoke do
       :event_name
     ]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(%{id: id, task: task, event_name: event_name}, state, handler)
           when is_binary(task) do
         task

@@ -23,7 +23,7 @@ defmodule Protean.Action.SendEvent do
 
     defstruct [:event, :to]
 
-    defimpl Executable, for: __MODULE__ do
+    defimpl Executable do
       def exec(%{event: event, to: to}, interpreter) do
         interpreter
         |> SendEvent.to(to)
@@ -39,7 +39,7 @@ defmodule Protean.Action.SendEvent do
 
     defstruct [:event, :to, :delay]
 
-    defimpl Executable, for: __MODULE__ do
+    defimpl Executable do
       def exec(%{event: event, to: to, delay: delay}, interpreter) do
         interpreter
         |> SendEvent.to(to)
@@ -55,7 +55,7 @@ defmodule Protean.Action.SendEvent do
 
     defstruct [:event, :to, :delay]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(%{to: to, event: event, delay: delay}, _state, _handler)
           when is_integer(delay) do
         %SendEvent.Resolved.Delay{event: event, delay: delay, to: to}

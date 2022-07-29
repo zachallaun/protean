@@ -12,7 +12,7 @@ defmodule Protean.Action.Pure do
 
     defstruct [:action_name]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(%{action_name: action_name}, state, handler) do
         with %State{} = state <- handler.pure(action_name, state, state.event) do
           {nil, State.actions(state)}

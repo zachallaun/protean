@@ -9,7 +9,7 @@ defmodule Protean.Action.Choose do
 
     defstruct [:actions]
 
-    defimpl Resolvable, for: __MODULE__ do
+    defimpl Resolvable do
       def resolve(%{actions: actions}, state, handler) do
         choice =
           actions
