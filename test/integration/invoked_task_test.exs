@@ -141,7 +141,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
       msg =
         capture_log(fn ->
           assert_protean(machine,
-            sleep: 30,
+            sleep: 40,
             matches: "failure"
           )
         end)

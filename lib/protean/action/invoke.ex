@@ -23,7 +23,7 @@ defmodule Protean.Action.Invoke do
 
     defimpl Executable, for: __MODULE__ do
       def exec(%{id: id, child_spec_fun: child_spec_fun}, interpreter) do
-        case DynamicSupervisor.start_child(Protean.Supervisor, child_spec_fun.(self())) do
+        case Protean.DynamicSupervisor.start_child(child_spec_fun.(self())) do
           {:ok, child} ->
             ref = Process.monitor(child)
 
@@ -50,7 +50,7 @@ defmodule Protean.Action.Invoke do
       def exec(%{id: id}, interpreter) do
         case interpreter.invoked[id] do
           %{pid: pid, ref: ref} ->
-            DynamicSupervisor.terminate_child(Protean.Supervisor, pid)
+            Protean.DynamicSupervisor.terminate_child(pid)
             Process.demonitor(ref, [:flush])
             update_in(interpreter.invoked, &Map.delete(&1, id))
 

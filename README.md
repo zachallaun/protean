@@ -14,6 +14,15 @@ This project is currently an exploration of statecharts as they fit into the con
 
 ## Usage
 
+Add `Protean` under your application supervisor:
+
+```elixir
+children = [
+  Protean,
+  # ...
+]
+```
+
 This simple statechart has a single state that defines the behavior of a counter with an optional maximum and minimum.
 
 ```elixir

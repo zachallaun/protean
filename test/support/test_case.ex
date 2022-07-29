@@ -64,6 +64,7 @@ defmodule Protean.TestCase do
   end
 
   setup context do
+    start_supervised(Protean)
     setup_context(context)
   end
 
