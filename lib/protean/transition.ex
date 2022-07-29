@@ -3,8 +3,8 @@ defmodule Protean.Transition do
 
   alias __MODULE__
   alias Protean.Action
-  alias Protean.State
   alias Protean.Node
+  alias Protean.State
 
   defstruct [
     :source_id,

@@ -49,7 +49,7 @@ defmodule Protean.Utilities do
   @doc """
   Generate a UUIDv4 string.
   """
-  def uuid4() do
+  def uuid4 do
     <<u0::48, _::4, u1::12, _::2, u2::62>> = :crypto.strong_rand_bytes(16)
     <<u0::48, 4::4, u1::12, 2::2, u2::62>>
     |> uuid4_to_string()

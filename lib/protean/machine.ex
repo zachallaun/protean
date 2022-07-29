@@ -7,8 +7,8 @@ defmodule Protean.Machine do
 
   alias __MODULE__
   alias Protean.MachineConfig
-  alias Protean.State
   alias Protean.Node
+  alias Protean.State
   alias Protean.Transition
   alias Protean.Utilities
 
