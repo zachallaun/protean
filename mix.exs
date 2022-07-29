@@ -1,6 +1,7 @@
 defmodule Protean.MixProject do
   use Mix.Project
 
+  @name "Protean"
   @version "0.0.1"
   @source_url "https://github.com/zachallaun/protean"
 
@@ -14,7 +15,8 @@ defmodule Protean.MixProject do
       deps: deps(),
       package: package(),
       docs: docs(),
-      name: "Protean"
+      source_url: @source_url,
+      name: @name
     ]
   end
 
@@ -54,11 +56,10 @@ defmodule Protean.MixProject do
 
   defp docs do
     [
-      main: "readme",
+      main: @name,
       source_url: @source_url,
       # source_ref: "v#{@version}",
       extras: [
-        "README.md",
         "guides/introduction.livemd": [title: "Introduction"]
       ],
       groups_for_extras: [
