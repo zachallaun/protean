@@ -1,10 +1,10 @@
 ![Warning](https://img.shields.io/badge/Warning-Experimental-critical?labelColor=870800&color=d11a0f) [![GitHub](https://img.shields.io/badge/GitHub-zachallaun%2Fprotean-orange?logo=github)](https://github.com/zachallaun/protean) [![Docs](https://img.shields.io/badge/-Docs-informational)](https://hexdocs.pm/protean/)
 
-# Protean
+<!-- MDOC !-->
 
 _Caveat emptor: Protean is a library for personal learning and exploration, not (yet) for doing Serious Work_.
 
-Protean is an experimental Elixir library for managing state and side-effects through the use of statecharts. It is heavily inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays in some places in order to adhere to Elixir idioms and OTP conventions. Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standard, though not completely.
+An experimental Elixir library for managing state and side-effects through the use of statecharts. It is heavily inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays in some places in order to adhere to Elixir idioms and OTP conventions. Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standard, though not completely.
 
 **What are statecharts?** They are an extension to finite state machines that allow you to model complex behavior in a declarative, data-driven manner. They include nested and parallel states, enhanced/augmented state (through context), side-effects (through actions), process management (through invoke), and more. To learn more about statecharts, I recommend [statecharts.dev](https://statecharts.dev/).
 
@@ -12,7 +12,7 @@ Protean is an experimental Elixir library for managing state and side-effects th
 
 This project is currently an exploration of statecharts as they fit into the context of Elixir and OTP. XState adopted the actor model in its implementation, so Elixir seemed like a natural fit. However, it may be that Elixir/OTP makes these abstractions unnecessary.
 
-## Example
+## Usage
 
 This simple statechart has a single state that defines the behavior of a counter with an optional maximum and minimum.
 
@@ -109,6 +109,8 @@ Enum.each(1..20, fn _ -> Protean.send_event(pid, "INC") end)
 Protean.send_event(pid, {"LOG", :count})
 # count: 10
 ```
+
+<!-- MDOC !-->
 
 ## Documentation
 
