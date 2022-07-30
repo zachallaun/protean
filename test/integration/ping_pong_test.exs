@@ -52,7 +52,7 @@ defmodule ProteanIntegration.PingPongTest do
     ]
 
     @impl true
-    def pure("reply", state, {ping_or_pong, from}) do
+    def action("reply", state, {ping_or_pong, from}) do
       %{context: %{received: received}} = state
       reply = if ping_or_pong == "ping", do: "pong", else: "ping"
 

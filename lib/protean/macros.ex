@@ -128,10 +128,7 @@ defmodule Protean.Macros do
   defp def_default_impls(_env) do
     quote generated: true, location: :keep do
       @impl Protean
-      def pure(_, _, _), do: nil
-
-      @impl Protean
-      def effect(_, _, _), do: nil
+      def action(_, _, _), do: nil
 
       @impl Protean
       def invoke(_, _, _), do: nil

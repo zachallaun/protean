@@ -60,17 +60,18 @@ defmodule Counter do
   ]
 
   @impl Protean
-  def pure("increment", state, _event), do: Action.assign_in(state, [:count], & &1 + 1)
-  def pure("decrement", state, _event), do: Action.assign_in(state, [:count], & &1 - 1)
+  def action("increment", state, _event), do: Action.assign_in(state, [:count], & &1 + 1)
+  def action("decrement", state, _event), do: Action.assign_in(state, [:count], & &1 - 1)
 
-  def pure("set_min_or_max", state, {"SET", {key, val}}) do
+  def action("set_min_or_max", state, {"SET", {key, val}}) do
     Action.assign(state, key, val)
   end
 
-  @impl Protean
-  def effect("log", state, {_, attribute}) do
+  def action("log", state, {_, attribute}) do
     %{context: context} = state
     IO.puts("#{attribute}: #{context[attribute]}")
+
+    state
   end
 
   @impl Protean
@@ -131,6 +132,7 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
   - [x] Machines/Interpreters
   - [x] GenServers (non-Protean)
   - [x] Tasks
+  - [ ] Streams
   - [ ] Autoforward events
 - [ ] Actions
   - [x] Send event to self
@@ -155,6 +157,7 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
   - [ ] Correct transition conflict handling
 - [ ] Final states
 - [ ] History states
+- [ ] Event coercion (e.g. from phx pubsub -> protean)
 
 ## Installation
 

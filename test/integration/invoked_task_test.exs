@@ -39,7 +39,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     ]
 
     @impl true
-    def pure("save_result", state, {_, result}) do
+    def action("save_result", state, {_, result}) do
       Action.assign(state, :result, result)
     end
   end
@@ -92,7 +92,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     end
 
     @impl true
-    def pure("save_result", state, {_, result}) do
+    def action("save_result", state, {_, result}) do
       Action.assign(state, :result, result)
     end
   end

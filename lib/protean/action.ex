@@ -7,11 +7,6 @@ defmodule Protean.Action do
   `c:exec_action/2` defined by this module. However, Protean defines action creators and
   additional syntax sugar such that fully custom actions should be rare.
 
-  ### Pure & Effect
-
-  The most common "hook" for a Protean machine are the `pure/3` and `effect/3` callbacks, which
-  are used to generate actions or produce side-effects at runtime, respectively.
-
   ### Actions
 
   See individual action documentation below for details.
@@ -51,7 +46,9 @@ defmodule Protean.Action do
   @spec exec(action, Interpreter.t()) :: exec_action_return
   @spec exec(name, Interpreter.t()) :: exec_action_return
   def exec(action_name, interpreter) when is_binary(action_name) do
-    exec({__MODULE__, {:literal, action_name}}, interpreter)
+    action_name
+    |> delegate()
+    |> exec(interpreter)
   end
 
   def exec({handler, arg}, interpreter) do
@@ -66,17 +63,10 @@ defmodule Protean.Action do
 
   @doc "TODO"
   @doc type: :action
-  def pure(%State{} = state, action_name), do: pure(action_name) |> put_action(state)
+  def delegate(%State{} = state, action_name), do: delegate(action_name) |> put_action(state)
 
-  def pure(action_name) when is_binary(action_name) do
-    {__MODULE__, {:pure, action_name}}
-  end
-
-  @doc "TODO"
-  def effect(%State{} = state, action_name), do: effect(action_name) |> put_action(state)
-
-  def effect(action_name) when is_binary(action_name) do
-    {__MODULE__, {:effect, action_name}}
+  def delegate(action_name) when is_binary(action_name) do
+    {__MODULE__, {:delegate, action_name}}
   end
 
   @doc "TODO"
@@ -146,23 +136,13 @@ defmodule Protean.Action do
 
   # Action callbacks
 
-  def exec_action({:literal, action_name}, interpreter) do
-    {:cont, interpreter, [pure(action_name), effect(action_name)]}
-  end
-
-  def exec_action({:pure, action_name}, interpreter) do
+  def exec_action({:delegate, action_name}, interpreter) do
     %{state: state, handler: handler} = interpreter
 
-    case handler.pure(action_name, state, state.event) do
+    case handler.action(action_name, state, state.event) do
       nil -> {:cont, interpreter}
       %State{} = state -> {:cont, interpreter, State.actions(state)}
     end
-  end
-
-  def exec_action({:effect, action_name}, interpreter) do
-    %{state: state, handler: handler} = interpreter
-    handler.effect(action_name, state, state.event)
-    {:cont, interpreter}
   end
 
   def exec_action({:assign, :merge, assigns}, interpreter) do

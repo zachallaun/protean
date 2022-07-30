@@ -52,7 +52,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     ]
 
     @impl true
-    def pure(action_name, %{context: %{acc: acc}} = state, _event) do
+    def action(action_name, %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, [action_name | acc])
     end
 

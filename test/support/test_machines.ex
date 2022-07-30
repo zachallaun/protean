@@ -260,11 +260,11 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def pure("entering_a", %{context: %{acc: acc}} = state, _event) do
+    def action("entering_a", %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["entering_a" | acc])
     end
 
-    def pure("exiting_a", %{context: %{acc: acc}} = state, _event) do
+    def action("exiting_a", %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["exiting_a" | acc])
     end
   end
@@ -396,7 +396,7 @@ defmodule TestMachines do
       ]
 
     @impl true
-    def pure(action_name, state, _event) do
+    def action(action_name, state, _event) do
       %{acc: acc} = state.context
       Action.assign(state, :acc, [action_name | acc])
     end

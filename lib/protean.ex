@@ -53,12 +53,11 @@ defmodule Protean do
   @callback invoke(Action.name(), State.t(), event) :: term()
 
   @doc """
-  Used to modify machine context and trigger additional actions. Returns the machine state.
+  Used to execute actions in response to machine transitions.
 
-  This callback should not produce any side-effects, but should instead leave side-effects to
-  `c:effect/3` or return actions describing side-effects that will be executed by the
-  interpreter. This ensures that all effects take place in the proper order or can be
-  appropriately canceled as a result of later actions.
+  Receives the current machine state and event triggering the action as arguments and must return
+  the machine state. It is possible to attach actions to the machine state to indicate that they
+  should be performed immediately following this action. See `Protean.Action`.
 
   ### Example
 
@@ -78,47 +77,17 @@ defmodule Protean do
       ]
 
       @impl Protean
-      def pure("assign_and_send_data", state, {"data_event", data}) do
+      def action("assign_and_send_data", state, {"data_event", data}) do
         %{service: pid} = state.context
+
+        PubSub.broadcast!(@pubsub, @topic, data)
 
         state
         |> Protean.Action.send_event({"data_received", data}, to: pid)
         |> Protean.Action.assign(:last_received_data, data)
       end
   """
-  @callback pure(Action.name(), State.t(), event) :: State.t() | nil
-
-  @doc """
-  Used to perform arbitrary side-effects.
-
-  ### Example
-
-      @machine [
-        # ...
-        states: [
-          # ...
-          editing_user: [
-            on: [
-              "user.commit": [
-                actions: ["broadcast"],
-                target: "viewing_user"
-              ]
-            ]
-          ],
-          viewing_user: [
-            # ...
-          ]
-        ]
-      ]
-
-      @impl Protean
-      def effect("broadcast", state, {"user.commit", user}) do
-        %{topic: topic} = state.context
-
-        PubSub.broadcast(topic, "user:\#{user.id}", {:user_update, user})
-      end
-  """
-  @callback effect(Action.name(), State.t(), event) :: term()
+  @callback action(Action.name(), State.t(), event) :: State.t()
 
   @doc """
   Used to determine whether a transition should take place.
