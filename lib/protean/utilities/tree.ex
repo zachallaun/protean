@@ -7,7 +7,7 @@ defmodule Protean.Utilities.Tree do
   `reducer` will be called with each node and is expected to return a 2-element
   tuple, the accumulator and a list of any children of that node.
   """
-  @spec tree_reduce(any(), (any(), acc -> {acc, [any()]}), acc) :: acc when acc: var
+  @spec tree_reduce(term(), (term(), acc -> {acc, [term()]}), acc) :: acc when acc: var
   def tree_reduce(tree, reducer, acc), do: dfs_tree_reduce([tree], reducer, acc)
 
   defp dfs_tree_reduce(stack, reducer, acc)

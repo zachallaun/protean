@@ -245,13 +245,13 @@ defmodule Protean.Interpreter do
     interpreter
   end
 
-  @spec select_invokes(t) :: [any()]
+  @spec select_invokes(t) :: [term()]
   defp select_invokes(_interpreter) do
     # TODO
     []
   end
 
-  @spec invoke(t, [any()]) :: t
+  @spec invoke(t, [term()]) :: t
   defp invoke(interpreter, _to_invoke) do
     # TODO
     interpreter

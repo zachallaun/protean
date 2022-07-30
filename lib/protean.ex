@@ -15,13 +15,13 @@ defmodule Protean do
   @typedoc """
   A normalized event. Any events received from Protean will be of this form.
   """
-  @type event :: {name :: String.t(), payload :: any()}
+  @type event :: {name :: String.t(), payload :: term()}
 
   @typedoc """
   A sendable event. Events sent to Protean that match this type will be "desugared" to
   `t:event`.
   """
-  @type sendable_event :: {String.t(), any()} | {atom(), any()} | String.t() | atom()
+  @type sendable_event :: {String.t(), term()} | {atom(), term()} | String.t() | atom()
 
   @doc """
   Used to define invoked services at runtime. Returns a value or child spec usable by the invoke
@@ -50,7 +50,7 @@ defmodule Protean do
         {__MODULE__, :run_task, [data]}
       end
   """
-  @callback invoke(Action.name(), State.t(), event) :: any()
+  @callback invoke(Action.name(), State.t(), event) :: term()
 
   @doc """
   Used to modify machine context and trigger additional actions. Returns the machine state.
@@ -118,7 +118,7 @@ defmodule Protean do
         PubSub.broadcast(topic, "user:\#{user.id}", {:user_update, user})
       end
   """
-  @callback effect(Action.name(), State.t(), event) :: any()
+  @callback effect(Action.name(), State.t(), event) :: term()
 
   @doc """
   Used to determine whether a transition should take place.
@@ -215,9 +215,9 @@ defmodule Protean do
   defdelegate ping(pid), to: Server
 
   @doc "TODO"
-  @spec matches?(State.t(), descriptor :: any()) :: boolean()
-  @spec matches?(Interpreter.t(), descriptor :: any()) :: boolean()
-  @spec matches?(GenServer.server(), descriptor :: any()) :: boolean()
+  @spec matches?(State.t(), descriptor :: term()) :: boolean()
+  @spec matches?(Interpreter.t(), descriptor :: term()) :: boolean()
+  @spec matches?(GenServer.server(), descriptor :: term()) :: boolean()
   def matches?(item, descriptor)
 
   def matches?(%State{} = state, descriptor),

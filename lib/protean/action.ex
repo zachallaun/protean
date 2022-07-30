@@ -29,7 +29,7 @@ defmodule Protean.Action do
   An action is a 2-element tuple, where `handler` implements the `Protean.Action` behaviour and
   `action_arg` is an argument that will be passed back to the handler during execution.
   """
-  @type action :: {handler :: module(), action_arg :: any()}
+  @type action :: {handler :: module(), action_arg :: term()}
 
   @type exec_action_return ::
           {:cont, Interpreter.t()}
@@ -45,7 +45,7 @@ defmodule Protean.Action do
       running the rest of the pipeline's actions
     * `{:halt, interpreter}` to halt the action pipeline, canceling any further actions
   """
-  @callback exec_action(action_arg :: any(), Interpreter.t()) :: exec_action_return
+  @callback exec_action(action_arg :: term(), Interpreter.t()) :: exec_action_return
 
   @doc "Executes an action given an interpreter. See `c:exec_action/2`."
   @spec exec(action, Interpreter.t()) :: exec_action_return

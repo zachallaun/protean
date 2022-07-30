@@ -80,7 +80,7 @@ defmodule Protean.Interpreter.Server do
   Get the current machine state and check whether it matches the given descriptor. See
   `Protean.State.matches?/2` for descriptor usage.
   """
-  @spec matches?(server, descriptor :: any()) :: boolean()
+  @spec matches?(server, descriptor :: term()) :: boolean()
   def matches?(pid, pattern) do
     pid
     |> current()
@@ -90,7 +90,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Stop the service, terminating the process.
   """
-  @spec stop(server, reason :: any()) :: :ok
+  @spec stop(server, reason :: term()) :: :ok
   def stop(pid, reason \\ :normal) do
     GenServer.stop(pid, reason)
     :ok
