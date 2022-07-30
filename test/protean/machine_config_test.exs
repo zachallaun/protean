@@ -15,10 +15,10 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.Invoke.delayed_send("$protean.after.2000-#", 2000)
+            Action.invoke(:delayed_send, "$protean.after.2000-#", 2000)
           ],
           exit: [
-            Action.Invoke.cancel("$protean.after.2000-#")
+            Action.invoke(:cancel, "$protean.after.2000-#")
           ],
           on: [
             "$protean.after.2000-#": "b"
@@ -45,12 +45,12 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.Invoke.delayed_send("$protean.after.1000-#", 1000),
-            Action.Invoke.delayed_send("$protean.after.2000-#", 2000)
+            Action.invoke(:delayed_send, "$protean.after.1000-#", 1000),
+            Action.invoke(:delayed_send, "$protean.after.2000-#", 2000)
           ],
           exit: [
-            Action.Invoke.cancel("$protean.after.1000-#"),
-            Action.Invoke.cancel("$protean.after.2000-#")
+            Action.invoke(:cancel, "$protean.after.1000-#"),
+            Action.invoke(:cancel, "$protean.after.2000-#")
           ],
           on: [
             "$protean.after.1000-#": [
@@ -82,10 +82,10 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.Invoke.task("task_id", task_fun)
+            Action.invoke(:task, "task_id", task_fun)
           ],
           exit: [
-            Action.Invoke.cancel("task_id")
+            Action.invoke(:cancel, "task_id")
           ],
           on: [
             "$protean.invoke.done-task_id": "done_state",
@@ -108,10 +108,10 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.Invoke.proc("proc_id", Anything)
+            Action.invoke(:proc, "proc_id", Anything)
           ],
           exit: [
-            Action.Invoke.cancel("proc_id")
+            Action.invoke(:cancel, "proc_id")
           ],
           on: [
             "$protean.invoke.done-proc_id": "done_state",

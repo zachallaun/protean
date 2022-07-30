@@ -131,18 +131,18 @@ defmodule Protean.MachineConfig do
       |> Enum.filter(&Function.identity/1)
       |> Enum.map(&parse_transition(&1, node_id))
 
-    entry_action = parse_action(invoke_entry_action(config, id))
-    exit_action = parse_action(Action.Invoke.cancel(id))
+    [entry_action] = parse_actions(invoke_entry_action(config, id))
+    [exit_action] = parse_actions(Action.invoke(:cancel, id))
 
     {entry_action, exit_action, transitions}
   end
 
   defp invoke_entry_action(%{task: task}, id) do
-    Action.Invoke.task(id, task)
+    Action.invoke(:task, id, task)
   end
 
   defp invoke_entry_action(%{proc: proc}, id) do
-    Action.Invoke.proc(id, proc)
+    Action.invoke(:proc, id, proc)
   end
 
   defp parse_delayed_transitions(nil, _id), do: {[], [], []}
@@ -161,8 +161,8 @@ defmodule Protean.MachineConfig do
     {delay, config} = Keyword.pop!(config, :delay)
     event_name = Utilities.internal_event(:after, id, delay)
 
-    entry_action = parse_action(Action.Invoke.delayed_send(event_name, delay))
-    exit_action = parse_action(Action.Invoke.cancel(event_name))
+    [entry_action] = parse_actions(Action.invoke(:delayed_send, event_name, delay))
+    [exit_action] = parse_actions(Action.invoke(:cancel, event_name))
     transition = parse_transition(config ++ [on: event_name], id)
 
     {entry_action, exit_action, transition}
@@ -179,9 +179,7 @@ defmodule Protean.MachineConfig do
   end
 
   defp parse_actions(nil), do: []
-  defp parse_actions(actions), do: Enum.map(actions, &parse_action/1)
-
-  defp parse_action(action), do: action
+  defp parse_actions(actions), do: List.wrap(actions)
 
   defp parse_automatic_transitions(nil, _id), do: []
 

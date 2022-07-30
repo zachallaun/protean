@@ -270,22 +270,15 @@ defmodule Protean.Interpreter do
     |> exec_all(actions)
   end
 
-  # Recursively resolve and execute all actions in order, ensuring that actions are resolved
-  # and executed with the proper state.
-  defp exec_all(interpreter, unresolved, resolved \\ [])
-
-  defp exec_all(interpreter, [], []), do: interpreter
-
-  defp exec_all(interpreter, unresolved, [_ | _] = resolved) do
-    resolved
-    |> Enum.reduce(interpreter, &Action.exec/2)
-    |> exec_all(unresolved, [])
+  defp exec_all(interpreter, [action | rest]) do
+    case Action.exec(action, interpreter) do
+      {:halt, interpreter} -> interpreter
+      {:cont, interpreter} -> exec_all(interpreter, rest)
+      {:cont, interpreter, actions} -> exec_all(interpreter, actions ++ rest)
+    end
   end
 
-  defp exec_all(interpreter, [action | rest], []) do
-    {resolved, unresolved} = Action.resolve(action, interpreter.state, interpreter.handler)
-    exec_all(interpreter, unresolved ++ rest, resolved)
-  end
+  defp exec_all(interpreter, []), do: interpreter
 
   defp add_internal(interpreter, event),
     do: update_in(interpreter.internal_queue, &:queue.in(event, &1))
