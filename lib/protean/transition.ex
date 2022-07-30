@@ -3,6 +3,7 @@ defmodule Protean.Transition do
 
   alias __MODULE__
   alias Protean.Action
+  alias Protean.Guard
   alias Protean.Node
   alias Protean.State
 
@@ -19,7 +20,7 @@ defmodule Protean.Transition do
           source_id: Node.id(),
           target_ids: [Node.id()] | nil,
           event_descriptor: event_descriptor,
-          guard: Transition.Guard.guard(),
+          guard: Guard.guard(),
           internal: boolean(),
           actions: [Action.t()]
         }
@@ -92,7 +93,7 @@ defmodule Protean.Transition do
   defp guard_allows?(%Transition{guard: nil}, _, _, _), do: true
 
   defp guard_allows?(%Transition{guard: guard}, state, event, handler) do
-    Transition.Guard.allows?(guard, state, event, handler)
+    Guard.allows?(guard, state, event, handler)
   end
 
   defp any_components_match?(descriptor, name_parts),
