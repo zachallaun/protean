@@ -298,29 +298,4 @@ defmodule Protean.Action do
     do: interpreter.invoked[name][:pid]
 
   defp resolve_recipient(_interpreter, to), do: to
-
-  # @doc false
-  # @spec resolve(unresolved, State.t(), module()) :: {[resolved], [unresolved]}
-  # def resolve(action, state, handler) do
-  #   case Resolvable.resolve(action, state, handler) do
-  #     nil -> {[], []}
-  #     {resolved, unresolved} -> {List.wrap(resolved), List.wrap(unresolved)}
-  #     resolved -> {List.wrap(resolved), []}
-  #   end
-  # end
-
-  # @doc false
-  # @spec exec(resolved, Interpreter.t()) :: Interpreter.t()
-  # def exec(action, interpreter) do
-  #   case Executable.exec(action, interpreter) do
-  #     nil -> interpreter
-  #     interpreter -> interpreter
-  #   end
-  # end
-
-  # defimpl Resolvable, for: BitString do
-  #   def resolve(action_name, _state, _handler) do
-  #     {nil, [Action.pure(action_name), Action.effect(action_name)]}
-  #   end
-  # end
 end
