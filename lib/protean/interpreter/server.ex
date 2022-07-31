@@ -7,6 +7,8 @@ defmodule Protean.Interpreter.Server do
 
   use GenServer
 
+  require Logger
+
   alias Protean.Interpreter
   alias Protean.State
 
@@ -151,7 +153,6 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_info(anything, interpreter) do
-    require Logger
     Logger.info("Unexpected message: #{inspect(anything)}")
     {:noreply, interpreter}
   end

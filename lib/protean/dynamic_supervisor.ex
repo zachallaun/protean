@@ -27,8 +27,6 @@ defmodule Protean.DynamicSupervisor do
   end
 
   defp error_noproc!(error) do
-    require Logger
-
     Logger.error("""
     Child processes started with `:invoke` require that `Protean` has been started. Are you sure \
     that `Protean` has been started under your supervision tree?\
