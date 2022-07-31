@@ -119,6 +119,7 @@ defmodule Protean.MachineConfigTest do
           ]
         ]
       ]
+      |> assert_parsed_same()
     end
   end
 
