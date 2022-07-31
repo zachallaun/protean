@@ -88,11 +88,11 @@ defmodule Protean.Action do
   @doc "TODO"
   def assign_in(%State{} = state, path, value), do: assign_in(path, value) |> put_action(state)
 
-  def assign_in(path, fun) when is_function(fun) do
+  def assign_in(path, fun) when is_list(path) and is_function(fun) do
     assign(fn %{context: context} -> update_in(context, path, fun) end)
   end
 
-  def assign_in(path, value) do
+  def assign_in(path, value) when is_list(path) do
     assign(fn %{context: context} -> put_in(context, path, value) end)
   end
 
@@ -125,9 +125,12 @@ defmodule Protean.Action do
     {__MODULE__, {:invoke, :task, id, task, Utils.internal_event(:invoke, :done, id)}}
   end
 
+  def invoke(:stream, id, stream) do
+    {__MODULE__, {:invoke, :stream, id, stream, Utils.internal_event(:invoke, :done, id)}}
+  end
+
   def invoke(:delayed_send, id, delay) do
-    task = {:timer, :sleep, [delay]}
-    {__MODULE__, {:invoke, :task, id, task, id}}
+    {__MODULE__, {:invoke, :task, id, {:timer, :sleep, [delay]}, id}}
   end
 
   def invoke(:cancel, id) do
@@ -208,8 +211,7 @@ defmodule Protean.Action do
     __invoke__(id, child_spec_fun, interpreter)
   end
 
-  def exec_action({:invoke, :task, id, name, event_name}, interpreter)
-      when is_binary(name) do
+  def exec_action({:invoke, :task, id, name, event_name}, interpreter) when is_binary(name) do
     %{state: state, handler: handler} = interpreter
     task = handler.invoke(name, state, state.event)
     exec_action({:invoke, :task, id, task, event_name}, interpreter)
@@ -218,6 +220,17 @@ defmodule Protean.Action do
   def exec_action({:invoke, :task, id, task, event_name}, interpreter) do
     child_spec_fun = fn pid ->
       Task.child_spec(fn -> task |> run_task() |> send_result(pid, event_name) end)
+    end
+
+    __invoke__(id, child_spec_fun, interpreter)
+  end
+
+  def exec_action({:invoke, :stream, id, stream, event_name}, interpreter) do
+    child_spec_fun = fn pid ->
+      Task.child_spec(fn ->
+        for event <- stream, do: send(pid, event)
+        send(pid, {event_name, nil})
+      end)
     end
 
     __invoke__(id, child_spec_fun, interpreter)

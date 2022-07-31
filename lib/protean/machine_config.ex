@@ -137,12 +137,16 @@ defmodule Protean.MachineConfig do
     {entry_action, exit_action, transitions}
   end
 
+  defp invoke_entry_action(%{proc: proc}, id) do
+    Action.invoke(:proc, id, proc)
+  end
+
   defp invoke_entry_action(%{task: task}, id) do
     Action.invoke(:task, id, task)
   end
 
-  defp invoke_entry_action(%{proc: proc}, id) do
-    Action.invoke(:proc, id, proc)
+  defp invoke_entry_action(%{stream: stream}, id) do
+    Action.invoke(:stream, id, stream)
   end
 
   defp parse_delayed_transitions(nil, _id), do: {[], [], []}
