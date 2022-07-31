@@ -211,10 +211,11 @@ defmodule Protean.Action do
     __invoke__(id, child_spec_fun, interpreter)
   end
 
-  def exec_action({:invoke, :task, id, name, event_name}, interpreter) when is_binary(name) do
+  def exec_action({:invoke, invoke_type, id, name, event_name}, interpreter)
+      when is_binary(name) do
     %{state: state, handler: handler} = interpreter
-    task = handler.invoke(name, state, state.event)
-    exec_action({:invoke, :task, id, task, event_name}, interpreter)
+    to_invoke = handler.invoke(name, state, state.event)
+    exec_action({:invoke, invoke_type, id, to_invoke, event_name}, interpreter)
   end
 
   def exec_action({:invoke, :task, id, task, event_name}, interpreter) do
