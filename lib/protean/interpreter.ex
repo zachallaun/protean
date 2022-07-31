@@ -9,7 +9,7 @@ defmodule Protean.Interpreter do
   alias Protean.Action
   alias Protean.Machine
   alias Protean.State
-  alias Protean.Utilities
+  alias Protean.Utils
 
   defstruct [
     :machine,
@@ -88,7 +88,7 @@ defmodule Protean.Interpreter do
   @spec start(t) :: t
   def start(%Interpreter{running: false} = interpreter) do
     %{interpreter | running: true}
-    |> add_internal({Utilities.internal_event(:init), nil})
+    |> add_internal({Utils.internal_event(:init), nil})
     |> run_interpreter()
   end
 
@@ -127,7 +127,7 @@ defmodule Protean.Interpreter do
   def notify_process_down(%Interpreter{} = interpreter, id: id) do
     interpreter
     |> update_in([:invoked], &Map.delete(&1, id))
-    |> add_internal({Utilities.internal_event(:invoke, :error, id), nil})
+    |> add_internal({Utils.internal_event(:invoke, :error, id), nil})
     |> run_interpreter()
   end
 

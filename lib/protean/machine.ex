@@ -10,7 +10,7 @@ defmodule Protean.Machine do
   alias Protean.Node
   alias Protean.State
   alias Protean.Transition
-  alias Protean.Utilities
+  alias Protean.Utils
 
   defstruct [
     :root,
@@ -29,7 +29,7 @@ defmodule Protean.Machine do
 
   def new(config, opts \\ []) do
     {root, context} = MachineConfig.parse!(config)
-    idmap = Utilities.Tree.tree_reduce(root, &idmap_reducer/2, %{})
+    idmap = Utils.Tree.tree_reduce(root, &idmap_reducer/2, %{})
 
     %Machine{
       root: root,
@@ -72,7 +72,7 @@ defmodule Protean.Machine do
     [target_ids, to_exit, to_enter] =
       transitions
       |> Enum.map(&transition_result(machine, state, &1))
-      |> Utilities.unzip3()
+      |> Utils.unzip3()
       |> Tuple.to_list()
       |> Enum.map(fn items -> items |> Enum.concat() |> Enum.uniq() end)
 

@@ -1,4 +1,4 @@
-defmodule Protean.Utilities.Tree do
+defmodule Protean.Utils.Tree do
   @moduledoc false
 
   @doc """

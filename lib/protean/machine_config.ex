@@ -7,7 +7,7 @@ defmodule Protean.MachineConfig do
   alias Protean.Action
   alias Protean.Node
   alias Protean.Transition
-  alias Protean.Utilities
+  alias Protean.Utils
 
   @root_id ["#"]
 
@@ -114,19 +114,19 @@ defmodule Protean.MachineConfig do
       {entry_actions, exit_actions, nested_transitions} =
         invokes
         |> Enum.map(&parse_invoke_config(Enum.into(&1, %{}), id))
-        |> Utilities.unzip3()
+        |> Utils.unzip3()
 
       {entry_actions, exit_actions, Enum.concat(nested_transitions)}
     end
   end
 
   defp parse_invoke_config(config, node_id) do
-    id = config[:id] || Utilities.uuid4()
+    id = config[:id] || Utils.uuid4()
 
     transitions =
       [
-        config[:done] && {Utilities.internal_event(:invoke, :done, id), config[:done]},
-        config[:error] && {Utilities.internal_event(:invoke, :error, id), config[:error]}
+        config[:done] && {Utils.internal_event(:invoke, :done, id), config[:done]},
+        config[:error] && {Utils.internal_event(:invoke, :error, id), config[:error]}
       ]
       |> Enum.filter(&Function.identity/1)
       |> Enum.map(&parse_transition(&1, node_id))
@@ -157,13 +157,13 @@ defmodule Protean.MachineConfig do
     else
       transitions
       |> Enum.map(&parse_delayed_transition(&1, id))
-      |> Utilities.unzip3()
+      |> Utils.unzip3()
     end
   end
 
   defp parse_delayed_transition(config, id) do
     {delay, config} = Keyword.pop!(config, :delay)
-    event_name = Utilities.internal_event(:after, id, delay)
+    event_name = Utils.internal_event(:after, id, delay)
 
     [entry_action] = parse_actions(Action.invoke(:delayed_send, event_name, delay))
     [exit_action] = parse_actions(Action.invoke(:cancel, event_name))

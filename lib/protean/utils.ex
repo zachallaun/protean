@@ -1,4 +1,4 @@
-defmodule Protean.Utilities do
+defmodule Protean.Utils do
   @moduledoc false
 
   @internal_prefix "$protean"

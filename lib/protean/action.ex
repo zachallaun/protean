@@ -15,7 +15,7 @@ defmodule Protean.Action do
   alias Protean.Interpreter
   alias Protean.Guard
   alias Protean.State
-  alias Protean.Utilities, as: Utils
+  alias Protean.Utils
 
   @typedoc "The string name of an action used to pattern match in a handler."
   @type name :: String.t()
