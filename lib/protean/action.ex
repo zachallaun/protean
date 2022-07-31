@@ -117,20 +117,20 @@ defmodule Protean.Action do
   end
 
   @doc false
-  def invoke(:proc, id, proc) do
-    {__MODULE__, {:invoke, :proc, id, proc}}
+  def invoke(:proc, proc, id) do
+    {__MODULE__, {:invoke, :proc, proc, id}}
   end
 
-  def invoke(:task, id, task) do
-    {__MODULE__, {:invoke, :task, id, task, Utils.internal_event(:invoke, :done, id)}}
+  def invoke(:task, task, id) do
+    {__MODULE__, {:invoke, :task, task, id, Utils.internal_event(:invoke, :done, id)}}
   end
 
-  def invoke(:stream, id, stream) do
-    {__MODULE__, {:invoke, :stream, id, stream, Utils.internal_event(:invoke, :done, id)}}
+  def invoke(:stream, stream, id) do
+    {__MODULE__, {:invoke, :stream, stream, id, Utils.internal_event(:invoke, :done, id)}}
   end
 
   def invoke(:delayed_send, id, delay) do
-    {__MODULE__, {:invoke, :task, id, {:timer, :sleep, [delay]}, id}}
+    {__MODULE__, {:invoke, :task, {:timer, :sleep, [delay]}, id, id}}
   end
 
   def invoke(:cancel, id) do
@@ -202,7 +202,7 @@ defmodule Protean.Action do
     {:cont, interpreter}
   end
 
-  def exec_action({:invoke, :proc, id, proc}, interpreter) do
+  def exec_action({:invoke, :proc, proc, id}, interpreter) do
     child_spec_fun = fn pid ->
       # FIXME: This doesn't work if proc is already a tuple
       {proc, [parent: pid]}
@@ -211,26 +211,25 @@ defmodule Protean.Action do
     __invoke__(id, child_spec_fun, interpreter)
   end
 
-  def exec_action({:invoke, invoke_type, id, name, event_name}, interpreter)
-      when is_binary(name) do
+  def exec_action({:invoke, invoke_type, name, id, done}, interpreter) when is_binary(name) do
     %{state: state, handler: handler} = interpreter
     to_invoke = handler.invoke(name, state, state.event)
-    exec_action({:invoke, invoke_type, id, to_invoke, event_name}, interpreter)
+    exec_action({:invoke, invoke_type, to_invoke, id, done}, interpreter)
   end
 
-  def exec_action({:invoke, :task, id, task, event_name}, interpreter) do
+  def exec_action({:invoke, :task, task, id, done}, interpreter) do
     child_spec_fun = fn pid ->
-      Task.child_spec(fn -> task |> run_task() |> send_result(pid, event_name) end)
+      Task.child_spec(fn -> task |> run_task() |> send_result(pid, done) end)
     end
 
     __invoke__(id, child_spec_fun, interpreter)
   end
 
-  def exec_action({:invoke, :stream, id, stream, event_name}, interpreter) do
+  def exec_action({:invoke, :stream, stream, id, done}, interpreter) do
     child_spec_fun = fn pid ->
       Task.child_spec(fn ->
         for event <- stream, do: send(pid, event)
-        send(pid, {event_name, nil})
+        send(pid, {done, nil})
       end)
     end
 

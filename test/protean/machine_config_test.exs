@@ -82,7 +82,7 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.invoke(:task, "task_id", task_fun)
+            Action.invoke(:task, task_fun, "task_id")
           ],
           exit: [
             Action.invoke(:cancel, "task_id")
@@ -108,7 +108,7 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.invoke(:proc, "proc_id", Anything)
+            Action.invoke(:proc, Anything, "proc_id")
           ],
           exit: [
             Action.invoke(:cancel, "proc_id")
