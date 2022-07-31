@@ -21,7 +21,10 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "$protean.after.2000-#")
           ],
           on: [
-            "$protean.after.2000-#": "b"
+            "$protean.after.2000-#": [
+              target: "b",
+              exact: true
+            ]
           ]
         ]
       ]
@@ -55,10 +58,12 @@ defmodule Protean.MachineConfigTest do
           on: [
             "$protean.after.1000-#": [
               target: "c",
-              when: "some_condition"
+              when: "some_condition",
+              exact: true
             ],
             "$protean.after.2000-#": [
-              target: "c"
+              target: "c",
+              exact: true
             ]
           ]
         ]
@@ -88,8 +93,14 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "task_id")
           ],
           on: [
-            "$protean.invoke.done-task_id": "done_state",
-            "$protean.invoke.error-task_id": "error_state"
+            "$protean.invoke.done-task_id": [
+              target: "done_state",
+              exact: true
+            ],
+            "$protean.invoke.error-task_id": [
+              target: "error_state",
+              exact: true
+            ]
           ]
         ]
       ]
@@ -114,13 +125,44 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "proc_id")
           ],
           on: [
-            "$protean.invoke.done-proc_id": "done_state",
-            "$protean.invoke.error-proc_id": "error_state"
+            "$protean.invoke.done-proc_id": [
+              target: "done_state",
+              exact: true
+            ],
+            "$protean.invoke.error-proc_id": [
+              target: "error_state",
+              exact: true
+            ]
           ]
         ]
       ]
       |> assert_parsed_same()
     end
+  end
+
+  test "done" do
+    [
+      [
+        initial: "a",
+        states: [
+          a: []
+        ],
+        done: "other"
+      ],
+      [
+        initial: "a",
+        states: [
+          a: []
+        ],
+        on: [
+          "$protean.done-#": [
+            target: "other",
+            exact: true
+          ]
+        ]
+      ]
+    ]
+    |> assert_parsed_same()
   end
 
   defp assert_parsed_same(nodes) do

@@ -1,5 +1,13 @@
 defmodule Protean.Transition do
-  @moduledoc false
+  @moduledoc """
+  TODO
+
+  Event descriptors
+  Guards
+  Internal
+  Exact
+  Actions
+  """
 
   alias __MODULE__
   alias Protean.Action
@@ -12,6 +20,7 @@ defmodule Protean.Transition do
     :target_ids,
     :event_descriptor,
     :guard,
+    exact: false,
     internal: false,
     actions: []
   ]
@@ -20,6 +29,7 @@ defmodule Protean.Transition do
           source_id: Node.id(),
           target_ids: [Node.id()] | nil,
           event_descriptor: event_descriptor,
+          exact: boolean(),
           guard: Guard.guard(),
           internal: boolean(),
           actions: [Action.t()]
@@ -78,16 +88,17 @@ defmodule Protean.Transition do
   @spec responds_to?(t, Protean.event() | nil) :: boolean()
   defp responds_to?(%Transition{event_descriptor: nil}, _event), do: true
 
-  defp responds_to?(transition, {event_name, _}),
-    do: event_descriptor_match?(transition.event_descriptor, event_name)
+  defp responds_to?(transition, {event_name, _}) do
+    event_descriptor_match?(transition.event_descriptor, event_name, transition.exact)
+  end
 
   @doc """
   Checks whether an event descriptor matches an event name.
   """
-  @spec event_descriptor_match?(event_descriptor, String.t()) :: boolean()
-  def event_descriptor_match?(descriptor, name) do
+  @spec event_descriptor_match?(event_descriptor, String.t(), boolean()) :: boolean()
+  def event_descriptor_match?(descriptor, name, match_exact? \\ false) do
     name_parts = String.split(name, ".")
-    any_components_match?(descriptor, name_parts)
+    Enum.any?(descriptor, &component_match?(&1, name_parts, match_exact?))
   end
 
   defp guard_allows?(%Transition{guard: nil}, _, _, _), do: true
@@ -96,13 +107,12 @@ defmodule Protean.Transition do
     Guard.allows?(guard, state, event, handler)
   end
 
-  defp any_components_match?(descriptor, name_parts),
-    do: Enum.any?(descriptor, &component_match?(&1, name_parts))
+  defp component_match?([], [], true), do: true
+  defp component_match?([], _name, true), do: false
+  defp component_match?([], _name, false), do: true
 
-  defp component_match?([], _name), do: true
+  defp component_match?([x | rest_descriptor], [x | rest_name], match_exact?),
+    do: component_match?(rest_descriptor, rest_name, match_exact?)
 
-  defp component_match?([x | rest_descriptor], [x | rest_name]),
-    do: component_match?(rest_descriptor, rest_name)
-
-  defp component_match?(_descriptor, _name), do: false
+  defp component_match?(_, _, _), do: false
 end

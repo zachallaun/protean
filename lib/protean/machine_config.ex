@@ -93,15 +93,48 @@ defmodule Protean.MachineConfig do
     {delay_entry, delay_exit, delay_transitions} = parse_delayed_transitions(config[:after], id)
     {invoke_entry, invoke_exit, invoke_transitions} = parse_invokes(config[:invoke], id)
 
+    done_transitions =
+      case config[:done] do
+        nil ->
+          []
+
+        done ->
+          [{Utils.internal_event(:done, id), done}]
+          |> parse_transitions(id)
+          |> Enum.map(&make_exact/1)
+      end
+
+    transitions =
+      Enum.concat([
+        invoke_transitions,
+        done_transitions,
+        delay_transitions,
+        parse_transitions(config[:on], id)
+      ])
+
+    entry_actions =
+      Enum.concat([
+        invoke_entry,
+        delay_entry,
+        parse_actions(config[:entry])
+      ])
+
+    exit_actions =
+      Enum.concat([
+        invoke_exit,
+        delay_exit,
+        parse_actions(config[:exit])
+      ])
+
     %Node{
       type: type,
       id: id,
       states: parse_children(config[:states], id),
       initial: parse_initial(config[:initial], id),
       automatic_transitions: parse_automatic_transitions(config[:always], id),
-      transitions: invoke_transitions ++ delay_transitions ++ parse_transitions(config[:on], id),
-      entry: invoke_entry ++ delay_entry ++ parse_actions(config[:entry]),
-      exit: invoke_exit ++ delay_exit ++ parse_actions(config[:exit])
+      transitions: transitions,
+      entry: entry_actions,
+      exit: exit_actions
     }
   end
 
@@ -130,6 +163,7 @@ defmodule Protean.MachineConfig do
       ]
       |> Enum.filter(&Function.identity/1)
       |> Enum.map(&parse_transition(&1, node_id))
+      |> Enum.map(&make_exact/1)
 
     [entry_action] = parse_actions(invoke_entry_action(config, id))
     [exit_action] = parse_actions(Action.invoke(:cancel, id))
@@ -167,7 +201,7 @@ defmodule Protean.MachineConfig do
 
     [entry_action] = parse_actions(Action.invoke(:delayed_send, event_name, delay))
     [exit_action] = parse_actions(Action.invoke(:cancel, event_name))
-    transition = parse_transition(config ++ [on: event_name], id)
+    transition = parse_transition(config ++ [on: event_name], id) |> make_exact()
 
     {entry_action, exit_action, transition}
   end
@@ -187,14 +221,17 @@ defmodule Protean.MachineConfig do
 
   defp parse_automatic_transitions(nil, _id), do: []
 
-  defp parse_automatic_transitions(target, id) when is_atom(target) or is_binary(target),
-    do: [parse_transition(target, id)]
+  defp parse_automatic_transitions(target, id) when is_atom(target) or is_binary(target) do
+    parse_automatic_transitions([target], id)
+  end
 
   defp parse_automatic_transitions(transitions, id) when is_list(transitions) do
     if Keyword.keyword?(transitions) do
-      [parse_transition(transitions, id)]
+      parse_automatic_transitions([transitions], id)
     else
-      parse_transitions(transitions, id)
+      transitions
+      |> parse_transitions(id)
+      |> Enum.map(&make_exact/1)
     end
   end
 
@@ -218,6 +255,7 @@ defmodule Protean.MachineConfig do
     %Transition{
       source_id: id,
       target_ids: target_ids,
+      exact: !!transition[:exact],
       event_descriptor: parse_event_descriptor(transition[:on]),
       actions: parse_actions(transition[:actions]),
       guard: parse_guard(transition[:when])
@@ -234,6 +272,8 @@ defmodule Protean.MachineConfig do
       {_, _, _} -> %{transition | internal: false}
     end
   end
+
+  defp make_exact(transition), do: %{transition | exact: true}
 
   defp parse_guard(nil), do: nil
 

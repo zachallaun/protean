@@ -63,6 +63,40 @@ defmodule Protean.Machine do
     |> State.assign_actions(entry_actions(machine, entry_ids))
   end
 
+  @doc false
+  @spec final_ancestors(State.value(), t, State.t()) :: [Node.id()]
+  def final_ancestors(ids, machine, state) do
+    %Machine{idmap: idmap} = machine
+
+    ids
+    |> Enum.flat_map(&Node.ancestor_ids/1)
+    |> Enum.uniq()
+    |> Enum.filter(&in_final_state?(idmap[&1], state))
+  end
+
+  @spec in_final_state?(Node.t(), State.t()) :: boolean()
+  defp in_final_state?(%Node{type: :atomic}, _), do: false
+
+  defp in_final_state?(%Node{type: :final} = node, state) do
+    node.id in state.value
+  end
+
+  defp in_final_state?(%Node{type: :compound} = node, state) do
+    node
+    |> active_child(state.value)
+    |> in_final_state?(state)
+  end
+
+  defp in_final_state?(%Node{type: :parallel} = node, state) do
+    Enum.all?(node.states, &in_final_state?(&1, state))
+  end
+
+  defp active_child(%Node{type: :compound} = node, active_ids) do
+    Enum.find(node.states, fn child ->
+      Enum.any?(active_ids, &loose_descendant?(&1, child.id))
+    end)
+  end
+
   @spec take_transitions(t, State.t(), [Transition.t()]) :: State.t()
   def take_transitions(machine, state, transitions)
 
@@ -145,23 +179,14 @@ defmodule Protean.Machine do
         []
 
       %{type: :compound} = compound ->
-        child =
-          Enum.find(compound.states, fn child ->
-            Enum.any?(target_ids, &loose_descendant?(&1, child.id))
-          end)
-
-        if child do
+        if child = active_child(compound, target_ids) do
           [child | entry_set(child.id, target_ids, idmap)]
         else
           []
         end
 
       %{type: :parallel} = parallel ->
-        parallel.states ++ Enum.map(parallel.states, &entry_set(&1, target_ids, idmap))
-
-        # nil ->
-        #   IO.inspect(domain_id, label: "domain id")
-        #   []
+        parallel.states ++ Enum.flat_map(parallel.states, &entry_set(&1.id, target_ids, idmap))
     end
   end
 
@@ -263,11 +288,13 @@ defmodule Protean.Machine do
     |> Enum.flat_map(& &1.entry)
   end
 
-  defp entry_order(nodes),
-    do: Enum.sort_by(nodes, & &1.order, :asc)
+  defp entry_order(nodes) do
+    Enum.sort_by(nodes, & &1.order, :asc)
+  end
 
-  defp exit_order(nodes),
-    do: Enum.sort_by(nodes, & &1.order, :desc)
+  defp exit_order(nodes) do
+    Enum.sort_by(nodes, & &1.order, :desc)
+  end
 
   defp lookup_nodes(machine, ids) do
     Enum.map(ids, fn id -> machine.idmap[id] end)

@@ -265,7 +265,14 @@ defmodule Protean.Interpreter do
       |> Machine.take_transitions(state, transitions)
       |> State.pop_actions()
 
-    interpreter
+    final_state_events =
+      state.value
+      |> MapSet.difference(interpreter.state.value)
+      |> Machine.final_ancestors(machine, state)
+      |> Enum.map(&{Utils.internal_event(:done, &1), nil})
+
+    final_state_events
+    |> Enum.reduce(interpreter, &add_internal(&2, &1))
     |> with_state(state)
     |> exec_all(actions)
   end
