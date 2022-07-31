@@ -119,7 +119,7 @@ defmodule Protean.Interpreter.Server do
 
   @impl true
   def handle_call(:current_state, _from, interpreter) do
-    reply_with_state(interpreter)
+    {:reply, Interpreter.state(interpreter), interpreter}
   end
 
   def handle_call(:ping, _from, interpreter) do
@@ -127,12 +127,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_call({:event, event}, _from, interpreter) do
-    interpreter
-    |> Interpreter.send_event(event)
-    |> reply_with_state()
-  end
-
-  defp reply_with_state(interpreter) do
+    interpreter = Interpreter.send_event(interpreter, event)
     {:reply, Interpreter.state(interpreter), interpreter}
   end
 

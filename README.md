@@ -132,7 +132,7 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
   - [x] Machines/Interpreters
   - [x] GenServers (non-Protean)
   - [x] Tasks
-  - [ ] Streams
+  - [x] Streams
   - [ ] Autoforward events
 - [ ] Actions
   - [x] Send event to self
