@@ -47,11 +47,11 @@ defmodule Protean.Macros do
 
   @doc false
   defmacro __before_compile__(env) do
-    quote generated: true, location: :keep do
-      unquote(def_machine_function(env))
-      unquote(def_default_impls(env))
-      unquote(def_default_otp(env))
-    end
+    [
+      def_machine_function(env),
+      def_default_impls(env),
+      def_default_otp(env)
+    ]
   end
 
   @doc """
