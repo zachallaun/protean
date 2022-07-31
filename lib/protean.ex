@@ -179,6 +179,7 @@ defmodule Protean do
 
   @doc "TODO"
   defdelegate stop(pid, reason), to: Server
+  defdelegate stop(pid), to: Server
 
   @doc false
   defdelegate ping(pid), to: Server

@@ -128,6 +128,7 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
 
 ## Todo
 
+- [ ] Subscribe/unsubscribe
 - [ ] Invoked services
   - [x] Machines/Interpreters
   - [x] GenServers (non-Protean)
@@ -145,19 +146,13 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
   - [ ] Forward action
   - [ ] Escalate action
   - [x] Choose action
-- [x] Transitions
-  - [x] Automatic transitions
-  - [x] Delayed transitions (implemented as delayed sends to auto transition states)
-  - [x] Correctly cancel non-sent actions when transitioning out
-  - [x] Internal vs. external transitions
-    - External = exit/entry actions will be re-triggered
-    - Internal = exit/entry actions will not be re-triggered, only transition actions
 - [ ] Parallel states
   - [x] Basic implementation
   - [ ] Correct transition conflict handling
-- [ ] Final states
 - [ ] History states
 - [ ] Event coercion (e.g. from phx pubsub -> protean)
+- [ ] Fix all "FIXME"
+- [ ] Fix all "TODO"
 
 ## Installation
 
