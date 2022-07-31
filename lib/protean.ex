@@ -187,7 +187,7 @@ defmodule Protean do
   @doc "TODO"
   @spec matches?(State.t(), descriptor :: term()) :: boolean()
   @spec matches?(Interpreter.t(), descriptor :: term()) :: boolean()
-  @spec matches?(GenServer.server(), descriptor :: term()) :: boolean()
+  @spec matches?(Server.server(), descriptor :: term()) :: boolean()
   def matches?(item, descriptor)
 
   def matches?(%State{} = state, descriptor),
