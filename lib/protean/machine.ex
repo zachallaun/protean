@@ -68,8 +68,17 @@ defmodule Protean.Machine do
   def final_ancestors(ids, machine, state) do
     %Machine{idmap: idmap} = machine
 
-    ids
-    |> Enum.flat_map(&Node.ancestor_ids/1)
+    for id <- ids do
+      parent_id = Node.parent_id(id)
+      grandparent_id = Node.parent_id(parent_id)
+
+      if grandparent_id && idmap[grandparent_id].type == :parallel do
+        [parent_id, grandparent_id]
+      else
+        [parent_id]
+      end
+    end
+    |> Enum.concat()
     |> Enum.uniq()
     |> Enum.filter(&in_final_state?(idmap[&1], state))
   end

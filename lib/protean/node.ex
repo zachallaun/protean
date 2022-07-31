@@ -136,13 +136,20 @@ defmodule Protean.Node do
     end
   end
 
-  @doc """
-  Given a Node id, return a list containing that id and all of its
-  ancestors.
-  """
+  @doc "Given a Node id, return a list containing that id and all of its ancestors."
   @spec ancestor_ids(id) :: [id]
   def ancestor_ids([]), do: []
   def ancestor_ids([_self | parent] = id), do: [id | ancestor_ids(parent)]
+
+  @doc "Given a Node id, return its parent's id. Returns nil if the Node is the root."
+  @spec parent_id(id) :: id
+  def parent_id([_]), do: nil
+  def parent_id([_ | parent]), do: parent
+
+  @doc "Returns true if the given id is a root node."
+  @spec root?(id) :: id
+  def root?([_]), do: true
+  def root?(_), do: false
 
   @doc """
   Tests whether `descendant_id` is in fact a descendant of `ancestor_id`.

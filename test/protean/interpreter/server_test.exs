@@ -21,11 +21,11 @@ defmodule Protean.Interpreter.ServerTest do
   end
 
   test "server can be started and stopped" do
+    Process.flag(:trap_exit, true)
     {:ok, pid} = TestMachine.start_link()
-    ref = Process.monitor(pid)
     assert Server.matches?(pid, :a)
     assert :ok = Server.stop(pid)
-    assert_receive {:DOWN, ^ref, :process, _, :normal}
+    assert_receive {:EXIT, _pid, {:shutdown, %Protean.State{}}}
   end
 
   @tag machine: {TestMachine, name: NamedMachine}

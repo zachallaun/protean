@@ -64,6 +64,7 @@ defmodule Protean.TestCase do
   end
 
   setup context do
+    Process.flag(:trap_exit, true)
     setup_context(context)
   end
 
@@ -131,7 +132,6 @@ defmodule Protean.TestCase do
   defp setup_machine({module, opts}) do
     {:ok, pid} = module.start_link(opts)
     ref = Process.monitor(pid)
-
     :ok = Protean.ping(pid)
 
     {%{machine: pid, ref: ref}, fn -> Process.exit(pid, :normal) end}

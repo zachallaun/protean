@@ -44,7 +44,7 @@ defmodule ProteanIntegration.FinalStatesTest do
         ],
         nearly_done: [
           on: [
-            [all_done: "all_done"]
+            all_done: "all_done"
           ]
         ],
         all_done: [
@@ -58,26 +58,40 @@ defmodule ProteanIntegration.FinalStatesTest do
     ]
   end
 
-  @tag machine: TestMachine
-  test "final states for compound nodes", %{machine: machine} do
-    assert_protean(machine,
-      send: "simple_compound",
-      matches: "simple_compound.a",
-      send: "b",
-      matches: "nearly_done"
-    )
-  end
+  describe "final state" do
+    @describetag machine: TestMachine
 
-  @tag machine: TestMachine
-  test "final states for parallel nodes", %{machine: machine} do
-    assert_protean(machine,
-      send: "simple_parallel",
-      matches: "simple_parallel.p1.a",
-      matches: "simple_parallel.p2.c",
-      send: "b",
-      matches: "simple_parallel.p1.b",
-      send: "d",
-      matches: "nearly_done"
-    )
+    test "in compound nodes", %{machine: machine} do
+      assert_protean(machine,
+        send: "simple_compound",
+        matches: "simple_compound.a",
+        send: "b",
+        matches: "nearly_done"
+      )
+    end
+
+    test "in parallel nodes", %{machine: machine} do
+      assert_protean(machine,
+        send: "simple_parallel",
+        matches: "simple_parallel.p1.a",
+        matches: "simple_parallel.p2.c",
+        send: "b",
+        matches: "simple_parallel.p1.b",
+        send: "d",
+        matches: "nearly_done"
+      )
+    end
+
+    test "at root", %{machine: machine} do
+      assert_protean(machine,
+        send: "simple_compound",
+        send: "b",
+        matches: "nearly_done",
+        send: "all_done"
+      )
+
+      assert not Process.alive?(machine)
+      assert_received {:EXIT, _pid, {:shutdown, %Protean.State{}}}
+    end
   end
 end

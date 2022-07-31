@@ -88,7 +88,7 @@ defmodule Protean.Interpreter do
   @spec start(t) :: t
   def start(%Interpreter{running: false} = interpreter) do
     %{interpreter | running: true}
-    |> add_internal({Utils.internal_event(:init), nil})
+    |> add_internal(Utils.internal_event(:init))
     |> run_interpreter()
   end
 
@@ -127,7 +127,7 @@ defmodule Protean.Interpreter do
   def notify_process_down(%Interpreter{} = interpreter, id: id) do
     interpreter
     |> update_in([:invoked], &Map.delete(&1, id))
-    |> add_internal({Utils.internal_event(:invoke, :error, id), nil})
+    |> add_internal(Utils.internal_event(:invoke, :error, id))
     |> run_interpreter()
   end
 
@@ -265,16 +265,17 @@ defmodule Protean.Interpreter do
       |> Machine.take_transitions(state, transitions)
       |> State.pop_actions()
 
-    final_state_events =
+    final_states =
       state.value
       |> MapSet.difference(interpreter.state.value)
       |> Machine.final_ancestors(machine, state)
-      |> Enum.map(&{Utils.internal_event(:done, &1), nil})
 
-    final_state_events
+    final_states
+    |> Enum.map(&Utils.internal_event(:done, &1))
     |> Enum.reduce(interpreter, &add_internal(&2, &1))
     |> with_state(state)
     |> exec_all(actions)
+    |> then(&if machine.root.id in final_states, do: stop(&1), else: &1)
   end
 
   defp exec_all(interpreter, [action | rest]) do
@@ -287,9 +288,15 @@ defmodule Protean.Interpreter do
 
   defp exec_all(interpreter, []), do: interpreter
 
-  defp add_internal(interpreter, event),
-    do: update_in(interpreter.internal_queue, &:queue.in(event, &1))
+  defp add_internal(interpreter, name) when is_binary(name) do
+    add_internal(interpreter, {name, nil})
+  end
 
-  defp with_state(interpreter, state),
-    do: put_in(interpreter.state, state)
+  defp add_internal(interpreter, event) do
+    update_in(interpreter.internal_queue, &:queue.in(event, &1))
+  end
+
+  defp with_state(interpreter, state) do
+    put_in(interpreter.state, state)
+  end
 end
