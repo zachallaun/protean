@@ -19,7 +19,8 @@ defmodule Protean.Interpreter do
     :supervisor,
     running: false,
     internal_queue: :queue.new(),
-    invoked: %{}
+    invoked: %{},
+    subscribed: []
   ]
 
   @type t :: %Interpreter{
@@ -30,7 +31,8 @@ defmodule Protean.Interpreter do
           supervisor: Supervisor.supervisor(),
           running: boolean(),
           internal_queue: :queue.queue(),
-          invoked: invoked
+          invoked: invoked,
+          subscribed: [{pid(), reference()}]
         }
 
   @type invoked :: %{invoked_id => invoked_service}
@@ -121,6 +123,14 @@ defmodule Protean.Interpreter do
 
   def send_event(interpreter, _event), do: interpreter
 
+  def subscribe(interpreter, subscriber) do
+    update_in(interpreter.subscribed, &[subscriber | &1])
+  end
+
+  def unsubscribe(interpreter, subscriber) do
+    update_in(interpreter.subscribed, &Enum.reject(&1, fn s -> s == subscriber end))
+  end
+
   @doc false
   @spec notify_process_down(t, ref: reference()) :: t
   @spec notify_process_down(t, id: invoked_id) :: t
@@ -194,6 +204,15 @@ defmodule Protean.Interpreter do
     transitions
     |> microstep(interpreter_with_event)
     |> run_interpreter()
+    |> notify_subscribers()
+  end
+
+  defp notify_subscribers(interpreter) do
+    Enum.each(interpreter.subscribed, fn {pid, ref} ->
+      send(pid, {:state, state(interpreter), ref})
+    end)
+
+    interpreter
   end
 
   defp set_event(interpreter, event) do

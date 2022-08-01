@@ -158,20 +158,43 @@ defmodule Protean do
   def event({name, payload}) when is_binary(name), do: {name, payload}
 
   @doc "TODO"
-  defdelegate send_event(pid, event), to: Server
+  defdelegate send_event(protean, event), to: Server
 
   @doc "TODO"
-  defdelegate send_event_async(pid, event), to: Server
+  defdelegate send_event_async(protean, event), to: Server
 
   @doc "TODO"
-  defdelegate send_event_after(pid, event, time), to: Server
+  defdelegate send_event_after(protean, event, time), to: Server
 
   @doc "TODO"
-  defdelegate current(pid), to: Server
+  defdelegate current(protean), to: Server
 
   @doc "TODO"
-  defdelegate stop(pid, reason), to: Server
-  defdelegate stop(pid), to: Server
+  defdelegate stop(protean, reason), to: Server
+  defdelegate stop(protean), to: Server
+
+  @doc """
+  Subscribes the caller to the running Protean machine, returning a reference.
+
+  Processes subscribed to a machine will receive messages whenever the machine transitions. (Note
+  that a machine can transition to the same state it was in previously.) By default, subscribed
+  processes also monitor the machine (see `Process.monitor/1`). This behavior can be changed by
+  passing `monitor: false`.
+
+  Messages on transition will be delivered in the shape of:
+
+      {:state, state, ref}
+
+  where:
+
+    * `state` is the `Protean.State` resulting from the transition;
+    * `ref` is a monitor reference.
+  """
+  @spec subscribe(Server.server(), keyword()) :: reference()
+  defdelegate subscribe(protean, opts \\ [monitor: true]), to: Server
+
+  @doc "Unsubscribes the caller from the running Protean machine."
+  defdelegate unsubscribe(protean, ref), to: Server
 
   @doc false
   defdelegate ping(pid), to: Server
