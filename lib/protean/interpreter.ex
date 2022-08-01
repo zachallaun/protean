@@ -110,7 +110,7 @@ defmodule Protean.Interpreter do
   def stop(interpreter) do
     interpreter.invoked
     |> Map.values()
-    |> Enum.each(fn %{pid: pid} -> Process.exit(pid, :normal) end)
+    |> Enum.each(fn %{pid: pid} -> Process.exit(pid, :shutdown) end)
 
     %{interpreter | running: false, invoked: []}
   end

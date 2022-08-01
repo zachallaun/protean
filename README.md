@@ -128,7 +128,7 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
 
 ## Todo
 
-- [ ] Subscribe/unsubscribe
+- [x] Subscribe/unsubscribe
 - [ ] Invoked services
   - [x] Machines/Interpreters
   - [x] GenServers (non-Protean)

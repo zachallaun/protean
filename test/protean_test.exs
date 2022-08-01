@@ -18,7 +18,7 @@ defmodule ProteanTest do
       states: [
         init: [
           invoke: [
-            task: {:timer, :sleep, [1000]}
+            task: {:timer, :sleep, [100]}
           ]
         ]
       ]
