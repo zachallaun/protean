@@ -131,6 +131,8 @@ defmodule Protean.Interpreter.Server do
   @impl true
   def init(opts) do
     Process.flag(:trap_exit, true)
+    ref = Process.monitor(opts[:parent])
+    opts = Keyword.put(opts, :parent, {opts[:parent], ref})
 
     interpreter =
       Interpreter.new(opts)
@@ -159,11 +161,11 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_cast({:subscribe, pid, ref}, interpreter) do
-    {:noreply, Interpreter.subscribe(interpreter, {pid, ref})}
+    {:noreply, Interpreter.subscribe(interpreter, {pid, ref}), {:continue, :check_running}}
   end
 
   def handle_cast({:unsubscribe, pid, ref}, interpreter) do
-    {:noreply, Interpreter.unsubscribe(interpreter, {pid, ref})}
+    {:noreply, Interpreter.unsubscribe(interpreter, {pid, ref}), {:continue, :check_running}}
   end
 
   @impl true
@@ -181,7 +183,8 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, interpreter) do
-    {:noreply, Interpreter.notify_process_down(interpreter, ref: ref)}
+    {:noreply, Interpreter.notify_process_down(interpreter, ref: ref),
+     {:continue, :check_running}}
   end
 
   def handle_info({:EXIT, _pid, :normal}, interpreter) do
@@ -192,11 +195,5 @@ defmodule Protean.Interpreter.Server do
     require Logger
     Logger.info("Unexpected message: #{inspect(anything)}")
     {:noreply, interpreter}
-  end
-
-  @impl true
-  def terminate(_reason, interpreter) do
-    Interpreter.stop(interpreter)
-    :ok
   end
 end

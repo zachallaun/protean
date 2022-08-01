@@ -203,9 +203,14 @@ defmodule Protean.Action do
   end
 
   def exec_action({:invoke, :proc, proc, id}, interpreter) do
-    child_spec_fun = fn pid ->
-      # FIXME: This doesn't work if proc is already a tuple
-      {proc, [parent: pid]}
+    child_spec_fun = fn _pid_alias, pid ->
+      defaults = [parent: pid]
+
+      case proc do
+        {mod, arg} -> {mod, Keyword.merge(defaults, arg)}
+        mod -> {mod, defaults}
+      end
+      |> Supervisor.child_spec(restart: :temporary)
     end
 
     __invoke__(id, child_spec_fun, interpreter)
@@ -218,18 +223,18 @@ defmodule Protean.Action do
   end
 
   def exec_action({:invoke, :task, task, id, done}, interpreter) do
-    child_spec_fun = fn pid ->
-      Task.child_spec(fn -> task |> run_task() |> send_result(pid, done) end)
+    child_spec_fun = fn pid_alias, _ ->
+      Task.child_spec(fn -> task |> run_task() |> send_result(pid_alias, done) end)
     end
 
     __invoke__(id, child_spec_fun, interpreter)
   end
 
   def exec_action({:invoke, :stream, stream, id, done}, interpreter) do
-    child_spec_fun = fn pid ->
+    child_spec_fun = fn pid_alias, _ ->
       Task.child_spec(fn ->
-        for event <- stream, do: send(pid, event)
-        send(pid, {done, nil})
+        for event <- stream, do: send(pid_alias, event)
+        send(pid_alias, {done, nil})
       end)
     end
 
@@ -241,7 +246,7 @@ defmodule Protean.Action do
 
     Protean.DynamicSupervisor.start_child(
       interpreter.supervisor,
-      child_spec_fun.(self_alias)
+      child_spec_fun.(self_alias, self())
     )
     |> case do
       {:ok, child} ->
@@ -287,7 +292,7 @@ defmodule Protean.Action do
 
   defp resolve_recipient(_interpreter, nil), do: self()
   defp resolve_recipient(_interpreter, :self), do: self()
-  defp resolve_recipient(%{parent: parent}, :parent), do: parent
+  defp resolve_recipient(%{parent: {parent, _ref}}, :parent), do: parent
 
   defp resolve_recipient(interpreter, name) when is_binary(name),
     do: interpreter.invoked[name][:pid]
