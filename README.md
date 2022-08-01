@@ -14,7 +14,7 @@ This project is currently an exploration of statecharts as they fit into the con
 
 ## Usage
 
-Add `Protean` under your application supervisor:
+Add `Protean` under your application supervisor. This starts a supervisor that is used by Protean internally to manage subprocesses. See `Protean.start_link/1` for more information.
 
 ```elixir
 children = [
