@@ -1,0 +1,300 @@
+# Machine definition syntax
+
+## To macro or not to macro
+
+That is the question!
+
+Right now, Protean machines are defined using Elixir data structures: keyword lists. There's not much magic to machine definition. We assume you have a `@machine` module attribute that defines a machine config, but it's all just data. You don't even need to use the module attribute -- you can  `def machine` or pass it with `use Protean, machine: ...`.
+
+The primary downside to this is that it can be a bit difficult to read/scan. It's easy to get visually lost as to the level of nesting you're at (for nested machines) and `mix format` removes any extra whitespace/etc. you may have put between states to differentiate. It's also easy for different semantic sections of the config to look alike. In order to use the nicer keyword syntax, everything has to be an atom (state names, etc.) even if it's converted internally to a string. It's easy for the `on:` list of events to get visually mixed up with `states:` etc.
+
+I've been hesitant to reach for macros because they introduce complexity and are another thing you have to learn to use the library, but I am now wondering whether the benefits of fuller use of Elixir's syntax would make up for the drawbacks.
+
+## Form Input Example
+
+This is based on [this machine](https://stately.ai/viz/id1) from the Stately visualizer.
+
+<!-- livebook:{"break_markdown":true} -->
+
+#### Data definition
+
+```elixir
+defmodule FormInput do
+  use Protean
+
+  @machine [
+    initial: "Active",
+    context: [
+      value: ""
+    ],
+    states: [
+      Active: [
+        type: "parallel",
+        on: [
+          DISABLE: "Disabled"
+        ],
+        states: [
+          Focus: [
+            initial: "Unfocused",
+            states: [
+              Focused: [
+                on: [
+                  BLUR: "Unfocused"
+                ]
+              ],
+              Unfocused: [
+                on: [
+                  FOCUS: "Focused"
+                ]
+              ]
+            ]
+          ],
+          Validation: [
+            initial: "Pending",
+            on: [
+              CHANGE: [
+                target: ".Pending",
+                actions: "assign_value"
+              ]
+            ],
+            states: [
+              Pending: [
+                invoke: [
+                  task: "validate_field",
+                  done: "Valid"
+                ],
+                on: [
+                  REPORT_INVALID: [
+                    target: "Invalid",
+                    actions: "assign_error"
+                  ]
+                ]
+              ],
+              Valid: [],
+              Invalid: []
+            ]
+          ]
+        ]
+      ]
+    ],
+    Disabled: [
+      on: [
+        ENABLE: "Active"
+      ]
+    ]
+  ]
+end
+```
+
+#### Proposed macro syntax
+
+```elixir
+# defmodule FormInput do
+# use Protean
+ast =
+  quote do
+    machine do
+      initial("Active")
+      context(%{value: "", error: nil})
+
+      states do
+        "Active" ->
+          type(:parallel)
+          on("DISABLE", "Disabled")
+
+          states do
+            "Focus" ->
+              initial("Unfocused")
+
+              states do
+                "Focused" ->
+                  on("BLUR", "Unfocused")
+
+                "Unfocused" ->
+                  on("FOCUS", "Focused")
+              end
+
+            "Validation" ->
+              initial("Pending")
+              on({"CHANGE", _val}, ".Pending", actions: :assign_value)
+
+              states do
+                "Pending" ->
+                  invoke(task: :validate_field, done: "Valid")
+                  on({"REPORT_INVALID", _err}, "Invalid", actions: :assign_error)
+
+                  "Valid"
+
+                  "Invalid"
+              end
+          end
+
+        "Disabled" ->
+          on("ENABLE", "Active")
+      end
+    end
+  end
+```
+
+This is about 20 lines shorter and `mix format` has no issues with it except for wanting to add parens around the calls. (That's pretty easily fixed using [`locals_without_parens`](https://hexdocs.pm/mix/main/Mix.Tasks.Format.html#module-importing-dependencies-configuration) which we can export.) There's also (imo) much better visual differentiation between the configuration language (`initial`, `states`, `on`, etc.) and the actual states (strings).
+
+Another thing that this opens up is the potential to match on non-string events. We could actually do away with the `Protean.event` type entirely and let events be completely arbitrary things that you can match on using match syntax.
+
+```elixir
+quote do
+  machine do
+    initial("Init")
+
+    states do
+      "Init" ->
+        on(%Events.Save{}, actions: :save)
+        on(%Events.Other{}, "Other State")
+        on({%Events.Whatever{}, _something}, "Whatever")
+    end
+  end
+end
+```
+
+This would make Protean almost immediately compatible with any existing PubSub/event system you already have. For example, here's how you could match on the user update example from the `Phoenix.PubSub` [docs](https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.html).
+
+```elixir
+quote do
+  on({:user_update, _user}, actions: :assign_updates)
+end
+```
+
+I was considering this entire "event coercion" system/callback so that you could transform events from other sources into something that Protean can understand i.e. `{"event", payload}`, but this makes that unnecessary since you could just match on anything.
+
+Of course, now the machine definition macro is getting even _more_ complex because we'll need to generate some kind of matcher function attached to each transition, but that might not actually be too bad.
+
+```elixir
+defmodule Match do
+  defmacro make_matcher(pattern) do
+    quote do
+      fn expr -> match?(unquote(pattern), expr) end
+    end
+  end
+end
+```
+
+```elixir
+require Match
+quote(do: Match.make_matcher(%{x: 1, y: _})) |> Macro.expand_once(__ENV__) |> Macro.to_string()
+```
+
+```elixir
+m = Match.make_matcher(%{x: 1, y: _})
+m.(%{x: 1, y: 5})
+```
+
+Any nodes that accept keyword lists should be able to have them provided as a block. (Note: I'll need to move away from `when` even though I think it reads really well, but it's parsed as an operator and not a regular call so it messes up the AST in the block form).
+
+```elixir
+quote do
+  on(%Events.SomeEvent{type: :foo}, "New State", guard: :some_guard?, actions: [:some_action])
+  # equivalent to
+  on(%Events.SomeEvent{type: :foo},
+    target: "New State",
+    guard: :some_guard?,
+    actions: [:some_action]
+  )
+
+  # equivalent to
+  on %Events.SomeEvent{type: :foo} do
+    target("New State")
+    guard(:some_guard?)
+    actions([:some_action])
+  end
+
+  # also will need to handle:
+  on(%Events.SomeEvent{type: :foo}, do: target("New State"))
+end
+```
+
+```elixir
+# Data definition for the syntax? defined sort of like a BNF grammar
+#
+# Basic idea here is:
+#   - keys correspond to a call
+#   - value represents the arity of the call and how to name the args
+#   - attrs represent the attributes the call can receive either as kwargs or in a block
+#   - alias represents an alternative name for the call
+#   - attrs can appear more than once
+#   - 
+# 
+
+grammar = [
+  root: [attrs: [:type, :initial, :context, :on, :states]],
+  type: :value,
+  initial: :value,
+  context: :value,
+  on: [
+    value: [{:pattern}, {:pattern, :target}],
+    attrs: [:target, :guard, :actions]
+  ],
+  states: [attrs: [:state]],
+  state: [
+    alias: :->,
+    value: {:name},
+    attrs: [:type, :initial, :context, :on, :states, :invoke]
+  ],
+  invoke: [attrs: [:proc, :task, :stream, :done, :error, :guard]],
+  proc: :value,
+  task: :value,
+  stream: :value,
+  done: [from: :transition],
+  error: [from: :transition],
+  transition: [
+    value: [{}, {:target}],
+    attrs: [:target, :guard, :actions]
+  ]
+]
+```
+
+Possible alternative syntax is to get rid of `states` in favor of `state`, removes one extra level of nesting and additional syntax. However, it has the same scannability issue. The nice thing about the `states` syntax is that the use of `->` introduces a double-set of indentation, so it's really easy to track visually what is a part of what and when the `states` block ends.
+
+```elixir
+# defmodule FormInput do
+# use Protean
+ast =
+  quote do
+    machine do
+      initial("Active")
+      context(%{value: "", error: nil})
+
+      state "Active" do
+        type(:parallel)
+        on("DISABLE", "Disabled")
+
+        state "Focus" do
+          initial("Unfocused")
+
+          state "Focused" do
+            on("BLUR", "Unfocused")
+          end
+
+          state "Unfocused" do
+            on("FOCUS", "Focused")
+          end
+        end
+
+        state "Validation" do
+          initial("Pending")
+          on({"CHANGE", _val}, ".Pending", actions: :assign_value)
+
+          state "Pending" do
+            invoke(task: :validate_field, done: "Valid")
+            on({"REPORT_INVALID", _err}, "Invalid", actions: :assign_error)
+          end
+
+          state("Valid")
+          state("Invalid")
+        end
+      end
+
+      state "Disabled" do
+        on("ENABLE", "Active")
+      end
+    end
+  end
+```
