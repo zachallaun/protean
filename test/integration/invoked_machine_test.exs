@@ -176,7 +176,6 @@ defmodule ProteanIntegration.InvokedMachineTest do
   describe "invoked machine immediately crashes" do
     @describetag machine: InvokeImmediatelyCrashes
 
-    @tag here: true
     test "trigger error transition", %{machine: machine} do
       capture_log(fn ->
         assert_protean(machine,
