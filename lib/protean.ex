@@ -189,6 +189,9 @@ defmodule Protean do
 
     * `state` is the `Protean.State` resulting from the transition;
     * `ref` is a monitor reference.
+
+  As with monitor, if the process is already dead when calling `Protean.subscribe/2`, a `:DOWN`
+  message is delivered immediately.
   """
   @spec subscribe(GenServer.server(), keyword()) :: reference()
   defdelegate subscribe(protean, opts \\ [monitor: true]), to: Server
