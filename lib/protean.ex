@@ -5,8 +5,6 @@ defmodule Protean do
              |> String.split("<!-- MDOC !-->")
              |> Enum.fetch!(1)
 
-  use Supervisor
-
   alias Protean.Action
   alias Protean.Interpreter
   alias Protean.Interpreter.Server
@@ -132,30 +130,24 @@ defmodule Protean do
   end
 
   @doc """
-  Starts a singleton instance of Protean. This allows Protean to use a `DynamicSupervisor`
-  internally to manage processes invoked by a machine.
+  Starts an instance of the Protean supervisor, which allows Protean to manage processes invoked
+  by a machine. For options, see `Supervisor.start_link/2`. If not specified, the supervisor name
+  will default to `Protean`.
   """
-  def start_link(opts \\ [])
-
-  def start_link([]) do
-    Supervisor.start_link(__MODULE__, name: __MODULE__)
+  def start_link(opts \\ []) do
+    DynamicSupervisor.start_link(
+      Protean.DynamicSupervisor,
+      [],
+      Keyword.merge([name: Protean], opts)
+    )
   end
 
   def child_spec(opts) do
     %{
-      id: __MODULE__,
-      start: {__MODULE__, :start_link, [opts]},
+      id: Keyword.get(opts, :id, Protean),
+      start: {Protean, :start_link, [opts]},
       type: :supervisor
     }
-  end
-
-  @impl true
-  def init(_opts) do
-    children = [
-      Protean.DynamicSupervisor
-    ]
-
-    Supervisor.init(children, strategy: :one_for_all)
   end
 
   @doc "Normalizes a `t:sendable_event` to a `t:event`."

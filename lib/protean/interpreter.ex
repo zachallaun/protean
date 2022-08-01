@@ -16,6 +16,7 @@ defmodule Protean.Interpreter do
     :state,
     :handler,
     :parent,
+    :supervisor,
     running: false,
     internal_queue: :queue.new(),
     invoked: %{}
@@ -25,6 +26,8 @@ defmodule Protean.Interpreter do
           machine: Machine.t(),
           state: State.t(),
           handler: module(),
+          parent: pid(),
+          supervisor: Supervisor.supervisor(),
           running: boolean(),
           internal_queue: :queue.queue(),
           invoked: invoked
@@ -45,6 +48,7 @@ defmodule Protean.Interpreter do
           {:machine, Machine.t()}
           | {:handler, module()}
           | {:parent, GenServer.server()}
+          | {:supervisor, Supervisor.supervisor()}
 
   @type metadata :: %{
           state: %{value: State.value()},
@@ -69,7 +73,8 @@ defmodule Protean.Interpreter do
       machine: machine,
       state: Machine.initial_state(machine),
       handler: Keyword.fetch!(opts, :handler),
-      parent: Keyword.get(opts, :parent)
+      parent: Keyword.get(opts, :parent),
+      supervisor: Keyword.get(opts, :supervisor)
     }
   end
 

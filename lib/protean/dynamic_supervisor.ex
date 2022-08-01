@@ -5,21 +5,21 @@ defmodule Protean.DynamicSupervisor do
 
   require Logger
 
-  def start_link(init_arg) do
-    DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
-  end
+  # Client
 
-  def start_child(spec) do
-    DynamicSupervisor.start_child(__MODULE__, spec)
+  def start_child(supervisor, spec) do
+    DynamicSupervisor.start_child(supervisor, spec)
   catch
     :exit, {:noproc, _} = error -> error_noproc!(error)
   end
 
-  def terminate_child(pid) do
-    DynamicSupervisor.terminate_child(__MODULE__, pid)
+  def terminate_child(supervisor, pid) do
+    DynamicSupervisor.terminate_child(supervisor, pid)
   catch
     :exit, {:noproc, _} = error -> error_noproc!(error)
   end
+
+  # Callbacks
 
   @impl true
   def init(_init_arg) do

@@ -191,7 +191,7 @@ defmodule Protean.Action do
     interpreter =
       case interpreter.invoked[id] do
         %{pid: pid, ref: ref} ->
-          Protean.DynamicSupervisor.terminate_child(pid)
+          Protean.DynamicSupervisor.terminate_child(interpreter.supervisor, pid)
           Process.demonitor(ref, [:flush])
           update_in(interpreter.invoked, &Map.delete(&1, id))
 
@@ -239,27 +239,29 @@ defmodule Protean.Action do
   defp __invoke__(id, child_spec_fun, interpreter) do
     self_alias = :erlang.alias()
 
-    interpreter =
-      case Protean.DynamicSupervisor.start_child(child_spec_fun.(self_alias)) do
-        {:ok, child} ->
-          ref = Process.monitor(child)
+    Protean.DynamicSupervisor.start_child(
+      interpreter.supervisor,
+      child_spec_fun.(self_alias)
+    )
+    |> case do
+      {:ok, child} ->
+        ref = Process.monitor(child)
 
-          update_in(
-            interpreter.invoked,
-            &Map.put(&1, id, %{
-              id: id,
-              pid: child,
-              ref: ref,
-              autoforward: false,
-              interpreter_alias: self_alias
-            })
-          )
+        update_in(
+          interpreter.invoked,
+          &Map.put(&1, id, %{
+            id: id,
+            pid: child,
+            ref: ref,
+            autoforward: false,
+            interpreter_alias: self_alias
+          })
+        )
 
-        {:error, _} ->
-          Interpreter.notify_process_down(interpreter, id: id)
-      end
-
-    {:cont, interpreter}
+      {:error, _} ->
+        Interpreter.notify_process_down(interpreter, id: id)
+    end
+    |> then(&{:cont, &1})
   end
 
   defp run_task({m, f, a}), do: apply(m, f, a)
