@@ -12,8 +12,6 @@ defmodule Protean.Interpreter.Server do
   alias Protean.Interpreter
   alias Protean.State
 
-  @type server :: GenServer.server()
-
   @type server_options :: [Interpreter.option() | GenServer.option()]
 
   @gen_server_options [:name, :timeout, :debug, :spawn_opt, :hibernate_after]
@@ -47,7 +45,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send_event(server, Protean.sendable_event()) :: State.t()
+  @spec send_event(GenServer.server(), Protean.sendable_event()) :: State.t()
   def send_event(pid, event) do
     GenServer.call(pid, {:event, Protean.event(event)})
   end
@@ -55,7 +53,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_event_async(server, Protean.sendable_event()) :: :ok
+  @spec send_event_async(GenServer.server(), Protean.sendable_event()) :: :ok
   def send_event_async(server, event) do
     server
     |> resolve_server_to_pid()
@@ -68,7 +66,8 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
   reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_event_after(server, Protean.sendable_event(), non_neg_integer()) :: reference()
+  @spec send_event_after(GenServer.server(), Protean.sendable_event(), non_neg_integer()) ::
+          reference()
   def send_event_after(server, event, time) do
     server
     |> resolve_server_to_pid()
@@ -78,7 +77,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Get the current machine state.
   """
-  @spec current(server) :: State.t()
+  @spec current(GenServer.server()) :: State.t()
   def current(pid) do
     GenServer.call(pid, :current_state)
   end
@@ -87,7 +86,7 @@ defmodule Protean.Interpreter.Server do
   Get the current machine state and check whether it matches the given descriptor. See
   `Protean.State.matches?/2` for descriptor usage.
   """
-  @spec matches?(server, descriptor :: term()) :: boolean()
+  @spec matches?(GenServer.server(), descriptor :: term()) :: boolean()
   def matches?(pid, pattern) do
     pid
     |> current()
@@ -97,7 +96,7 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Stop the service, terminating the process.
   """
-  @spec stop(server, reason :: term()) :: :ok
+  @spec stop(GenServer.server(), reason :: term()) :: :ok
   def stop(pid, reason \\ :default)
   def stop(pid, :default), do: GenServer.stop(pid, {:shutdown, current(pid)})
   def stop(pid, reason), do: GenServer.stop(pid, reason)

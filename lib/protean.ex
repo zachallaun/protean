@@ -190,7 +190,7 @@ defmodule Protean do
     * `state` is the `Protean.State` resulting from the transition;
     * `ref` is a monitor reference.
   """
-  @spec subscribe(Server.server(), keyword()) :: reference()
+  @spec subscribe(GenServer.server(), keyword()) :: reference()
   defdelegate subscribe(protean, opts \\ [monitor: true]), to: Server
 
   @doc "Unsubscribes the caller from the running Protean machine."
@@ -202,7 +202,7 @@ defmodule Protean do
   @doc "TODO"
   @spec matches?(State.t(), descriptor :: term()) :: boolean()
   @spec matches?(Interpreter.t(), descriptor :: term()) :: boolean()
-  @spec matches?(Server.server(), descriptor :: term()) :: boolean()
+  @spec matches?(GenServer.server(), descriptor :: term()) :: boolean()
   def matches?(item, descriptor)
 
   def matches?(%State{} = state, descriptor),
@@ -214,7 +214,7 @@ defmodule Protean do
     |> State.matches?(descriptor)
   end
 
-  def matches?(server, descriptor) do
-    Server.matches?(server, descriptor)
+  def matches?(protean, descriptor) do
+    Server.matches?(protean, descriptor)
   end
 end
