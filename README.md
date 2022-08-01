@@ -146,6 +146,7 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
 - [ ] Event coercion (e.g. from phx pubsub -> protean)
 - [ ] Fix all "FIXME"
 - [ ] Fix all "TODO"
+- [ ] Stricter machine config parsing with helpful error messages
 
 ## Installation
 
