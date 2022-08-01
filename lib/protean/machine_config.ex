@@ -171,16 +171,19 @@ defmodule Protean.MachineConfig do
     {entry_action, exit_action, transitions}
   end
 
-  defp invoke_entry_action(%{proc: proc}, id) do
-    Action.invoke(:proc, proc, id)
-  end
+  defp invoke_entry_action(config_map, id) do
+    {type, to_invoke} =
+      case config_map do
+        %{proc: proc} -> {:proc, proc}
+        %{task: task} -> {:task, task}
+        %{stream: stream} -> {:stream, stream}
+      end
 
-  defp invoke_entry_action(%{task: task}, id) do
-    Action.invoke(:task, task, id)
-  end
+    opts_with_defaults = %{autoforward: false}
+    user_opts = Map.take(config_map, Map.keys(opts_with_defaults))
+    opts = Map.merge(opts_with_defaults, user_opts) |> Enum.into([])
 
-  defp invoke_entry_action(%{stream: stream}, id) do
-    Action.invoke(:stream, stream, id)
+    Action.invoke(type, to_invoke, id, opts)
   end
 
   defp parse_delayed_transitions(nil, _id), do: {[], [], []}

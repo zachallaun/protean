@@ -117,20 +117,22 @@ defmodule Protean.Action do
   end
 
   @doc false
-  def invoke(:proc, proc, id) do
-    {__MODULE__, {:invoke, :proc, proc, id}}
+  def invoke(type, to_invoke, id, opts \\ [])
+
+  def invoke(:proc, proc, id, opts) do
+    {__MODULE__, {:invoke, :proc, proc, id, opts}}
   end
 
-  def invoke(:task, task, id) do
-    {__MODULE__, {:invoke, :task, task, id, Utils.internal_event(:invoke, :done, id)}}
+  def invoke(:task, task, id, opts) do
+    {__MODULE__, {:invoke, :task, task, id, Utils.internal_event(:invoke, :done, id), opts}}
   end
 
-  def invoke(:stream, stream, id) do
-    {__MODULE__, {:invoke, :stream, stream, id, Utils.internal_event(:invoke, :done, id)}}
+  def invoke(:stream, stream, id, opts) do
+    {__MODULE__, {:invoke, :stream, stream, id, Utils.internal_event(:invoke, :done, id), opts}}
   end
 
-  def invoke(:delayed_send, id, delay) do
-    {__MODULE__, {:invoke, :task, {:timer, :sleep, [delay]}, id, id}}
+  def invoke(:delayed_send, id, delay, opts) do
+    {__MODULE__, {:invoke, :task, {:timer, :sleep, [delay]}, id, id, opts}}
   end
 
   def invoke(:cancel, id) do
@@ -202,7 +204,7 @@ defmodule Protean.Action do
     {:cont, interpreter}
   end
 
-  def exec_action({:invoke, :proc, proc, id}, interpreter) do
+  def exec_action({:invoke, :proc, proc, id, opts}, interpreter) do
     child_spec_fun = fn pid ->
       defaults = [parent: pid]
 
@@ -213,24 +215,25 @@ defmodule Protean.Action do
       |> Supervisor.child_spec(restart: :temporary)
     end
 
-    __invoke__(id, child_spec_fun, interpreter)
+    __invoke__(id, child_spec_fun, interpreter, opts)
   end
 
-  def exec_action({:invoke, invoke_type, name, id, done}, interpreter) when is_binary(name) do
+  def exec_action({:invoke, invoke_type, name, id, done, opts}, interpreter)
+      when is_binary(name) do
     %{state: state, handler: handler} = interpreter
     to_invoke = handler.invoke(name, state, state.event)
-    exec_action({:invoke, invoke_type, to_invoke, id, done}, interpreter)
+    exec_action({:invoke, invoke_type, to_invoke, id, done, opts}, interpreter)
   end
 
-  def exec_action({:invoke, :task, task, id, done}, interpreter) do
+  def exec_action({:invoke, :task, task, id, done, opts}, interpreter) do
     child_spec_fun = fn pid ->
       Task.child_spec(fn -> task |> run_task() |> send_result(pid, done) end)
     end
 
-    __invoke__(id, child_spec_fun, interpreter)
+    __invoke__(id, child_spec_fun, interpreter, opts)
   end
 
-  def exec_action({:invoke, :stream, stream, id, done}, interpreter) do
+  def exec_action({:invoke, :stream, stream, id, done, opts}, interpreter) do
     child_spec_fun = fn pid ->
       Task.child_spec(fn ->
         for event <- stream, do: send(pid, event)
@@ -238,10 +241,10 @@ defmodule Protean.Action do
       end)
     end
 
-    __invoke__(id, child_spec_fun, interpreter)
+    __invoke__(id, child_spec_fun, interpreter, opts)
   end
 
-  defp __invoke__(id, child_spec_fun, interpreter) do
+  defp __invoke__(id, child_spec_fun, interpreter, opts) do
     self_alias = :erlang.alias()
 
     Protean.DynamicSupervisor.start_child(
@@ -258,7 +261,7 @@ defmodule Protean.Action do
             id: id,
             pid: child,
             ref: ref,
-            autoforward: false,
+            autoforward: Keyword.get(opts, :autoforward, false),
             interpreter_alias: self_alias
           })
         )

@@ -82,12 +82,13 @@ defmodule Protean.MachineConfigTest do
             id: "task_id",
             task: task_fun,
             done: "done_state",
-            error: "error_state"
+            error: "error_state",
+            autoforward: true
           ]
         ],
         [
           entry: [
-            Action.invoke(:task, task_fun, "task_id")
+            Action.invoke(:task, task_fun, "task_id", autoforward: true)
           ],
           exit: [
             Action.invoke(:cancel, "task_id")
@@ -119,7 +120,7 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.invoke(:proc, Anything, "proc_id")
+            Action.invoke(:proc, Anything, "proc_id", autoforward: false)
           ],
           exit: [
             Action.invoke(:cancel, "proc_id")

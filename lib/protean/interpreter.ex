@@ -270,8 +270,6 @@ defmodule Protean.Interpreter do
 
   @spec autoforward_to(invoked_service, Protean.event(), t) :: t
   defp autoforward_to(%{pid: pid}, event, interpreter) do
-    # TODO: do we need to handle failures here? can add to internal queue
-    # if errors occur.
     Interpreter.Server.send_event_async(pid, event)
     interpreter
   end

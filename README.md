@@ -128,13 +128,6 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
 
 ## Todo
 
-- [x] Subscribe/unsubscribe
-- [ ] Invoked services
-  - [x] Machines/Interpreters
-  - [x] GenServers (non-Protean)
-  - [x] Tasks
-  - [x] Streams
-  - [ ] Autoforward events
 - [ ] Actions
   - [x] Send event to self
   - [x] Send event to service
