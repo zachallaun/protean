@@ -49,7 +49,7 @@ defmodule Protean.Interpreter do
   @type option ::
           {:machine, Machine.t()}
           | {:handler, module()}
-          | {:parent, {GenServer.server(), reference()}}
+          | {:parent, GenServer.server()}
           | {:supervisor, Supervisor.supervisor()}
 
   @type metadata :: %{
@@ -102,11 +102,18 @@ defmodule Protean.Interpreter do
   def start(interpreter), do: interpreter
 
   @doc """
-  Stop an interpreter, preventing further event processing.
+  Stop an interpreter, preventing further event processing and terminating any invoked processes.
   """
   @spec stop(t) :: t
-  def stop(%Interpreter{} = interpreter),
-    do: %{interpreter | running: false}
+  def stop(%Interpreter{running: false} = interpreter), do: interpreter
+
+  def stop(interpreter) do
+    interpreter.invoked
+    |> Map.values()
+    |> Enum.each(fn %{pid: pid} -> Process.exit(pid, :normal) end)
+
+    %{interpreter | running: false, invoked: []}
+  end
 
   @doc """
   Send an event to a running interpreter. This will execute any transitions, actions, and side-
@@ -134,10 +141,6 @@ defmodule Protean.Interpreter do
   @doc false
   @spec notify_process_down(t, ref: reference()) :: t
   @spec notify_process_down(t, id: invoked_id) :: t
-  def notify_process_down(%Interpreter{parent: {_, ref}} = interpreter, ref: ref) do
-    stop(interpreter)
-  end
-
   def notify_process_down(%Interpreter{} = interpreter, ref: ref) do
     invoked = get_invoked_by_ref(interpreter, ref)
     notify_process_down(interpreter, id: invoked[:id])

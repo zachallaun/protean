@@ -131,8 +131,6 @@ defmodule Protean.Interpreter.Server do
   @impl true
   def init(opts) do
     Process.flag(:trap_exit, true)
-    ref = Process.monitor(opts[:parent])
-    opts = Keyword.put(opts, :parent, {opts[:parent], ref})
 
     interpreter =
       Interpreter.new(opts)
@@ -187,13 +185,18 @@ defmodule Protean.Interpreter.Server do
      {:continue, :check_running}}
   end
 
-  def handle_info({:EXIT, _pid, :normal}, interpreter) do
-    {:noreply, interpreter}
+  def handle_info({:EXIT, _pid, reason}, interpreter) do
+    {:stop, reason, interpreter}
   end
 
   def handle_info(anything, interpreter) do
     require Logger
     Logger.info("Unexpected message: #{inspect(anything)}")
     {:noreply, interpreter}
+  end
+
+  @impl true
+  def terminate(_reason, interpreter) do
+    Interpreter.stop(interpreter)
   end
 end
