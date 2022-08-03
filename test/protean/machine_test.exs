@@ -20,14 +20,14 @@ defmodule Protean.MachineTest do
     end
 
     test "transitions to atomic nodes", %{machine: machine, initial: initial} do
-      next = Machine.transition(machine, initial, "event_a")
+      next = Machine.transition(machine, initial, :event_a)
       assert next.value == MapSet.new([["state_b", "#"]])
     end
   end
 
   @tag machine: :simple_machine_2
   test "transitions when parent responds to event", %{machine: machine, initial: initial} do
-    next = Machine.transition(machine, initial, "event_a")
+    next = Machine.transition(machine, initial, :event_a)
     assert next.value == MapSet.new([["state_b", "#"]])
   end
 
@@ -51,7 +51,7 @@ defmodule Protean.MachineTest do
       machine: machine,
       initial: initial
     } do
-      state = Machine.transition(machine, initial, "event_a")
+      state = Machine.transition(machine, initial, :event_a)
       assert state.value == MapSet.new([["state_b", "#"]])
       assert state.private.actions == ["entry_a", "exit_a", "event_a_action", "entry_b"]
     end
@@ -71,7 +71,7 @@ defmodule Protean.MachineTest do
     end
 
     test "can transition within a parallel state", %{machine: machine, initial: initial} do
-      state = Machine.transition(machine, initial, "foo_event")
+      state = Machine.transition(machine, initial, :foo_event)
 
       assert state.value ==
                MapSet.new([

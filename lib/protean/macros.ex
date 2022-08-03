@@ -15,10 +15,7 @@ defmodule Protean.Macros do
 
   """
 
-  defmodule ConfigError do
-    @moduledoc false
-    defexception [:message]
-  end
+  defmodule ConfigError, do: defexception([:message])
 
   defmacro __using__(opts) do
     quote generated: true, location: :keep do
@@ -35,6 +32,29 @@ defmodule Protean.Macros do
   Define a Protean machine accessible through `__MODULE__.machine/0`.
   """
   defmacro defmachine(config) do
+    config
+    |> with_event_matchers()
+    |> make_machine_function()
+  end
+
+  defp with_event_matchers(config) do
+    Macro.prewalk(config, fn
+      {:on, transitions} ->
+        {:on,
+         Enum.map(transitions, fn {pattern, transition} ->
+           {make_match_fun(pattern), transition}
+         end)}
+
+      other ->
+        other
+    end)
+  end
+
+  defp make_match_fun(pattern) do
+    quote(do: fn expr -> match?(unquote(pattern), expr) end)
+  end
+
+  defp make_machine_function(config) do
     quote location: :keep do
       def machine do
         Protean.Machine.new(unquote(config), handler: __MODULE__)
@@ -100,6 +120,7 @@ defmodule Protean.Macros do
     |> Keyword.get(:handler, env.module)
   end
 
-  defp protean_opts(env),
-    do: Module.get_attribute(env.module, Protean.Options, [])
+  defp protean_opts(env) do
+    Module.get_attribute(env.module, Protean.Options, [])
+  end
 end

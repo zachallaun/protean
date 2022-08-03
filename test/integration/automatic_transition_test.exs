@@ -5,7 +5,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     use Protean
     alias Protean.Action
 
-    defmachine [
+    defmachine(
       initial: :a,
       context: %{
         acc: [],
@@ -49,7 +49,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
           actions: [Action.assign(allow: true)]
         ]
       ]
-    ]
+    )
 
     @impl true
     def action(action_name, %{context: %{acc: acc}} = state, _event) do
@@ -64,7 +64,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
 
   test "automatic transitions trigger actions in correct order", %{machine: machine} do
     assert_protean(machine,
-      send: "goto_b",
+      send: :goto_b,
       matches: "d",
       context: [acc: ["auto_to_d", "auto_to_c"]]
     )
@@ -72,20 +72,20 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
 
   test "normal transitions take precedence even if auto condition is true", %{machine: machine} do
     assert_protean(machine,
-      send: "goto_b",
-      send: "allow",
+      send: :goto_b,
+      send: :allow,
       matches: "e",
-      send: "goto_a",
-      send: "goto_b",
+      send: :goto_a,
+      send: :goto_b,
       matches: "a"
     )
   end
 
   test "auto transition triggered when condition is met", %{machine: machine} do
     assert_protean(machine,
-      send: "goto_b",
+      send: :goto_b,
       matches: "d",
-      send: "outer_allow",
+      send: :outer_allow,
       matches: "a"
     )
   end

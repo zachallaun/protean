@@ -10,6 +10,8 @@ defmodule Protean.Interpreter.Server do
   alias Protean.Interpreter
   alias Protean.State
 
+  @prefix :"$protean"
+
   @type server_options :: [Interpreter.option() | GenServer.option()]
 
   @gen_server_options [:name, :timeout, :debug, :spawn_opt, :hibernate_after]
@@ -43,19 +45,19 @@ defmodule Protean.Interpreter.Server do
   @doc """
   Send an event to the interpreter and wait for the next state.
   """
-  @spec send_event(GenServer.server(), Protean.sendable_event()) :: State.t()
+  @spec send_event(GenServer.server(), Protean.event()) :: State.t()
   def send_event(pid, event) do
-    GenServer.call(pid, {:event, Protean.event(event)})
+    GenServer.call(pid, event)
   end
 
   @doc """
   Send an event to the interpreter asyncronously.
   """
-  @spec send_event_async(GenServer.server(), Protean.sendable_event()) :: :ok
+  @spec send_event_async(GenServer.server(), Protean.event()) :: :ok
   def send_event_async(server, event) do
     server
     |> resolve_server_to_pid()
-    |> send(Protean.event(event))
+    |> send(event)
 
     :ok
   end
@@ -64,12 +66,12 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
   reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_event_after(GenServer.server(), Protean.sendable_event(), non_neg_integer()) ::
+  @spec send_event_after(GenServer.server(), Protean.event(), non_neg_integer()) ::
           reference()
   def send_event_after(server, event, time) do
     server
     |> resolve_server_to_pid()
-    |> Process.send_after(Protean.event(event), time)
+    |> Process.send_after(event, time)
   end
 
   @doc """
@@ -77,7 +79,7 @@ defmodule Protean.Interpreter.Server do
   """
   @spec current(GenServer.server()) :: State.t()
   def current(pid) do
-    GenServer.call(pid, :current_state)
+    GenServer.call(pid, {@prefix, :current_state})
   end
 
   @doc """
@@ -105,23 +107,23 @@ defmodule Protean.Interpreter.Server do
       |> resolve_server_to_pid()
       |> Process.monitor()
 
-    GenServer.cast(server, {:subscribe, self(), ref})
+    GenServer.cast(server, {@prefix, :subscribe, self(), ref})
 
     ref
   end
 
   def subscribe(server, monitor: false) do
     ref = make_ref()
-    GenServer.cast(server, {:subscribe, self(), ref})
+    GenServer.cast(server, {@prefix, :subscribe, self(), ref})
     ref
   end
 
   def unsubscribe(server, ref) do
-    GenServer.cast(server, {:unsubscribe, self(), ref})
+    GenServer.cast(server, {@prefix, :unsubscribe, self(), ref})
   end
 
   @doc false
-  def ping(pid), do: GenServer.call(pid, :ping)
+  def ping(pid), do: GenServer.call(pid, {@prefix, :ping})
 
   defp resolve_server_to_pid(ref) when is_reference(ref), do: ref
   defp resolve_server_to_pid(server), do: GenServer.whereis(server)
@@ -140,59 +142,55 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_call(:current_state, _from, interpreter) do
+  def handle_call({@prefix, :current_state}, _from, interpreter) do
     {:reply, Interpreter.state(interpreter), interpreter}
   end
 
-  def handle_call(:ping, _from, interpreter) do
+  def handle_call({@prefix, :ping}, _from, interpreter) do
     {:reply, :ok, interpreter}
   end
 
-  def handle_call({:event, event}, _from, interpreter) do
+  def handle_call(event, _from, interpreter) do
     interpreter = Interpreter.send_event(interpreter, event)
-    {:reply, Interpreter.state(interpreter), interpreter, {:continue, :check_running}}
+    {:reply, Interpreter.state(interpreter), interpreter, {:continue, {@prefix, :check_running}}}
   end
 
   @impl true
-  def handle_cast({:event, event}, interpreter) do
-    {:noreply, Interpreter.send_event(interpreter, event), {:continue, :check_running}}
+  def handle_cast({@prefix, :subscribe, pid, ref}, interpreter) do
+    {:noreply, Interpreter.subscribe(interpreter, {pid, ref}),
+     {:continue, {@prefix, :check_running}}}
   end
 
-  def handle_cast({:subscribe, pid, ref}, interpreter) do
-    {:noreply, Interpreter.subscribe(interpreter, {pid, ref}), {:continue, :check_running}}
+  def handle_cast({@prefix, :unsubscribe, pid, ref}, interpreter) do
+    {:noreply, Interpreter.unsubscribe(interpreter, {pid, ref}),
+     {:continue, {@prefix, :check_running}}}
   end
 
-  def handle_cast({:unsubscribe, pid, ref}, interpreter) do
-    {:noreply, Interpreter.unsubscribe(interpreter, {pid, ref}), {:continue, :check_running}}
-  end
-
-  @impl true
-  def handle_continue(:check_running, interpreter) do
-    if Interpreter.running?(interpreter) do
-      {:noreply, interpreter}
-    else
-      {:stop, {:shutdown, Interpreter.state(interpreter)}, interpreter}
-    end
+  def handle_cast(event, interpreter) do
+    {:noreply, Interpreter.send_event(interpreter, event), {:continue, {@prefix, :check_running}}}
   end
 
   @impl true
-  def handle_info({event_name, _} = event, interpreter) when is_binary(event_name) do
-    {:noreply, Interpreter.send_event(interpreter, event), {:continue, :check_running}}
-  end
-
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, interpreter) do
-    {:noreply, Interpreter.notify_process_down(interpreter, ref: ref),
-     {:continue, :check_running}}
+  def handle_info({:DOWN, ref, :process, _pid, reason}, interpreter) do
+    {:noreply, Interpreter.notify_process_down(interpreter, reason, ref: ref),
+     {:continue, {@prefix, :check_running}}}
   end
 
   def handle_info({:EXIT, _pid, reason}, interpreter) do
     {:stop, reason, interpreter}
   end
 
-  def handle_info(anything, interpreter) do
-    require Logger
-    Logger.info("Unexpected message: #{inspect(anything)}")
-    {:noreply, interpreter}
+  def handle_info(event, interpreter) do
+    {:noreply, Interpreter.send_event(interpreter, event), {:continue, {@prefix, :check_running}}}
+  end
+
+  @impl true
+  def handle_continue({@prefix, :check_running}, interpreter) do
+    if Interpreter.running?(interpreter) do
+      {:noreply, interpreter}
+    else
+      {:stop, {:shutdown, Interpreter.state(interpreter)}, interpreter}
+    end
   end
 
   @impl true

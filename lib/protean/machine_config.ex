@@ -101,7 +101,6 @@ defmodule Protean.MachineConfig do
         done ->
           [{Utils.internal_event(:done, id), done}]
           |> parse_transitions(id)
-          |> Enum.map(&make_exact/1)
       end
 
     transitions =
@@ -155,15 +154,16 @@ defmodule Protean.MachineConfig do
 
   defp parse_invoke_config(config, node_id) do
     id = config[:id] || Utils.uuid4()
+    on_done = Utils.internal_event(:invoke, :done, id)
+    on_error = Utils.internal_event(:invoke, :error, id)
 
     transitions =
       [
-        config[:done] && {Utils.internal_event(:invoke, :done, id), config[:done]},
-        config[:error] && {Utils.internal_event(:invoke, :error, id), config[:error]}
+        config[:done] && {fn e -> match?({^on_done, _}, e) end, config[:done]},
+        config[:error] && {on_error, config[:error]}
       ]
       |> Enum.filter(&Function.identity/1)
       |> Enum.map(&parse_transition(&1, node_id))
-      |> Enum.map(&make_exact/1)
 
     [entry_action] = parse_actions(invoke_entry_action(config, id))
     [exit_action] = parse_actions(Action.invoke(:cancel, id))
@@ -204,7 +204,7 @@ defmodule Protean.MachineConfig do
 
     [entry_action] = parse_actions(Action.invoke(:delayed_send, event_name, delay))
     [exit_action] = parse_actions(Action.invoke(:cancel, event_name))
-    transition = parse_transition(config ++ [on: event_name], id) |> make_exact()
+    transition = parse_transition({event_name, config}, id)
 
     {entry_action, exit_action, transition}
   end
@@ -225,16 +225,14 @@ defmodule Protean.MachineConfig do
   defp parse_automatic_transitions(nil, _id), do: []
 
   defp parse_automatic_transitions(target, id) when is_atom(target) or is_binary(target) do
-    parse_automatic_transitions([target], id)
+    parse_transitions([{nil, target}], id)
   end
 
   defp parse_automatic_transitions(transitions, id) when is_list(transitions) do
     if Keyword.keyword?(transitions) do
-      parse_automatic_transitions([transitions], id)
+      parse_transitions([{nil, transitions}], id)
     else
-      transitions
-      |> parse_transitions(id)
-      |> Enum.map(&make_exact/1)
+      parse_transitions(transitions, id)
     end
   end
 
@@ -243,23 +241,16 @@ defmodule Protean.MachineConfig do
   defp parse_transitions(transitions, id),
     do: Enum.map(transitions, &parse_transition(&1, id))
 
-  defp parse_transition({descriptor, target}, id) when is_atom(target) or is_binary(target),
-    do: parse_transition([target: target, on: descriptor], id)
+  defp parse_transition({matcher, target}, id) when is_atom(target) or is_binary(target),
+    do: parse_transition({matcher, target: target}, id)
 
-  defp parse_transition({descriptor, transition}, id) when is_list(transition),
-    do: parse_transition([on: descriptor] ++ transition, id)
-
-  defp parse_transition(target, id) when is_atom(target) or is_binary(target),
-    do: parse_transition([target: target], id)
-
-  defp parse_transition(transition, id) when is_list(transition) do
+  defp parse_transition({matcher, transition}, id) when is_list(transition) do
     target_ids = resolve_targets(transition[:target], id)
 
     %Transition{
       source_id: id,
       target_ids: target_ids,
-      exact: !!transition[:exact],
-      event_descriptor: parse_event_descriptor(transition[:on]),
+      match?: matcher,
       actions: parse_actions(transition[:actions]),
       guard: parse_guard(transition[:when])
     }
@@ -275,8 +266,6 @@ defmodule Protean.MachineConfig do
       {_, _, _} -> %{transition | internal: false}
     end
   end
-
-  defp make_exact(transition), do: %{transition | exact: true}
 
   defp parse_guard(nil), do: nil
 
@@ -341,23 +330,6 @@ defmodule Protean.MachineConfig do
     |> String.split(".")
     |> Enum.reverse()
   end
-
-  defp parse_event_descriptor(nil), do: nil
-
-  defp parse_event_descriptor(descriptor) when is_atom(descriptor),
-    do: parse_event_descriptor(to_string(descriptor))
-
-  defp parse_event_descriptor(descriptor) when is_binary(descriptor) do
-    descriptor
-    |> String.split(" ")
-    |> Enum.map(&String.split(&1, "."))
-    |> Enum.map(&expand_descriptor_component/1)
-  end
-
-  defp expand_descriptor_component([]), do: []
-  defp expand_descriptor_component(["" | rest]), do: expand_descriptor_component(rest)
-  defp expand_descriptor_component(["*" | rest]), do: expand_descriptor_component(rest)
-  defp expand_descriptor_component([part | rest]), do: [part | expand_descriptor_component(rest)]
 
   defp require!(config, keys),
     do: check!(config, keys, &is_nil(config[&1]), "must have keys")

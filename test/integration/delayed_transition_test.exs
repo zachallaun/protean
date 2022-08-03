@@ -4,7 +4,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine [
+    defmachine(
       context: %{
         path: []
       },
@@ -27,9 +27,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
         c: [
           entry: ["save_path"],
           on: [
-            "$protean.after.50-#.a": [
-              actions: ["blow_up"]
-            ]
+            {"$protean.after.50-#.a", actions: ["blow_up"]}
           ]
         ],
         d: [
@@ -40,7 +38,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
         goto_c: ".c",
         goto_d: ".d"
       ]
-    ]
+    )
 
     @impl Protean
     def action("save_path", %{context: %{path: path}} = state, _event) do
@@ -63,7 +61,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
   test "delayed transitions can be short-circuited by transitioning early", %{machine: machine} do
     assert_protean(machine,
-      send: "goto_c",
+      send: :goto_c,
       sleep: 50,
       matches: "c"
     )
@@ -72,7 +70,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   test "short-circuited transitions don't execute actions", %{machine: machine} do
     assert_protean(machine,
       context: [path: [[["a", "#"]]]],
-      send: "goto_d",
+      send: :goto_d,
       sleep: 50,
       context: [path: [[["d", "#"]], [["a", "#"]]]]
     )
@@ -80,7 +78,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
   test "short-circuited transitions don't still send event", %{machine: machine} do
     assert_protean(machine,
-      send: "goto_c",
+      send: :goto_c,
       sleep: 50
     )
   end

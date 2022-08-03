@@ -181,7 +181,7 @@ defmodule TestMachines do
   defmodule SillyDirectionMachine do
     use Protean
 
-    defmachine [
+    defmachine(
       context: %{
         direction: :straight
       },
@@ -210,7 +210,7 @@ defmodule TestMachines do
           actions: [Action.assign(direction: :right)]
         ]
       ]
-    ]
+    )
 
     @impl true
     def condition("direction_straight?", %{context: %{direction: :straight}}, _event), do: true
@@ -230,7 +230,7 @@ defmodule TestMachines do
   defmodule PureMachine1 do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: :a,
       context: %{
         acc: []
@@ -259,7 +259,7 @@ defmodule TestMachines do
         ],
         b: []
       ]
-    ]
+    )
 
     @impl true
     def action("entering_a", %{context: %{acc: acc}} = state, _event) do
@@ -278,7 +278,7 @@ defmodule TestMachines do
   defmodule HigherOrderGuardMachine1 do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: :a,
       states: [
         a: [],
@@ -287,24 +287,12 @@ defmodule TestMachines do
         d: []
       ],
       on: [
-        goto_a: [
-          target: "#a",
-          when: {:not, {:in, "#d"}}
-        ],
-        goto_b: [
-          target: "#b",
-          when: {:in, "#a"}
-        ],
-        goto_c: [
-          target: "#c",
-          when: {:or, [{:in, "#d"}, {:in, "#b"}]}
-        ],
-        goto_d: [
-          target: "#d",
-          when: {:and, [{:in, "#c"}, "asked_nicely"]}
-        ]
+        {:goto_a, target: ".a", when: {:not, {:in, "#d"}}},
+        {:goto_b, target: ".b", when: {:in, "#a"}},
+        {:goto_c, target: ".c", when: {:or, [{:in, "#d"}, {:in, "#b"}]}},
+        {{:goto_d, _}, target: ".d", when: {:and, [{:in, "#c"}, "asked_nicely"]}}
       ]
-    ]
+    )
 
     @impl true
     def condition("asked_nicely", _state, {_, :please}), do: true
@@ -317,7 +305,7 @@ defmodule TestMachines do
   defmodule HigherOrderGuardMachine2 do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: :a,
       states: [
         a: [],
@@ -326,24 +314,12 @@ defmodule TestMachines do
         d: []
       ],
       on: [
-        goto_a: [
-          target: ".a",
-          when: [:not, in: "d"]
-        ],
-        goto_b: [
-          target: ".b",
-          when: [in: "a"]
-        ],
-        goto_c: [
-          target: ".c",
-          when: [:or, in: "d", in: "b"]
-        ],
-        goto_d: [
-          target: ".d",
-          when: ["asked_nicely", in: "c"]
-        ]
+        {:goto_a, target: ".a", when: [:not, in: "d"]},
+        {:goto_b, target: ".b", when: [in: "a"]},
+        {:goto_c, target: ".c", when: [:or, in: "d", in: "b"]},
+        {{:goto_d, _}, target: ".d", when: ["asked_nicely", in: "c"]}
       ]
-    ]
+    )
 
     @impl true
     def condition("asked_nicely", _state, {_, :please}), do: true
@@ -356,7 +332,7 @@ defmodule TestMachines do
   defmodule AutoTransitionMachine1 do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: :a,
       states: [
         a: [
@@ -364,7 +340,7 @@ defmodule TestMachines do
         ],
         b: []
       ]
-    ]
+    )
   end
 
   def auto_transition_machine_1 do
@@ -374,7 +350,7 @@ defmodule TestMachines do
   defmodule AutoTransitionMachine2 do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: :a,
       context: %{
         acc: []
@@ -399,7 +375,7 @@ defmodule TestMachines do
         ],
         d: []
       ]
-    ]
+    )
 
     @impl true
     def action(action_name, state, _event) do

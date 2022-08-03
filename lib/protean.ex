@@ -10,16 +10,8 @@ defmodule Protean do
   alias Protean.Interpreter.Server
   alias Protean.State
 
-  @typedoc """
-  A normalized event. Any events received from Protean will be of this form.
-  """
-  @type event :: {name :: String.t(), payload :: term()}
-
-  @typedoc """
-  A sendable event. Events sent to Protean that match this type will be "desugared" to
-  `t:event`.
-  """
-  @type sendable_event :: {String.t(), term()} | {atom(), term()} | String.t() | atom()
+  @typedoc "Any message sent to a Protean machine."
+  @type event :: term()
 
   @doc """
   Used to define invoked services at runtime. Returns a value or child spec usable by the invoke
@@ -149,13 +141,6 @@ defmodule Protean do
       type: :supervisor
     }
   end
-
-  @doc "Normalizes a `t:sendable_event` to a `t:event`."
-  @spec event(sendable_event) :: event
-  def event(name) when is_atom(name), do: {to_string(name), nil}
-  def event(name) when is_binary(name), do: {name, nil}
-  def event({name, payload}) when is_atom(name), do: {to_string(name), payload}
-  def event({name, payload}) when is_binary(name), do: {name, payload}
 
   @doc "TODO"
   defdelegate send_event(protean, event), to: Server

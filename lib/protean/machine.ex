@@ -255,10 +255,9 @@ defmodule Protean.Machine do
   Given a machine, a machine state, and an event, transition to the next state
   if the machine defines a transition for the given state and event.
   """
-  @spec transition(t, State.t(), Protean.sendable_event()) :: State.t()
+  @spec transition(t, State.t(), Protean.event()) :: State.t()
   def transition(machine, state, event) do
-    with event <- Protean.event(event),
-         transitions <- select_transitions(machine, state, event) do
+    with transitions <- select_transitions(machine, state, event) do
       take_transitions(machine, state, transitions)
     end
   end

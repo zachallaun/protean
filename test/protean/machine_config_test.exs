@@ -21,10 +21,7 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "$protean.after.2000-#")
           ],
           on: [
-            "$protean.after.2000-#": [
-              target: "b",
-              exact: true
-            ]
+            {"$protean.after.2000-#", target: "b"}
           ]
         ]
       ]
@@ -56,15 +53,8 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "$protean.after.2000-#")
           ],
           on: [
-            "$protean.after.1000-#": [
-              target: "c",
-              when: "some_condition",
-              exact: true
-            ],
-            "$protean.after.2000-#": [
-              target: "c",
-              exact: true
-            ]
+            {"$protean.after.1000-#", target: "c", when: "some_condition"},
+            {"$protean.after.2000-#", target: "c"}
           ]
         ]
       ]
@@ -94,14 +84,8 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "task_id")
           ],
           on: [
-            "$protean.invoke.done-task_id": [
-              target: "done_state",
-              exact: true
-            ],
-            "$protean.invoke.error-task_id": [
-              target: "error_state",
-              exact: true
-            ]
+            {fn -> :ok end, target: "done_state"},
+            {"$protean.invoke.error-task_id", target: "error_state"}
           ]
         ]
       ]
@@ -126,14 +110,8 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "proc_id")
           ],
           on: [
-            "$protean.invoke.done-proc_id": [
-              target: "done_state",
-              exact: true
-            ],
-            "$protean.invoke.error-proc_id": [
-              target: "error_state",
-              exact: true
-            ]
+            {fn -> :ok end, target: "done_state"},
+            {"$protean.invoke.error-proc_id", target: "error_state"}
           ]
         ]
       ]
@@ -156,10 +134,7 @@ defmodule Protean.MachineConfigTest do
           a: []
         ],
         on: [
-          "$protean.done-#": [
-            target: "other",
-            exact: true
-          ]
+          {"$protean.done-#", target: "other"}
         ]
       ]
     ]
@@ -168,6 +143,29 @@ defmodule Protean.MachineConfigTest do
 
   defp assert_parsed_same(nodes) do
     [parsed1, parsed2] = Enum.map(nodes, &MachineConfig.parse_node/1)
-    assert parsed1 == parsed2
+    assert parsed_same?(parsed1, parsed2)
   end
+
+  defp parsed_same?(f1, f2) when is_function(f1) and is_function(f2), do: true
+
+  defp parsed_same?(l1, l2) when is_list(l1) and is_list(l2) do
+    length(l1) === length(l2) &&
+      Enum.all?(Enum.zip(l1, l2), fn {e1, e2} -> parsed_same?(e1, e2) end)
+  end
+
+  defp parsed_same?(t1, t2) when is_tuple(t1) and is_tuple(t2) do
+    parsed_same?(Tuple.to_list(t1), Tuple.to_list(t2))
+  end
+
+  defp parsed_same?(m1, m2) when is_map(m1) and is_map(m2) do
+    [l1, l2] =
+      for m <- [m1, m2] do
+        m |> Map.to_list() |> Enum.sort_by(fn {k, _v} -> k end)
+      end
+
+    parsed_same?(l1, l2)
+  end
+
+  defp parsed_same?(x, x), do: true
+  defp parsed_same?(_, _), do: false
 end

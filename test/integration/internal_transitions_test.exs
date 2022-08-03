@@ -5,7 +5,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     use Protean
     alias Protean.Action
 
-    defmachine [
+    defmachine(
       context: [
         on_entry: [],
         on_exit: []
@@ -62,7 +62,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
           ]
         ]
       ]
-    ]
+    )
 
     def action("add_a_entry", state, _), do: add(state, :on_entry, "a")
     def action("add_a1_entry", state, _), do: add(state, :on_entry, "a1")
@@ -82,7 +82,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
 
   test "internal self-transitions do not trigger entry/exit actions", %{machine: machine} do
     assert_protean(machine,
-      send: "a1_self_internal",
+      send: :a1_self_internal,
       context: [on_entry: ["a1", "a"], on_exit: []]
     )
   end
@@ -90,14 +90,14 @@ defmodule ProteanIntegration.InternalTransitionsTest do
   test "external self-transitions trigger entry/exit actions", %{machine: machine} do
     assert_protean(machine,
       context: [on_entry: ["a1", "a"], on_exit: []],
-      send: "a1_self_external",
+      send: :a1_self_external,
       context: [on_entry: ["a1", "a1", "a"], on_exit: ["a1"]]
     )
   end
 
   test "internal relative transitions do not trigger entry/exit actions", %{machine: machine} do
     assert_protean(machine,
-      send: "a2_internal",
+      send: :a2_internal,
       matches: "a.a2",
       context: [on_entry: ["a2", "a1", "a"], on_exit: ["a1"]]
     )
@@ -105,7 +105,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
 
   test "external relative transitions trigger entry/exit actions", %{machine: machine} do
     assert_protean(machine,
-      send: "a2_external",
+      send: :a2_external,
       matches: "a.a2",
       context: [on_entry: ["a2", "a", "a1", "a"], on_exit: ["a", "a1"]]
     )
@@ -113,10 +113,10 @@ defmodule ProteanIntegration.InternalTransitionsTest do
 
   test "transition to sibling and back", %{machine: machine} do
     assert_protean(machine,
-      send: "b",
+      send: :b,
       matches: "b",
       context: [on_entry: ["a1", "a"], on_exit: ["a", "a1"]],
-      send: "back_to_a",
+      send: :back_to_a,
       matches: "a.a1",
       context: [on_entry: ["a1", "a", "a1", "a"], on_exit: ["a", "a1"]]
     )

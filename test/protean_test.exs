@@ -4,25 +4,21 @@ defmodule ProteanTest do
   defmodule SimpleMachine do
     use Protean
 
-    defmachine [
-      initial: "init",
-      states: [init: []]
-    ]
+    defmachine initial: "init",
+               states: [init: []]
   end
 
   defmodule TimerMachine do
     use Protean
 
-    defmachine [
-      initial: "init",
-      states: [
-        init: [
-          invoke: [
-            task: {:timer, :sleep, [100]}
-          ]
-        ]
-      ]
-    ]
+    defmachine initial: "init",
+               states: [
+                 init: [
+                   invoke: [
+                     task: {:timer, :sleep, [100]}
+                   ]
+                 ]
+               ]
   end
 
   describe "Protean supervisor" do
@@ -47,22 +43,6 @@ defmodule ProteanTest do
       {:ok, _} = TimerMachine.start_link(supervisor: MyProtean)
       assert 1 = length(Supervisor.which_children(MyProtean))
     end
-  end
-
-  test "event/1" do
-    import Protean, only: [event: 1]
-
-    assert {"foo", nil} = event("foo")
-    assert {"foo", nil} = event(:foo)
-    assert {"foo", nil} = event({"foo", nil})
-    assert {"foo", nil} = event({:foo, nil})
-    assert {"foo", "bar"} = event({"foo", "bar"})
-    assert {"foo", "bar"} = event({:foo, "bar"})
-    assert {"foo", :bar} = event({:foo, :bar})
-
-    assert_raise FunctionClauseError, fn -> event('foo') end
-    assert_raise FunctionClauseError, fn -> event({"foo"}) end
-    assert_raise FunctionClauseError, fn -> event({"foo", "bar", "baz"}) end
   end
 
   describe "basic API usage" do

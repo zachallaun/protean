@@ -124,15 +124,20 @@ defmodule Protean.Action do
   end
 
   def invoke(:task, task, id, opts) do
-    {__MODULE__, {:invoke, :task, task, id, Utils.internal_event(:invoke, :done, id), opts}}
-  end
-
-  def invoke(:stream, stream, id, opts) do
-    {__MODULE__, {:invoke, :stream, stream, id, Utils.internal_event(:invoke, :done, id), opts}}
+    {__MODULE__, {:invoke, :task, task, id, opts}}
   end
 
   def invoke(:delayed_send, id, delay, opts) do
-    {__MODULE__, {:invoke, :task, {:timer, :sleep, [delay]}, id, id, opts}}
+    f = fn ->
+      :timer.sleep(delay)
+      id
+    end
+
+    {__MODULE__, {:invoke, :function, f, id, opts}}
+  end
+
+  def invoke(:stream, stream, id, opts) do
+    {__MODULE__, {:invoke, :stream, stream, id, opts}}
   end
 
   def invoke(:cancel, id) do
@@ -204,6 +209,14 @@ defmodule Protean.Action do
     {:cont, interpreter}
   end
 
+  def exec_action({:invoke, invoke_type, name, id, opts}, interpreter) when is_binary(name) do
+    %{state: state, handler: handler} = interpreter
+
+    to_invoke = handler.invoke(name, state, state.event)
+
+    exec_action({:invoke, invoke_type, to_invoke, id, opts}, interpreter)
+  end
+
   def exec_action({:invoke, :proc, proc, id, opts}, interpreter) do
     child_spec_fun = fn pid ->
       defaults = [parent: pid]
@@ -218,27 +231,32 @@ defmodule Protean.Action do
     __invoke__(id, child_spec_fun, interpreter, opts)
   end
 
-  def exec_action({:invoke, invoke_type, name, id, done, opts}, interpreter)
-      when is_binary(name) do
-    %{state: state, handler: handler} = interpreter
-    to_invoke = handler.invoke(name, state, state.event)
-    exec_action({:invoke, invoke_type, to_invoke, id, done, opts}, interpreter)
-  end
+  def exec_action({:invoke, :task, task, id, opts}, interpreter) do
+    on_done = Utils.internal_event(:invoke, :done, id)
 
-  def exec_action({:invoke, :task, task, id, done, opts}, interpreter) do
     child_spec_fun = fn pid ->
-      Task.child_spec(fn -> task |> run_task() |> send_result(pid, done) end)
+      Task.child_spec(fn -> send(pid, {on_done, run_task(task)}) end)
     end
 
     __invoke__(id, child_spec_fun, interpreter, opts)
   end
 
-  def exec_action({:invoke, :stream, stream, id, done, opts}, interpreter) do
+  def exec_action({:invoke, :stream, stream, id, opts}, interpreter) do
+    on_done = Utils.internal_event(:invoke, :done, id)
+
     child_spec_fun = fn pid ->
       Task.child_spec(fn ->
         for event <- stream, do: send(pid, event)
-        send(pid, {done, nil})
+        send(pid, {on_done, nil})
       end)
+    end
+
+    __invoke__(id, child_spec_fun, interpreter, opts)
+  end
+
+  def exec_action({:invoke, :function, f, id, opts}, interpreter) when is_function(f) do
+    child_spec_fun = fn pid ->
+      Task.child_spec(fn -> send(pid, f.()) end)
     end
 
     __invoke__(id, child_spec_fun, interpreter, opts)
@@ -266,17 +284,10 @@ defmodule Protean.Action do
           })
         )
 
-      {:error, _} ->
-        Interpreter.notify_process_down(interpreter, id: id)
+      {:error, reason} ->
+        Interpreter.notify_process_down(interpreter, reason, id: id)
     end
     |> then(&{:cont, &1})
-  end
-
-  defp run_task({m, f, a}), do: apply(m, f, a)
-  defp run_task(f) when is_function(f), do: f.()
-
-  defp send_result(result, to, event_name) do
-    send(to, {event_name, result})
   end
 
   defp guard_allows?({_, when: guard}, interpreter) do
@@ -301,4 +312,7 @@ defmodule Protean.Action do
     do: interpreter.invoked[name][:pid]
 
   defp resolve_recipient(_interpreter, to), do: to
+
+  defp run_task({m, f, a}), do: apply(m, f, a)
+  defp run_task(f) when is_function(f), do: f.()
 end

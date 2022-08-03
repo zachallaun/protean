@@ -5,28 +5,25 @@ defmodule ProteanIntegration.InvokedStreamTest do
     use Protean
     alias Protean.Action
 
-    defmachine [
+    defmachine(
       initial: "main",
       context: [data: []],
       states: [
         main: [
           invoke: [
-            id: "mystream",
             stream:
-              fn -> {"stream_data", :rand.uniform()} end
+              fn -> {:stream_data, :rand.uniform()} end
               |> Stream.repeatedly()
               |> Stream.take(5),
             done: "stream_consumed"
           ],
           on: [
-            stream_data: [
-              actions: ["write_data"]
-            ]
+            {{:stream_data, _}, actions: "write_data"}
           ]
         ],
         stream_consumed: []
       ]
-    ]
+    )
 
     @impl true
     def action("write_data", state, {_, value}) do
@@ -49,33 +46,30 @@ defmodule ProteanIntegration.InvokedStreamTest do
     use Protean
     alias Protean.Action
 
-    defmachine [
+    defmachine(
       initial: "waiting",
       context: [data: []],
       states: [
         waiting: [
           on: [
-            stream: "consuming"
+            {{:stream, _}, "consuming"}
           ]
         ],
         consuming: [
           invoke: [
-            id: "stream",
             stream: "stream_from_event",
             done: "waiting"
           ],
           on: [
-            stream_data: [
-              actions: ["write_data"]
-            ]
+            {{:stream_data, _}, actions: "write_data"}
           ]
         ]
       ]
-    ]
+    )
 
     @impl true
     def invoke("stream_from_event", _state, {_, stream}) do
-      Stream.map(stream, &{"stream_data", &1})
+      Stream.map(stream, &{:stream_data, &1})
     end
 
     @impl true
@@ -88,7 +82,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
   @tag machine: StreamMachine2
   test "invoked streams can be resolved by handler", %{machine: machine} do
     assert_protean(machine,
-      send: {"stream", Stream.repeatedly(fn -> 1 end) |> Stream.take(5)},
+      send: {:stream, Stream.repeatedly(fn -> 1 end) |> Stream.take(5)},
       sleep: 50,
       matches: "waiting",
       context: [data: [1, 1, 1, 1, 1]]

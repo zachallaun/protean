@@ -7,17 +7,15 @@ defmodule Protean.Interpreter.ServerTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine [
-      initial: :a,
-      states: [
-        a: [
-          on: [
-            goto_b: :b
-          ]
-        ],
-        b: []
-      ]
-    ]
+    defmachine initial: :a,
+               states: [
+                 a: [
+                   on: [
+                     goto_b: :b
+                   ]
+                 ],
+                 b: []
+               ]
   end
 
   test "server can be started and stopped" do
@@ -35,26 +33,26 @@ defmodule Protean.Interpreter.ServerTest do
 
   @tag machine: TestMachine
   test "send_event/2", %{machine: server} do
-    assert state = %State{} = Server.send_event(server, "goto_b")
+    assert state = %State{} = Server.send_event(server, :goto_b)
     assert State.matches?(state, :b)
   end
 
   @tag machine: TestMachine
   test "send_event_async/2", %{machine: server} do
-    assert :ok = Server.send_event_async(server, "goto_b")
+    assert :ok = Server.send_event_async(server, :goto_b)
     assert Server.matches?(server, :b)
   end
 
   @tag machine: TestMachine
   test "send_event_after/3", %{machine: server} do
-    Server.send_event_after(server, "goto_b", 10)
+    Server.send_event_after(server, :goto_b, 10)
     :timer.sleep(20)
     assert Server.matches?(server, :b)
   end
 
   @tag machine: TestMachine
   test "send_event_after/3 can be canceled", %{machine: server} do
-    timer = Server.send_event_after(server, "goto_b", 10)
+    timer = Server.send_event_after(server, :goto_b, 10)
     Process.cancel_timer(timer)
     :timer.sleep(20)
     assert Server.matches?(server, :a)

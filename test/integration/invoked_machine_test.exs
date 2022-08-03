@@ -7,7 +7,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     use Protean
     alias Protean.Action
 
-    defmachine [
+    defmachine(
       initial: "parenting",
       states: [
         parenting: [
@@ -16,31 +16,27 @@ defmodule ProteanIntegration.InvokedMachineTest do
             proc: ProteanIntegration.InvokedMachineTest.Child
           ],
           on: [
-            grow_it: [
-              actions: [
-                Action.send_event("grow", to: "child")
-              ]
-            ],
-            child_grown: "relax"
+            {:grow_it, actions: [Action.send_event(:grow, to: "child")]},
+            {{:child_grown, _}, "relax"}
           ]
         ],
         relax: []
       ]
-    ]
+    )
   end
 
   defmodule Child do
     use Protean
     alias Protean.Action
 
-    defmachine [
+    defmachine(
       initial: "growing",
       states: [
         growing: [
           on: [
             grow: [
               actions: [
-                Action.send_event({"child_grown", "I hath grown"}, to: :parent)
+                Action.send_event({:child_grown, "I hath grown"}, to: :parent)
               ],
               target: "grown"
             ]
@@ -48,7 +44,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
         ],
         grown: []
       ]
-    ]
+    )
   end
 
   describe "the parent/child relationship" do
@@ -56,7 +52,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
 
     test "sending events between parent/child", %{machine: parent} do
       assert_protean(parent,
-        send: "grow_it",
+        send: :grow_it,
         sleep: 30,
         matches: "relax"
       )
@@ -66,7 +62,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule Crashes do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "can_crash",
       states: [
         can_crash: [
@@ -77,7 +73,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ]
         ]
       ]
-    ]
+    )
 
     @impl Protean
     def action("crash", _, _) do
@@ -88,7 +84,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule InvokeCrashes do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "init",
       states: [
         init: [
@@ -102,13 +98,13 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ],
           on: [
             make_it_crash: [
-              actions: [Protean.Action.send_event("go_boom", to: "crashes")]
+              actions: [Protean.Action.send_event(:go_boom, to: "crashes")]
             ]
           ]
         ],
         invoke_crashed: []
       ]
-    ]
+    )
 
     @impl Protean
     def action("save_event", state, event) do
@@ -123,7 +119,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
       error_message =
         capture_log(fn ->
           assert_protean(machine,
-            send: "make_it_crash",
+            send: :make_it_crash,
             sleep: 30,
             matches: "invoke_crashed"
           )
@@ -136,7 +132,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule ImmediatelyCrashes do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "crash_now",
       states: [
         crash_now: [
@@ -145,7 +141,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ]
         ]
       ]
-    ]
+    )
 
     @impl Protean
     def action("crash", _, _) do
@@ -156,7 +152,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule InvokeImmediatelyCrashes do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "init",
       states: [
         init: [
@@ -170,7 +166,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
         ],
         invoke_crashed: []
       ]
-    ]
+    )
   end
 
   describe "invoked machine immediately crashes" do

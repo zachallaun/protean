@@ -52,11 +52,6 @@ defmodule Protean.Interpreter do
           | {:parent, GenServer.server()}
           | {:supervisor, Supervisor.supervisor()}
 
-  @type metadata :: %{
-          state: %{value: State.value()},
-          event: Protean.event()
-        }
-
   # Partial Access behaviour (not defining `pop/2`)
   @doc false
   def fetch(interpreter, key), do: Map.fetch(interpreter, key)
@@ -119,10 +114,8 @@ defmodule Protean.Interpreter do
   Send an event to a running interpreter. This will execute any transitions, actions, and side-
   effects associated with the current machine state and this event.
   """
-  @spec send_event(t, Protean.sendable_event()) :: t
+  @spec send_event(t, Protean.event()) :: t
   def send_event(%Interpreter{running: true} = interpreter, event) do
-    event = Protean.event(event)
-
     interpreter
     |> autoforward_event(event)
     |> process_event(event)
@@ -139,19 +132,30 @@ defmodule Protean.Interpreter do
   end
 
   @doc false
-  @spec notify_process_down(t, ref: reference()) :: t
-  @spec notify_process_down(t, id: invoked_id) :: t
-  def notify_process_down(%Interpreter{} = interpreter, ref: ref) do
+  @spec notify_process_down(t, reason :: term(), ref: reference()) :: t
+  @spec notify_process_down(t, reason :: term(), id: invoked_id) :: t
+  def notify_process_down(%Interpreter{} = interpreter, reason, ref: ref) do
     invoked = get_invoked_by_ref(interpreter, ref)
-    notify_process_down(interpreter, id: invoked[:id])
+    notify_process_down(interpreter, reason, id: invoked[:id])
   end
 
-  def notify_process_down(%Interpreter{} = interpreter, id: id) do
+  def notify_process_down(%Interpreter{} = interpreter, reason, id: id) do
+    interpreter =
+      if invoke_error?(reason) do
+        add_internal(interpreter, Utils.internal_event(:invoke, :error, id))
+      else
+        interpreter
+      end
+
     interpreter
     |> update_in([:invoked], &Map.delete(&1, id))
-    |> add_internal(Utils.internal_event(:invoke, :error, id))
     |> run_interpreter()
   end
+
+  defp invoke_error?(:normal), do: false
+  defp invoke_error?(:shutdown), do: false
+  defp invoke_error?({:shutdown, _}), do: false
+  defp invoke_error?(_other), do: true
 
   defp get_invoked_by_ref(%{invoked: invoked}, ref) do
     invoked
@@ -316,10 +320,6 @@ defmodule Protean.Interpreter do
   end
 
   defp exec_all(interpreter, []), do: interpreter
-
-  defp add_internal(interpreter, name) when is_binary(name) do
-    add_internal(interpreter, {name, nil})
-  end
 
   defp add_internal(interpreter, event) do
     update_in(interpreter.internal_queue, &:queue.in(event, &1))
