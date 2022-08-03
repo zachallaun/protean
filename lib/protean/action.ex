@@ -45,14 +45,7 @@ defmodule Protean.Action do
   @callback exec_action(action_arg :: term(), Interpreter.t()) :: exec_action_return
 
   @doc "Executes an action given an interpreter. See `c:exec_action/2`."
-  @spec exec(action, Interpreter.t()) :: exec_action_return
-  @spec exec(name, Interpreter.t()) :: exec_action_return
-  def exec(action_name, interpreter) when is_binary(action_name) do
-    action_name
-    |> delegate()
-    |> exec(interpreter)
-  end
-
+  @spec exec(action | term(), Interpreter.t()) :: exec_action_return
   def exec({handler, arg}, interpreter) do
     case handler.exec_action(arg, interpreter) do
       {:cont, interpreter, []} -> {:cont, interpreter}
@@ -63,12 +56,18 @@ defmodule Protean.Action do
     end
   end
 
+  def exec(action, interpreter) do
+    action
+    |> delegate()
+    |> exec(interpreter)
+  end
+
   @doc "TODO"
   @doc type: :action
   def delegate(%State{} = state, action_name), do: delegate(action_name) |> put_action(state)
 
-  def delegate(action_name) when is_binary(action_name) do
-    {__MODULE__, {:delegate, action_name}}
+  def delegate(action) do
+    {__MODULE__, {:delegate, action}}
   end
 
   @doc "TODO"
@@ -148,10 +147,10 @@ defmodule Protean.Action do
 
   # Action callbacks
 
-  def exec_action({:delegate, action_name}, interpreter) do
+  def exec_action({:delegate, action}, interpreter) do
     %{state: state, handler: handler} = interpreter
 
-    case handler.action(action_name, state, state.event) do
+    case handler.action(action, state, state.event) do
       nil -> {:cont, interpreter}
       %State{} = state -> {:cont, interpreter, State.actions(state)}
     end

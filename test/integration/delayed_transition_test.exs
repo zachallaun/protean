@@ -11,27 +11,27 @@ defmodule ProteanIntegration.DelayedTransitionTest do
       initial: "a",
       states: [
         a: [
-          entry: ["save_path"],
+          entry: :save_path,
           after: [
             delay: 50,
             target: "b"
           ]
         ],
         b: [
-          entry: ["save_path"],
+          entry: :save_path,
           after: [
             delay: 10,
             target: "c"
           ]
         ],
         c: [
-          entry: ["save_path"],
+          entry: :save_path,
           on: [
-            {"$protean.after.50-#.a", actions: ["blow_up"]}
+            {"$protean.after.50-#.a", actions: [:blow_up]}
           ]
         ],
         d: [
-          entry: ["save_path"]
+          entry: :save_path
         ]
       ],
       on: [
@@ -41,11 +41,11 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     )
 
     @impl Protean
-    def action("save_path", %{context: %{path: path}} = state, _event) do
+    def action(:save_path, %{context: %{path: path}} = state, _event) do
       Protean.Action.assign(state, :path, [MapSet.to_list(state.value) | path])
     end
 
-    def action("blow_up", _state, _event) do
+    def action(:blow_up, _state, _event) do
       raise "should never get here!"
     end
   end

@@ -1,8 +1,6 @@
 defmodule Protean.Interpreter do
   @moduledoc """
-  The `Protean.Interpreter` implements the full execution logic for a `Protean.Machine`,
-  including handling external events, transitioning state, executing actions, spawning children,
-  etc.
+  Execution logic for a Protean machine.
   """
 
   alias __MODULE__
@@ -36,14 +34,14 @@ defmodule Protean.Interpreter do
         }
 
   @type invoked :: %{invoked_id => invoked_service}
-  @type invoked_service :: %{
-          id: invoked_id,
-          pid: GenServer.server(),
-          ref: reference(),
-          autoforward: boolean(),
-          interpreter_alias: reference()
-        }
   @type invoked_id :: String.t()
+  @opaque invoked_service :: %{
+            id: invoked_id,
+            pid: GenServer.server(),
+            ref: reference(),
+            autoforward: boolean(),
+            interpreter_alias: reference()
+          }
 
   @type options :: [option]
   @type option ::
