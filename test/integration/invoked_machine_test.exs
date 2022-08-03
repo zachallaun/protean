@@ -16,7 +16,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
             proc: ProteanIntegration.InvokedMachineTest.Child
           ],
           on: [
-            {:grow_it, actions: [Action.send_event(:grow, to: "child")]},
+            {:grow_it, actions: [Action.send(:grow, to: "child")]},
             {{:child_grown, _}, "relax"}
           ]
         ],
@@ -36,7 +36,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
           on: [
             grow: [
               actions: [
-                Action.send_event({:child_grown, "I hath grown"}, to: :parent)
+                Action.send({:child_grown, "I hath grown"}, to: :parent)
               ],
               target: "grown"
             ]
@@ -52,7 +52,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
 
     test "sending events between parent/child", %{machine: parent} do
       assert_protean(parent,
-        send: :grow_it,
+        call: :grow_it,
         sleep: 30,
         matches: "relax"
       )
@@ -98,7 +98,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ],
           on: [
             make_it_crash: [
-              actions: [Protean.Action.send_event(:go_boom, to: "crashes")]
+              actions: [Protean.Action.send(:go_boom, to: "crashes")]
             ]
           ]
         ],
@@ -119,7 +119,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
       error_message =
         capture_log(fn ->
           assert_protean(machine,
-            send: :make_it_crash,
+            call: :make_it_crash,
             sleep: 30,
             matches: "invoke_crashed"
           )

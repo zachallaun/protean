@@ -25,7 +25,7 @@ defmodule Protean.TransitionTest do
       state =
         interpreter
         |> Interpreter.start()
-        |> Interpreter.send_event(:goto_b)
+        |> Interpreter.handle_event(:goto_b)
         |> Interpreter.state()
 
       assert Protean.matches?(state, :d)

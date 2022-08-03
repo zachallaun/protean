@@ -5,6 +5,8 @@ defmodule Protean do
              |> String.split("<!-- MDOC !-->")
              |> Enum.fetch!(1)
 
+  import Kernel, except: [send: 2]
+
   alias Protean.Action
   alias Protean.Interpreter
   alias Protean.Interpreter.Server
@@ -73,7 +75,7 @@ defmodule Protean do
         PubSub.broadcast!(@pubsub, @topic, data)
 
         state
-        |> Protean.Action.send_event({"data_received", data}, to: pid)
+        |> Protean.Action.call({"data_received", data}, to: pid)
         |> Protean.Action.assign(:last_received_data, data)
       end
   """
@@ -143,13 +145,13 @@ defmodule Protean do
   end
 
   @doc "TODO"
-  defdelegate send_event(protean, event), to: Server
+  defdelegate call(protean, event), to: Server
 
   @doc "TODO"
-  defdelegate send_event_async(protean, event), to: Server
+  defdelegate send(protean, event), to: Server
 
   @doc "TODO"
-  defdelegate send_event_after(protean, event, time), to: Server
+  defdelegate send_after(protean, event, time), to: Server
 
   @doc "TODO"
   defdelegate current(protean), to: Server

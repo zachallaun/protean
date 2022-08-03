@@ -82,7 +82,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
   @tag machine: StreamMachine2
   test "invoked streams can be resolved by handler", %{machine: machine} do
     assert_protean(machine,
-      send: {:stream, Stream.repeatedly(fn -> 1 end) |> Stream.take(5)},
+      call: {:stream, Stream.repeatedly(fn -> 1 end) |> Stream.take(5)},
       sleep: 50,
       matches: "waiting",
       context: [data: [1, 1, 1, 1, 1]]

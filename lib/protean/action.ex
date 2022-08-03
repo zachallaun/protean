@@ -12,6 +12,8 @@ defmodule Protean.Action do
   See individual action documentation below for details.
   """
 
+  import Kernel, except: [send: 2]
+
   alias Protean.Interpreter
   alias Protean.Guard
   alias Protean.State
@@ -97,15 +99,15 @@ defmodule Protean.Action do
   end
 
   @doc "TODO"
-  def send_event(%State{} = state, event, opts) do
-    send_event(event, opts) |> put_action(state)
+  def send(%State{} = state, event, opts) do
+    send(event, opts) |> put_action(state)
   end
 
-  def send_event(event, opts \\ []) do
+  def send(event, opts \\ []) do
     if delay = opts[:delay] do
-      {__MODULE__, {:send_event_after, event, opts[:to], delay}}
+      {__MODULE__, {:send_after, event, opts[:to], delay}}
     else
-      {__MODULE__, {:send_event, event, opts[:to]}}
+      {__MODULE__, {:send, event, opts[:to]}}
     end
   end
 
@@ -173,18 +175,18 @@ defmodule Protean.Action do
     exec_action({:assign, :merge, assigns}, interpreter)
   end
 
-  def exec_action({:send_event, event, to}, interpreter) do
+  def exec_action({:send, event, to}, interpreter) do
     interpreter
     |> resolve_recipient(to)
-    |> Protean.send_event_async(event)
+    |> Protean.send(event)
 
     {:cont, interpreter}
   end
 
-  def exec_action({:send_event_after, event, to, delay}, interpreter) do
+  def exec_action({:send_after, event, to, delay}, interpreter) do
     interpreter
     |> resolve_recipient(to)
-    |> Protean.send_event_after(event, delay)
+    |> Protean.send_after(event, delay)
 
     {:cont, interpreter}
   end
@@ -235,7 +237,7 @@ defmodule Protean.Action do
     on_done = Utils.internal_event(:invoke, :done, id)
 
     child_spec_fun = fn pid ->
-      Task.child_spec(fn -> send(pid, {on_done, run_task(task)}) end)
+      Task.child_spec(fn -> Kernel.send(pid, {on_done, run_task(task)}) end)
     end
 
     __invoke__(id, child_spec_fun, interpreter, opts)
@@ -246,8 +248,8 @@ defmodule Protean.Action do
 
     child_spec_fun = fn pid ->
       Task.child_spec(fn ->
-        for event <- stream, do: send(pid, event)
-        send(pid, {on_done, nil})
+        for event <- stream, do: Kernel.send(pid, event)
+        Kernel.send(pid, {on_done, nil})
       end)
     end
 
@@ -256,7 +258,7 @@ defmodule Protean.Action do
 
   def exec_action({:invoke, :function, f, id, opts}, interpreter) when is_function(f) do
     child_spec_fun = fn pid ->
-      Task.child_spec(fn -> send(pid, f.()) end)
+      Task.child_spec(fn -> Kernel.send(pid, f.()) end)
     end
 
     __invoke__(id, child_spec_fun, interpreter, opts)

@@ -4,7 +4,7 @@ defmodule ProteanIntegration.SubscriptionTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "a",
       states: [
         a: [
@@ -18,22 +18,22 @@ defmodule ProteanIntegration.SubscriptionTest do
           ]
         ]
       ]
-    ]
+    )
   end
 
   @tag machine: TestMachine
   test "subscribed processes receive updates on transition", %{machine: machine} do
     ref = Protean.subscribe(machine)
 
-    Protean.send_event(machine, "b")
+    Protean.call(machine, "b")
     assert_receive {:state, _, ^ref}
 
-    Protean.send_event(machine, "b")
+    Protean.call(machine, "b")
     assert_receive {:state, _, ^ref}
 
     Protean.unsubscribe(machine, ref)
 
-    Protean.send_event(machine, "a")
+    Protean.call(machine, "a")
     refute_receive {:state, _}
   end
 

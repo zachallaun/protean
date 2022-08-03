@@ -63,31 +63,31 @@ defmodule ProteanIntegration.FinalStatesTest do
 
     test "in compound nodes", %{machine: machine} do
       assert_protean(machine,
-        send: :simple_compound,
+        call: :simple_compound,
         matches: "simple_compound.a",
-        send: :b,
+        call: :b,
         matches: "nearly_done"
       )
     end
 
     test "in parallel nodes", %{machine: machine} do
       assert_protean(machine,
-        send: :simple_parallel,
+        call: :simple_parallel,
         matches: "simple_parallel.p1.a",
         matches: "simple_parallel.p2.c",
-        send: :b,
+        call: :b,
         matches: "simple_parallel.p1.b",
-        send: :d,
+        call: :d,
         matches: "nearly_done"
       )
     end
 
     test "at root", %{machine: machine} do
       assert_protean(machine,
-        send: :simple_compound,
-        send: :b,
+        call: :simple_compound,
+        call: :b,
         matches: "nearly_done",
-        send: :all_done
+        call: :all_done
       )
 
       assert not Process.alive?(machine)

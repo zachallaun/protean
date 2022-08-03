@@ -5,6 +5,8 @@ defmodule Protean.Interpreter.Server do
   that is delegated to by `Protean`.
   """
 
+  import Kernel, except: [send: 2]
+
   use GenServer
 
   alias Protean.Interpreter
@@ -43,21 +45,21 @@ defmodule Protean.Interpreter.Server do
   end
 
   @doc """
-  Send an event to the interpreter and wait for the next state.
+  Syncronously send an event to the interpreter and await the next state.
   """
-  @spec send_event(GenServer.server(), Protean.event()) :: State.t()
-  def send_event(pid, event) do
+  @spec call(GenServer.server(), Protean.event()) :: State.t()
+  def call(pid, event) do
     GenServer.call(pid, event)
   end
 
   @doc """
-  Send an event to the interpreter asyncronously.
+  Asyncronously send an event to the interpreter.
   """
-  @spec send_event_async(GenServer.server(), Protean.event()) :: :ok
-  def send_event_async(server, event) do
+  @spec send(GenServer.server(), Protean.event()) :: :ok
+  def send(server, event) do
     server
     |> resolve_server_to_pid()
-    |> send(event)
+    |> Kernel.send(event)
 
     :ok
   end
@@ -66,9 +68,8 @@ defmodule Protean.Interpreter.Server do
   Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
   reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_event_after(GenServer.server(), Protean.event(), non_neg_integer()) ::
-          reference()
-  def send_event_after(server, event, time) do
+  @spec send_after(GenServer.server(), Protean.event(), non_neg_integer()) :: reference()
+  def send_after(server, event, time) do
     server
     |> resolve_server_to_pid()
     |> Process.send_after(event, time)
@@ -151,7 +152,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_call(event, _from, interpreter) do
-    interpreter = Interpreter.send_event(interpreter, event)
+    interpreter = Interpreter.handle_event(interpreter, event)
     {:reply, Interpreter.state(interpreter), interpreter, {:continue, {@prefix, :check_running}}}
   end
 
@@ -167,7 +168,8 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_cast(event, interpreter) do
-    {:noreply, Interpreter.send_event(interpreter, event), {:continue, {@prefix, :check_running}}}
+    {:noreply, Interpreter.handle_event(interpreter, event),
+     {:continue, {@prefix, :check_running}}}
   end
 
   @impl true
@@ -181,7 +183,8 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_info(event, interpreter) do
-    {:noreply, Interpreter.send_event(interpreter, event), {:continue, {@prefix, :check_running}}}
+    {:noreply, Interpreter.handle_event(interpreter, event),
+     {:continue, {@prefix, :check_running}}}
   end
 
   @impl true

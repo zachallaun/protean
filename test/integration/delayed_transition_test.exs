@@ -61,7 +61,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
   test "delayed transitions can be short-circuited by transitioning early", %{machine: machine} do
     assert_protean(machine,
-      send: :goto_c,
+      call: :goto_c,
       sleep: 50,
       matches: "c"
     )
@@ -70,7 +70,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   test "short-circuited transitions don't execute actions", %{machine: machine} do
     assert_protean(machine,
       context: [path: [[["a", "#"]]]],
-      send: :goto_d,
+      call: :goto_d,
       sleep: 50,
       context: [path: [[["d", "#"]], [["a", "#"]]]]
     )
@@ -78,7 +78,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
   test "short-circuited transitions don't still send event", %{machine: machine} do
     assert_protean(machine,
-      send: :goto_c,
+      call: :goto_c,
       sleep: 50
     )
   end

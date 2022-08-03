@@ -93,7 +93,7 @@ It can be started under a supervisor, but we'll start it directly.
 Protean.current(pid).context
 # %{count: 0, min: nil, max: nil}
 
-Protean.send_event(pid, "INC")
+Protean.call(pid, "INC")
 # %Protean.State{
 #   context: %{count: 1, max: nil, min: nil},
 #   event: {"INC", nil},
@@ -101,12 +101,12 @@ Protean.send_event(pid, "INC")
 #   value: #MapSet<[["active", "#"]]>
 # }
 
-Enum.each(1..4, fn _ -> Protean.send_event(pid, "INC") end)
+Enum.each(1..4, fn _ -> Protean.call(pid, "INC") end)
 
 Protean.current(pid).context
 # %{count: 5, min: nil, max: nil}
 
-Protean.send_event(pid, {"SET", {:max, 10}})
+Protean.call(pid, {"SET", {:max, 10}})
 # %Protean.State{
 #   context: %{count: 5, max: 10, min: nil},
 #   event: {"SET", {:max, 10}},
@@ -114,9 +114,9 @@ Protean.send_event(pid, {"SET", {:max, 10}})
 #   value: #MapSet<[["active", "#"]]>
 # }
 
-Enum.each(1..20, fn _ -> Protean.send_event(pid, "INC") end)
+Enum.each(1..20, fn _ -> Protean.call(pid, "INC") end)
 
-Protean.send_event(pid, {"LOG", :count})
+Protean.call(pid, {"LOG", :count})
 # count: 10
 ```
 

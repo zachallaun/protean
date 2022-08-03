@@ -58,7 +58,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     test "anonymous function task invoked after transition", %{machine: machine} do
       assert_protean(machine,
         sleep: 30,
-        send: :goto_c,
+        call: :goto_c,
         sleep: 30,
         matches: "d",
         context: [result: :second_task_result]
@@ -211,7 +211,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
       fn ->
         :timer.sleep(30)
-        Protean.send_event(me, "message")
+        Protean.call(me, "message")
       end
     end
   end
@@ -221,7 +221,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     test "transitioning out of invoking state should cancel task", %{machine: machine} do
       assert_protean(machine,
-        send: :cancel,
+        call: :cancel,
         sleep: 50,
         matches: "canceled"
       )

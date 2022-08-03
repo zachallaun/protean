@@ -41,9 +41,9 @@ defmodule ProteanIntegration.AutoforwardTest do
 
   @tag machine: Parent
   test "events are forwarded to invoked children with autoforward: true", %{machine: machine} do
-    Protean.send_event(machine, {"event", "a"})
-    Protean.send_event(machine, {"event", "b"})
-    Protean.send_event(machine, {"event", "c"})
+    Protean.call(machine, {"event", "a"})
+    Protean.call(machine, {"event", "b"})
+    Protean.call(machine, {"event", "c"})
 
     assert %{data: ["c", "b", "a"]} = Protean.current(ChildMachine).context
   end

@@ -34,12 +34,12 @@ defmodule ProteanIntegration.SimpleTest do
   test "SimpleMachine", %{machine: machine} do
     assert_protean(machine,
       matches: "a",
-      send: :goto_b,
+      call: :goto_b,
       matches: "b",
       context: [data: nil],
-      send: {:set_data, :ok},
+      call: {:set_data, :ok},
       context: [data: :ok],
-      send: :goto_a,
+      call: :goto_a,
       matches: "a",
       context: [data: :ok]
     )

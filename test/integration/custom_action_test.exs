@@ -16,7 +16,7 @@ defmodule ProteanIntegration.CustomActionTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "init",
       context: [data: nil],
       states: [
@@ -30,14 +30,14 @@ defmodule ProteanIntegration.CustomActionTest do
           ]
         ]
       ]
-    ]
+    )
   end
 
   @tag machine: TestMachine
   test "custom action halts action pipeline", %{machine: machine} do
     assert_protean(machine,
       context: [data: nil],
-      send: "event",
+      call: "event",
       context: [data: nil]
     )
   end

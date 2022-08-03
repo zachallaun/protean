@@ -4,21 +4,25 @@ defmodule ProteanTest do
   defmodule SimpleMachine do
     use Protean
 
-    defmachine initial: "init",
-               states: [init: []]
+    defmachine(
+      initial: "init",
+      states: [init: []]
+    )
   end
 
   defmodule TimerMachine do
     use Protean
 
-    defmachine initial: "init",
-               states: [
-                 init: [
-                   invoke: [
-                     task: {:timer, :sleep, [100]}
-                   ]
-                 ]
-               ]
+    defmachine(
+      initial: "init",
+      states: [
+        init: [
+          invoke: [
+            task: {:timer, :sleep, [100]}
+          ]
+        ]
+      ]
+    )
   end
 
   describe "Protean supervisor" do
@@ -48,16 +52,16 @@ defmodule ProteanTest do
   describe "basic API usage" do
     @describetag machine: SimpleMachine
 
-    test "send_event/2", %{machine: machine} do
-      assert %Protean.State{} = Protean.send_event(machine, "event")
+    test "call/2", %{machine: machine} do
+      assert %Protean.State{} = Protean.call(machine, "event")
     end
 
-    test "send_event_async/2", %{machine: machine} do
-      assert :ok = Protean.send_event_async(machine, "event")
+    test "send/2", %{machine: machine} do
+      assert :ok = Protean.send(machine, "event")
     end
 
-    test "send_event_after/3", %{machine: machine} do
-      assert timer = Protean.send_event_after(machine, "event", 1000)
+    test "send_after/3", %{machine: machine} do
+      assert timer = Protean.send_after(machine, "event", 1000)
       assert 0 < Process.cancel_timer(timer)
     end
 
@@ -72,14 +76,14 @@ defmodule ProteanTest do
 
     test "subscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
-      assert Protean.send_event(machine, "event")
+      assert Protean.call(machine, "event")
       assert_receive {:state, %Protean.State{}, ^ref}
     end
 
     test "unsubscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
       assert :ok = Protean.unsubscribe(machine, ref)
-      assert Protean.send_event(machine, "event")
+      assert Protean.call(machine, "event")
       refute_receive {:state, %Protean.State{}, ^ref}
     end
 

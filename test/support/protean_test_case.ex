@@ -96,11 +96,11 @@ defmodule Protean.TestCase do
   def assert_protean(pid, instructions) do
     Enum.each(instructions, fn
       # Actions
-      {:send, event} ->
-        Protean.send_event(pid, event)
+      {:call, event} ->
+        Protean.call(pid, event)
 
       {:send_async, event} ->
-        Protean.send_event_async(pid, event)
+        Protean.send(pid, event)
 
       # Utilities
       {:sleep, milliseconds} when is_integer(milliseconds) ->

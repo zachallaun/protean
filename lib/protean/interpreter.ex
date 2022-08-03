@@ -111,17 +111,17 @@ defmodule Protean.Interpreter do
   end
 
   @doc """
-  Send an event to a running interpreter. This will execute any transitions, actions, and side-
-  effects associated with the current machine state and this event.
+  Handle an event, executing any transitions, actions, and side-effects associated with the
+  current machine state.
   """
-  @spec send_event(t, Protean.event()) :: t
-  def send_event(%Interpreter{running: true} = interpreter, event) do
+  @spec handle_event(t, Protean.event()) :: t
+  def handle_event(%Interpreter{running: true} = interpreter, event) do
     interpreter
     |> autoforward_event(event)
     |> process_event(event)
   end
 
-  def send_event(interpreter, _event), do: interpreter
+  def handle_event(interpreter, _event), do: interpreter
 
   def subscribe(interpreter, subscriber) do
     update_in(interpreter.subscribed, &[subscriber | &1])
@@ -274,7 +274,7 @@ defmodule Protean.Interpreter do
 
   @spec autoforward_to(invoked_service, Protean.event(), t) :: t
   defp autoforward_to(%{pid: pid}, event, interpreter) do
-    Interpreter.Server.send_event_async(pid, event)
+    Interpreter.Server.send(pid, event)
     interpreter
   end
 

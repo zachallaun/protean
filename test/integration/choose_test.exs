@@ -60,26 +60,26 @@ defmodule ProteanIntegration.ChooseTest do
 
     test "inline chooses single action when its condition is true", %{machine: machine} do
       assert_protean(machine,
-        send: "make_a_choice",
+        call: "make_a_choice",
         context: [data: ["a"]],
-        send: {"set_switch", "off"},
-        send: "make_a_choice",
+        call: {"set_switch", "off"},
+        call: "make_a_choice",
         context: [data: ["b", "a"]],
-        send: {"set_switch", "indeterminate"},
-        send: "make_a_choice",
+        call: {"set_switch", "indeterminate"},
+        call: "make_a_choice",
         context: [data: ["c", "b", "a"]]
       )
     end
 
     test "pure chooses single action when its condition is true", %{machine: machine} do
       assert_protean(machine,
-        send: "make_a_choice_pure",
+        call: "make_a_choice_pure",
         context: [data: ["a"]],
-        send: {"set_switch", "off"},
-        send: "make_a_choice_pure",
+        call: {"set_switch", "off"},
+        call: "make_a_choice_pure",
         context: [data: ["b", "a"]],
-        send: {"set_switch", "indeterminate"},
-        send: "make_a_choice_pure",
+        call: {"set_switch", "indeterminate"},
+        call: "make_a_choice_pure",
         context: [data: ["c", "b", "a"]]
       )
     end
