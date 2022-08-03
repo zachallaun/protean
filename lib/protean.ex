@@ -18,6 +18,14 @@ defmodule Protean do
   @typedoc "Any message sent to a Protean machine."
   @type event :: term()
 
+  @typedoc "Option values for `start*` functions."
+  @type option ::
+          {:machine, Protean.Machine.t()}
+          | {:handler, module()}
+          | {:parent, server | pid()}
+          | {:supervisor, Supervisor.name()}
+          | GenServer.option()
+
   @typedoc "Options for `subscribe/2`."
   @type subscribe_option :: {:monitor, boolean()}
 
@@ -59,7 +67,7 @@ defmodule Protean do
 
   ### Example
 
-      defmachine [
+      defmachine(
         # ...
         states: [
           # ...
@@ -69,7 +77,7 @@ defmodule Protean do
             ]
           ]
         ]
-      ]
+      )
 
       @impl Protean
       def action("assign_and_send_data", state, {:data, data}) do
@@ -89,7 +97,7 @@ defmodule Protean do
 
   ### Example
 
-      defmachine [
+      defmachine(
         # ...
         states: [
           editing_user: [
@@ -108,7 +116,7 @@ defmodule Protean do
             ]
           ]
         ]
-      ]
+      )
 
       @impl Protean
       def condition("user_valid?", state, {_, user}) do
@@ -126,6 +134,41 @@ defmodule Protean do
       use Protean.Macros, unquote(opts)
       :ok
     end
+  end
+
+  @doc """
+  Start a Protean machine linked to the current process.
+
+  This is often used to start the machine as part of a supervision tree. See
+  `GenServer.start_link/3` for description of return value.
+
+  The semantics are similar to `GenServer.start_link/3` and accepts the same options, with the
+  addition of some specific to Protean.
+
+  ## Options
+
+    * `:machine` - defaults to `module.machine()` - `%Protean.Machine{}` that will be
+      executed by the Protean interpreter.
+    * `:handler` - defaults to `module` - callback module used for actions, guards, invoke,
+      etc. See "Callbacks".
+    * `:parent` - defaults to `self()` - process id of the parent that will receive events from
+      the machine if a `Protean.Action.send(..., to: :parent)` action is used or when the machine
+      reaches a state with `:type` of `:final`.
+    * `:supervisor` - defaults to `Protean.Supervisor` - name of the supervisor process that will
+      be used to start processes resulting from running the machine. See "Supervisor".
+    * Any option accepted by `GenServer.start_link/3`.
+
+  """
+  @spec start_link(module(), [option]) :: GenServer.on_start()
+  def start_link(module, opts \\ []) do
+    defaults = [
+      machine: opts[:machine] || module.machine(),
+      handler: module,
+      parent: self(),
+      supervisor: Protean.Supervisor
+    ]
+
+    Server.start_link(Keyword.merge(defaults, opts))
   end
 
   @doc """

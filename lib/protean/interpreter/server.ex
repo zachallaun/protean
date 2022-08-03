@@ -16,27 +16,10 @@ defmodule Protean.Interpreter.Server do
 
   # Client API
 
-  @doc """
-  Start a new server. Accepts the following options:
-
-    * `:machine` (required) - The `Protean.Machine` defining the behavior of the state machine.
-    * `:handler` (required) - The module defining action handlers.
-    * `:parent` - The pid or `{pid, node}` of the parent process that will receive events from
-      the running machine if a send-to-parent action occurs or when the machine reaches a final
-      state. Defaults to `self()`.
-    * `:supervisor` - The supervisor that Protean should use to manage invoked processes.
-      Defaults to `Protean`.
-    * GenServer options - All other options will be passed to `GenServer.start_link/3`.
-
-  """
+  @doc false
   @spec start_link(server_options) :: GenServer.on_start()
   def start_link(opts) do
     {gen_server_opts, interpreter_opts} = Keyword.split(opts, @gen_server_options)
-
-    interpreter_opts =
-      interpreter_opts
-      |> Keyword.put_new(:parent, self())
-      |> Keyword.put_new(:supervisor, Protean.Supervisor)
 
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
   end

@@ -19,7 +19,7 @@ This project is currently an exploration of statecharts as they fit into the con
 XState adopted the actor model in its implementation, so Elixir seemed like a natural fit.
 However, it may be that Elixir/OTP makes these abstractions unnecessary.
 
-## Usage
+## Example
 
 Add `Protean.Supervisor` under your application supervisor.
 This starts a supervisor that is used by Protean internally to manage subprocesses.
@@ -95,7 +95,7 @@ Protean.current(pid).context
 Protean.call(pid, "Inc")
 # %Protean.State{
 #   context: %{count: 1, max: nil, min: nil},
-#   event: {"Inc", nil},
+#   event: "Inc",
 #   value: MapSet.new([["active", "#"]])
 # }
 
@@ -117,7 +117,7 @@ Protean.call(pid, {"Log", :count})
 # count: 10
 ```
 
-### Supervisor
+## Protean Supervisor
 
 Protean uses a `DynamicSupervisor` to manage internally spawned processes (often spawned through the use of `:invoke`).
 The simplest thing to do is to add `Protean.Supervisor` in your application supervision tree:
@@ -150,6 +150,43 @@ Protean.start_link(Counter, supervisor: ProteanSupervisor1)
 ```
 
 In the above example, any processes that are spawned by the Protean interpreter running `Counter` will use `ProteanSupervisor1`.
+
+## Starting supervised machines
+
+Just like `GenServer`, Protean machines will be most often started under a supervision tree.
+Invoking `use Protean` will automatically define a `child_spec/1` function that allows you to start the process directly under a supervisor.
+
+```elixir
+children = [
+  Counter
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+Protean machines also accept the same options as `Protean.start_link/3`.
+See those docs for more details.
+
+For instance, here's how you could start the `Counter` with a custom supervisor and name:
+
+```elixir
+children = [
+  # Start the Protean Supervisor
+  {Protean.Supervisor, name: MyProteanSupervisor},
+
+  # Start the Counter machine
+  {Counter, name: MyCounter, supervisor: MyProteanSupervisor}
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+
+Protean.current(MyCounter)
+# %Protean.State{
+#   context: %{count: 0, max: nil, min: nil},
+#   event: "$protean.init",
+#   value: MapSet.new([["active", "#"]])
+# }
+```
 
 <!-- MDOC !-->
 

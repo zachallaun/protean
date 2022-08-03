@@ -14,6 +14,7 @@ defmodule Protean.State do
   alias Protean.Action
   alias Protean.Node
 
+  @derive {Inspect, only: [:value, :event, :context]}
   defstruct [
     :value,
     :event,

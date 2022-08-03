@@ -17,13 +17,10 @@ defmodule Protean.Macros do
 
   defmodule ConfigError, do: defexception([:message])
 
-  defmacro __using__(opts) do
+  defmacro __using__(_) do
     quote generated: true, location: :keep do
       import Protean.Macros
       @behaviour Protean
-
-      Module.put_attribute(__MODULE__, Protean.Options, unquote(Macro.escape(opts)))
-
       @before_compile Protean.Macros
     end
   end
@@ -88,7 +85,7 @@ defmodule Protean.Macros do
     end
   end
 
-  defp def_default_otp(env) do
+  defp def_default_otp(_env) do
     quote generated: true, location: :keep do
       def child_spec(opts) do
         {id, opts} = Keyword.pop(opts, :id, __MODULE__)
@@ -102,25 +99,10 @@ defmodule Protean.Macros do
       end
 
       def start_link(opts \\ []) do
-        defaults = [
-          handler: unquote(machine_handler_name(env)),
-          machine: machine()
-        ]
-
-        Protean.Interpreter.Server.start_link(Keyword.merge(defaults, opts))
+        Protean.start_link(__MODULE__, opts)
       end
 
       defoverridable child_spec: 1, start_link: 1
     end
-  end
-
-  defp machine_handler_name(env) do
-    env
-    |> protean_opts()
-    |> Keyword.get(:handler, env.module)
-  end
-
-  defp protean_opts(env) do
-    Module.get_attribute(env.module, Protean.Options, [])
   end
 end
