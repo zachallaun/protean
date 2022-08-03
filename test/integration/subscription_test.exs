@@ -4,7 +4,7 @@ defmodule ProteanIntegration.SubscriptionTest do
   defmodule TestMachine do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "a",
       states: [
         a: [

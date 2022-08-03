@@ -4,7 +4,7 @@ defmodule ProteanIntegration.SimpleTest do
   defmodule SimpleMachine do
     use Protean
 
-    @machine [
+    defmachine [
       context: [
         data: nil
       ],

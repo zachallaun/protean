@@ -5,7 +5,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       context: [
         on_entry: [],
         on_exit: []

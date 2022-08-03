@@ -10,7 +10,7 @@ defmodule Protean.TestCase do
         defmodule ExampleMachine do
           use Protean
 
-          @machine [
+          defmachine [
             context: [
               foo: 1,
               bar: 2

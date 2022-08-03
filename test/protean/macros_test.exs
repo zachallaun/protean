@@ -3,28 +3,16 @@ defmodule Protean.MacrosTest do
 
   alias Protean.Machine
 
-  defmodule MachineAsKeyword do
-    use Protean,
-      machine: [
-        initial: :a,
-        states: [a: []]
-      ]
-  end
-
-  test "machines can be specified as a keyword to `use Protean`" do
-    assert %Machine{} = MachineAsKeyword.machine()
-  end
-
   defmodule MachineAsAttribute do
     use Protean
 
-    @machine [
+    defmachine [
       initial: :a,
       states: [a: []]
     ]
   end
 
-  test "machines can be specified in a @machine attribute" do
+  test "machines can be specified with defmachine" do
     assert %Machine{} = MachineAsAttribute.machine()
   end
 
@@ -43,29 +31,10 @@ defmodule Protean.MacrosTest do
     assert %Machine{} = MachineAsAttribute.machine()
   end
 
-  defmodule InlineFunctionKeyword do
-    use Protean,
-      machine: [
-        context: %{},
-        initial: :a,
-        states: [
-          a: [
-            entry: [
-              Protean.Action.assign(fn _, _, _ -> %{} end)
-            ]
-          ]
-        ]
-      ]
-  end
-
-  test "machines specified as a keyword allow inline functions" do
-    assert %Machine{} = InlineFunctionKeyword.machine()
-  end
-
   defmodule InlineFunctionAttribute do
     use Protean
 
-    @machine [
+    defmachine [
       context: %{},
       initial: :a,
       states: [
@@ -78,7 +47,7 @@ defmodule Protean.MacrosTest do
     ]
   end
 
-  test "machines specified as an attribute allow inline functions" do
+  test "machines specified with defmachine allow inline functions" do
     assert %Machine{} = InlineFunctionAttribute.machine()
   end
 end

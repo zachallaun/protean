@@ -5,7 +5,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       initial: :a,
       context: %{
         acc: [],

@@ -3,30 +3,16 @@ defmodule Protean.Macros do
   Injects code into the calling module in order to easily define Protean statecharts.
 
   This module is included by calling `use Protean` and requires that the caller define a machine
-  configuration in one of three ways:
+  configuration using `defmachine/1`:
 
-      defmodule Example1 do
+      defmodule Example do
         use Protean
 
-        @machine [
+        defmachine [
           # ...
         ]
       end
 
-      defmodule Example2 do
-        use Protean, machine: :my_machine
-
-        @my_machine [
-          # ...
-        ]
-      end
-
-      defmodule Example3 do
-        use Protean,
-          machine: [
-            # ...
-          ]
-      end
   """
 
   defmodule ConfigError do
@@ -36,93 +22,37 @@ defmodule Protean.Macros do
 
   defmacro __using__(opts) do
     quote generated: true, location: :keep do
+      import Protean.Macros
       @behaviour Protean
 
       Module.put_attribute(__MODULE__, Protean.Options, unquote(Macro.escape(opts)))
-      unquote(persist_attribute(opts))
 
       @before_compile Protean.Macros
     end
   end
 
+  @doc """
+  Define a Protean machine accessible through `__MODULE__.machine/0`.
+  """
+  defmacro defmachine(config) do
+    quote location: :keep do
+      def machine do
+        Protean.Machine.new(unquote(config), handler: __MODULE__)
+      end
+    end
+  end
+
   @doc false
   defmacro __before_compile__(env) do
+    unless Module.defines?(__CALLER__.module, {:machine, 0}, :def) do
+      raise ConfigError,
+        message: "Protean machine definition not found. See `Protean.Macros.defmachine/1`."
+    end
+
     [
-      def_machine_function(env),
       def_default_impls(env),
       def_default_otp(env)
     ]
-  end
-
-  @doc """
-  Helper macro to create a new module with the current module as the handler. Equivalent to:
-
-      Protean.Machine.new(..., handler: __MODULE__)
-  """
-  defmacro machine(config) do
-    quote location: :keep do
-      Protean.Machine.new(unquote(config), handler: __MODULE__)
-    end
-  end
-
-  defp persist_attribute(opts) do
-    case Keyword.get(opts, :machine, :machine) do
-      attr when is_atom(attr) ->
-        quote do
-          Module.register_attribute(__MODULE__, unquote(attr), persist: true)
-        end
-
-      _ ->
-        :ok
-    end
-  end
-
-  defp def_machine_function(env) do
-    # Four cases:
-    # 1. use Protean -> check for @machine or machine/0
-    # 2. use Protean, machine: :foo -> check for @foo
-    # 3. use Protean, machine: [foo: 0] -> check for foo/0
-    # 4. use Protean, machine: [initial: ...] -> generate __protean_machine__()
-    machine_option = Keyword.get(protean_opts(env), :machine)
-
-    cond do
-      is_nil(machine_option) && Module.defines?(env.module, {:machine, 0}, :def) ->
-        :ok
-
-      is_nil(machine_option) && Module.has_attribute?(env.module, :machine) ->
-        quote generated: true, location: :keep do
-          def unquote(machine_function_name(env))() do
-            Protean.Machine.new(
-              __MODULE__.__info__(:attributes)[:machine],
-              handler: unquote(machine_handler_name(env))
-            )
-          end
-        end
-
-      match?([{_name, 0}], machine_option) ->
-        [{name, 0}] = machine_option
-
-        if Module.defines?(env.module, {name, 0}, :def) do
-          :ok
-        else
-          raise ConfigError,
-            message: "Machine function definition not found: #{to_string(name)}/0"
-        end
-
-      Keyword.keyword?(machine_option) ->
-        quote generated: true, location: :keep do
-          def unquote(machine_function_name(env))() do
-            Protean.Machine.new(
-              unquote(machine_option),
-              handler: unquote(machine_handler_name(env))
-            )
-          end
-        end
-
-      true ->
-        raise ConfigError,
-          message: "No valid machine config found. Got: #{inspect(machine_option)}"
-    end
   end
 
   defp def_default_impls(_env) do
@@ -154,7 +84,7 @@ defmodule Protean.Macros do
       def start_link(opts \\ []) do
         defaults = [
           handler: unquote(machine_handler_name(env)),
-          machine: unquote(machine_function_name(env))()
+          machine: machine()
         ]
 
         Protean.Interpreter.Server.start_link(Keyword.merge(defaults, opts))
@@ -168,20 +98,6 @@ defmodule Protean.Macros do
     env
     |> protean_opts()
     |> Keyword.get(:handler, env.module)
-  end
-
-  defp machine_function_name(env) do
-    case Keyword.get(protean_opts(env), :machine) do
-      [{function_name, 0}] ->
-        function_name
-
-      [{function_name, n}] ->
-        raise ConfigError,
-          message: "machine function must have arity 0, got: #{to_string(function_name)}/#{n}"
-
-      _other ->
-        :machine
-    end
   end
 
   defp protean_opts(env),

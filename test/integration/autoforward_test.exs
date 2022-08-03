@@ -4,7 +4,7 @@ defmodule ProteanIntegration.AutoforwardTest do
   defmodule Child do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "receiving",
       context: [data: []],
       states: [
@@ -27,7 +27,7 @@ defmodule ProteanIntegration.AutoforwardTest do
   defmodule Parent do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "forwarding",
       states: [
         forwarding: [

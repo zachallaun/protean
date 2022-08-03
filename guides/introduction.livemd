@@ -16,7 +16,7 @@ Let's start with a very simple machine: a counter.
 defmodule Counter do
   use Protean
 
-  @machine [
+  defmachine [
     context: %{
       count: 0
     },
@@ -143,7 +143,7 @@ Let's define a slightly more interesting machine, one that models a request that
 defmodule Request do
   use Protean
 
-  @machine [
+  defmachine [
     initial: :pending,
     states: [
       pending: [

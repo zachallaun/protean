@@ -30,7 +30,7 @@ defmodule Counter do
   use Protean
   alias Protean.Action
 
-  @machine [
+  defmachine [
     initial: "active",
     context: [
       count: 0,
@@ -143,7 +143,6 @@ Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
   - [x] Basic implementation
   - [ ] Correct transition conflict handling
 - [ ] History states
-- [ ] Event coercion (e.g. from phx pubsub -> protean)
 - [ ] Fix all "FIXME"
 - [ ] Fix all "TODO"
 - [ ] Stricter machine config parsing with helpful error messages

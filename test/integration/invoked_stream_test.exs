@@ -5,7 +5,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       initial: "main",
       context: [data: []],
       states: [
@@ -49,7 +49,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       initial: "waiting",
       context: [data: []],
       states: [

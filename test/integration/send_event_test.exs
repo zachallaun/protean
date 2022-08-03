@@ -5,7 +5,7 @@ defmodule ProteanIntegration.SendEventTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       initial: "waiting",
       states: [
         waiting: [

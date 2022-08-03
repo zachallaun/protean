@@ -5,7 +5,7 @@ defmodule ProteanIntegration.ChooseTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       context: [switch: "on", data: []],
       initial: "a",
       states: [

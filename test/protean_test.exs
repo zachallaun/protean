@@ -4,7 +4,7 @@ defmodule ProteanTest do
   defmodule SimpleMachine do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [init: []]
     ]
@@ -13,7 +13,7 @@ defmodule ProteanTest do
   defmodule TimerMachine do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [
         init: [

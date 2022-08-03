@@ -306,8 +306,9 @@ This is a sketch of what I think the new syntax/API should be.
 Main changes:
 
 1. Move away from `{"string", data}` events to generic pattern matching on any term.
-2. Move away from `Protean.send_event` etc. to `Protean.call` (sync), `Protean.send` (async), `Protean.send_after` etc. since we're now sending any term as an event. But machines will be fully compatible with the usual `send`/etc. and should be able to slot into any context that expects a GenServer-like thing. (Should look to `:gen_statem` for inspiration here.)
-3. Maybe: Move to making the module that calls `use Protean` a GenServer directly (instead of "delegating" to `Protean.Interpreter.Server`). This would give us the ability to allow users to override `handle_info` and friends to potentially bypass certain messages or provide special handling.
+2. `@machine` -> `defmachine` macro
+3. Move away from `Protean.send_event` etc. to `Protean.call` (sync), `Protean.send` (async), `Protean.send_after` etc. since we're now sending any term as an event. But machines will be fully compatible with the usual `send`/etc. and should be able to slot into any context that expects a GenServer-like thing. (Should look to `:gen_statem` for inspiration here.)
+4. Maybe: Move to making the module that calls `use Protean` a GenServer directly (instead of "delegating" to `Protean.Interpreter.Server`). This would give us the ability to allow users to override `handle_info` and friends to potentially bypass certain messages or provide special handling.
 
 ```elixir
 defmodule MediaPlayer do
@@ -333,7 +334,7 @@ defmodule MediaPlayer do
     paused_at: DateTime.t() | nil
   }
 
-  @machine [
+  defmachine [
     initial: "Idle",
     context: %{
       profile: nil,
@@ -587,7 +588,7 @@ defmodule MediaPlayer.AutoplayNext do
           played_at: DateTime.t()
         }
 
-  @machine [
+  defmachine(
     initial: "AutoplayNext",
     states: [
       {
@@ -606,7 +607,7 @@ defmodule MediaPlayer.AutoplayNext do
         type: :final, entry: [:send_next_to_parent]
       }
     ]
-  ]
+  )
 
   @impl true
   def guard(:song_ending?, state, _) do

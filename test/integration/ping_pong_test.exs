@@ -9,7 +9,7 @@ defmodule ProteanIntegration.PingPongTest do
     A ping pong machine that waits for a {"ping", pid} or {"pong", pid} and replies with the
     opposite. It then waits for one more cycle
     """
-    @machine [
+    defmachine [
       initial: "waiting",
       context: [
         received: []

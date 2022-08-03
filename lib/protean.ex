@@ -27,7 +27,7 @@ defmodule Protean do
 
   ### Example
 
-      @machine [
+      defmachine [
         # ...
         states: [
           # ...
@@ -59,7 +59,7 @@ defmodule Protean do
 
   ### Example
 
-      @machine [
+      defmachine [
         # ...
         states: [
           # ...
@@ -92,7 +92,7 @@ defmodule Protean do
 
   ### Example
 
-      @machine [
+      defmachine [
         # ...
         states: [
           editing_user: [

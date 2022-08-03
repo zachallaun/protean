@@ -5,7 +5,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       context: [
         result: nil
       ],
@@ -70,7 +70,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       context: [result: nil],
       initial: "a",
       states: [
@@ -112,7 +112,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
   defmodule ErrorRaisingTasks do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [
         init: [
@@ -150,7 +150,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
   defmodule ResolvedTaskInvoke do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [
         init: [
@@ -183,7 +183,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
   defmodule CanceledTask do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [
         init: [

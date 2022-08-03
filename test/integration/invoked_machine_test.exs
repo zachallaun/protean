@@ -7,7 +7,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       initial: "parenting",
       states: [
         parenting: [
@@ -33,7 +33,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     use Protean
     alias Protean.Action
 
-    @machine [
+    defmachine [
       initial: "growing",
       states: [
         growing: [
@@ -66,7 +66,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule Crashes do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "can_crash",
       states: [
         can_crash: [
@@ -88,7 +88,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule InvokeCrashes do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [
         init: [
@@ -136,7 +136,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule ImmediatelyCrashes do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "crash_now",
       states: [
         crash_now: [
@@ -156,7 +156,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule InvokeImmediatelyCrashes do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [
         init: [

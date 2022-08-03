@@ -4,7 +4,7 @@ defmodule ProteanIntegration.FinalStatesTest do
   defmodule TestMachine do
     use Protean
 
-    @machine [
+    defmachine [
       initial: "init",
       states: [
         init: [],

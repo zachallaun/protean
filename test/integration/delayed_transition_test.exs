@@ -4,7 +4,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   defmodule TestMachine do
     use Protean
 
-    @machine [
+    defmachine [
       context: %{
         path: []
       },
