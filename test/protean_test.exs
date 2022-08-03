@@ -27,23 +27,23 @@ defmodule ProteanTest do
 
   describe "Protean supervisor" do
     test "can be started with default name" do
-      start_supervised(Protean)
-      assert Supervisor.which_children(Protean)
+      start_supervised(Protean.Supervisor)
+      assert Supervisor.which_children(Protean.Supervisor)
     end
 
     test "can be started with an explicit name" do
-      start_supervised({Protean, name: MyProtean})
+      start_supervised({Protean.Supervisor, name: MyProtean})
       assert Supervisor.which_children(MyProtean)
     end
 
     test "used by default to start invoked processes" do
-      start_supervised(Protean)
+      start_supervised(Protean.Supervisor)
       {:ok, _} = TimerMachine.start_link()
-      assert 1 = length(Supervisor.which_children(Protean))
+      assert 1 = length(Supervisor.which_children(Protean.Supervisor))
     end
 
     test "can be explicitly passed to machine" do
-      start_supervised({Protean, name: MyProtean})
+      start_supervised({Protean.Supervisor, name: MyProtean})
       {:ok, _} = TimerMachine.start_link(supervisor: MyProtean)
       assert 1 = length(Supervisor.which_children(MyProtean))
     end

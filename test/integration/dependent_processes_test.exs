@@ -4,16 +4,16 @@ defmodule ProteanIntegration.DependentProcessesTest do
   defmodule Child do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "init",
       states: [init: []]
-    ]
+    )
   end
 
   defmodule Parent do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: "init",
       states: [
         init: [
@@ -23,14 +23,14 @@ defmodule ProteanIntegration.DependentProcessesTest do
           ]
         ]
       ]
-    ]
+    )
   end
 
   @tag machine: Parent
   test "child machines exit when their spawning process exits", %{machine: machine} do
-    assert length(DynamicSupervisor.which_children(Protean)) == 1
+    assert length(DynamicSupervisor.which_children(Protean.Supervisor)) == 1
     :ok = Protean.stop(machine)
     :timer.sleep(50)
-    assert length(DynamicSupervisor.which_children(Protean)) == 0
+    assert length(DynamicSupervisor.which_children(Protean.Supervisor)) == 0
   end
 end

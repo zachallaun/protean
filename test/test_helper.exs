@@ -1,2 +1,2 @@
-Protean.start_link()
+Protean.Supervisor.start_link()
 ExUnit.start()

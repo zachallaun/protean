@@ -1,9 +1,5 @@
 defmodule Protean.Interpreter.Server do
-  @moduledoc """
-  `Protean.Interpreter.Server` implements the behaviour required to run a `Protean.Interpreter`
-  as a `GenServer`. This module is usually not invoked directly, but instead defines a client API
-  that is delegated to by `Protean`.
-  """
+  @moduledoc false
 
   import Kernel, except: [send: 2]
 
@@ -31,6 +27,7 @@ defmodule Protean.Interpreter.Server do
     * `:supervisor` - The supervisor that Protean should use to manage invoked processes.
       Defaults to `Protean`.
     * GenServer options - All other options will be passed to `GenServer.start_link/3`.
+
   """
   @spec start_link(server_options) :: GenServer.on_start()
   def start_link(opts) do
@@ -39,7 +36,7 @@ defmodule Protean.Interpreter.Server do
     interpreter_opts =
       interpreter_opts
       |> Keyword.put_new(:parent, self())
-      |> Keyword.put_new(:supervisor, Protean)
+      |> Keyword.put_new(:supervisor, Protean.Supervisor)
 
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
   end

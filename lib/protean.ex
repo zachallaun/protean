@@ -129,28 +129,6 @@ defmodule Protean do
   end
 
   @doc """
-  Starts an instance of the Protean supervisor, which allows Protean to manage processes invoked
-  by a machine.
-
-  For options, see `Supervisor.start_link/2`. If not specified, the supervisor name will default to `Protean`.
-  """
-  def start_link(opts \\ []) do
-    DynamicSupervisor.start_link(
-      Protean.DynamicSupervisor,
-      [],
-      Keyword.merge([name: Protean], opts)
-    )
-  end
-
-  def child_spec(opts) do
-    %{
-      id: Keyword.get(opts, :id, Protean),
-      start: {Protean, :start_link, [opts]},
-      type: :supervisor
-    }
-  end
-
-  @doc """
   Makes a synchronous call to the machine and waits for it to execute any transitions
   that result from the given event.
 
