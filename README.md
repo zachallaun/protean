@@ -4,7 +4,7 @@
 
 _Caveat emptor: Protean is a library for personal learning and exploration, not (yet) for doing Serious Work_.
 
-An experimental Elixir library for managing state and side-effects through the use of statecharts. It is heavily inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays in some places in order to adhere to Elixir idioms and OTP conventions. Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standard, though not completely.
+An experimental Elixir library for managing state and side-effects through the use of event-driven statecharts. It is heavily inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir idioms and OTP conventions. Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standard, though not completely.
 
 **What are statecharts?** They are an extension to finite state machines that allow you to model complex behavior in a declarative, data-driven manner. They include nested and parallel states, enhanced/augmented state (through context), side-effects (through actions), process management (through invoke), and more. To learn more about statecharts, I recommend [statecharts.dev](https://statecharts.dev/).
 
@@ -97,8 +97,7 @@ Protean.call(pid, "INC")
 # %Protean.State{
 #   context: %{count: 1, max: nil, min: nil},
 #   event: {"INC", nil},
-#   private: %{actions: []},
-#   value: #MapSet<[["active", "#"]]>
+#   value: MapSet.new([["active", "#"]])
 # }
 
 Enum.each(1..4, fn _ -> Protean.call(pid, "INC") end)
@@ -110,8 +109,7 @@ Protean.call(pid, {"SET", {:max, 10}})
 # %Protean.State{
 #   context: %{count: 5, max: 10, min: nil},
 #   event: {"SET", {:max, 10}},
-#   private: %{actions: []},
-#   value: #MapSet<[["active", "#"]]>
+#   value: MapSet.new([["active", "#"]])
 # }
 
 Enum.each(1..20, fn _ -> Protean.call(pid, "INC") end)

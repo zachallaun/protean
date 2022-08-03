@@ -44,17 +44,12 @@ defmodule Protean.Interpreter.Server do
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
   end
 
-  @doc """
-  Syncronously send an event to the interpreter and await the next state.
-  """
-  @spec call(GenServer.server(), Protean.event()) :: State.t()
-  def call(pid, event) do
-    GenServer.call(pid, event)
-  end
+  @doc false
+  @spec call(GenServer.server(), Protean.event(), timeout()) :: State.t()
+  def call(pid, event, timeout), do: GenServer.call(pid, event, timeout)
+  def call(pid, event), do: GenServer.call(pid, event)
 
-  @doc """
-  Asyncronously send an event to the interpreter.
-  """
+  @doc false
   @spec send(GenServer.server(), Protean.event()) :: :ok
   def send(server, event) do
     server
@@ -64,10 +59,7 @@ defmodule Protean.Interpreter.Server do
     :ok
   end
 
-  @doc """
-  Send an event to the interpreter after `time` in milliseconds has passed. Returns a timer
-  reference that can be canceled with `Process.cancel_timer/1`.
-  """
+  @doc false
   @spec send_after(GenServer.server(), Protean.event(), non_neg_integer()) :: reference()
   def send_after(server, event, time) do
     server
@@ -75,9 +67,7 @@ defmodule Protean.Interpreter.Server do
     |> Process.send_after(event, time)
   end
 
-  @doc """
-  Get the current machine state.
-  """
+  @doc false
   @spec current(GenServer.server()) :: State.t()
   def current(pid) do
     GenServer.call(pid, {@prefix, :current_state})

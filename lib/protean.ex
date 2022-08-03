@@ -12,8 +12,14 @@ defmodule Protean do
   alias Protean.Interpreter.Server
   alias Protean.State
 
+  @typedoc "A running Protean machine process."
+  @type server :: GenServer.server()
+
   @typedoc "Any message sent to a Protean machine."
   @type event :: term()
+
+  @typedoc "Options for `subscribe/2`."
+  @type subscribe_option :: {:monitor, boolean()}
 
   @doc """
   Used to define invoked services at runtime. Returns a value or child spec usable by the invoke
@@ -21,7 +27,7 @@ defmodule Protean do
 
   ### Example
 
-      defmachine [
+      defmachine(
         # ...
         states: [
           # ...
@@ -35,7 +41,7 @@ defmodule Protean do
             # ...
           ]
         ]
-      ]
+      )
 
       @impl Protean
       def invoke("my_task", _state, {"trigger", data}) do
@@ -57,25 +63,22 @@ defmodule Protean do
         # ...
         states: [
           # ...
-          waiting: [
+          state: [
             on: [
-              data_event: [
-                target: "data_received",
-                actions: ["assign_and_send_data"]
-              ]
+              {{:data, _any}, target: "data_received", actions: "assign_and_send_data"}
             ]
           ]
         ]
       ]
 
       @impl Protean
-      def action("assign_and_send_data", state, {"data_event", data}) do
+      def action("assign_and_send_data", state, {:data, data}) do
         %{service: pid} = state.context
 
         PubSub.broadcast!(@pubsub, @topic, data)
 
         state
-        |> Protean.Action.call({"data_received", data}, to: pid)
+        |> Protean.Action.send({"data_received", data}, to: pid)
         |> Protean.Action.assign(:last_received_data, data)
       end
   """
@@ -91,15 +94,17 @@ defmodule Protean do
         states: [
           editing_user: [
             on: [
-              "user.commit": [
+              {
+                {:user_commit, _},
                 when: "user_valid?",
                 actions: ["broadcast"],
                 target: "viewing_user"
-              ],
-              "user.commit": [
+              },
+              {
+                {:user_commit, _},
                 when: {:not, "user_valid?"},
                 actions: ["show_invalid_user_error"]
-              ]
+              }
             ]
           ]
         ]
@@ -125,8 +130,9 @@ defmodule Protean do
 
   @doc """
   Starts an instance of the Protean supervisor, which allows Protean to manage processes invoked
-  by a machine. For options, see `Supervisor.start_link/2`. If not specified, the supervisor name
-  will default to `Protean`.
+  by a machine.
+
+  For options, see `Supervisor.start_link/2`. If not specified, the supervisor name will default to `Protean`.
   """
   def start_link(opts \\ []) do
     DynamicSupervisor.start_link(
@@ -144,16 +150,39 @@ defmodule Protean do
     }
   end
 
-  @doc "TODO"
-  defdelegate call(protean, event), to: Server
+  @doc """
+  Makes a synchronous call to the machine and waits for it to execute any transitions
+  that result from the given event.
 
-  @doc "TODO"
+  Shares semantics with `GenServer.call/3`.
+  """
+  @spec call(server, event) :: State.t()
+  @spec call(server, event, timeout()) :: State.t()
+  defdelegate call(protean, event), to: Server
+  defdelegate call(protean, event, timeout), to: Server
+
+  @doc """
+  Sends an asynchronous event to the machine.
+
+  Shares semantics with `GenServer.cast/2`.
+  """
+  @spec send(server, event) :: :ok
   defdelegate send(protean, event), to: Server
 
-  @doc "TODO"
+  @doc """
+  Sends an event to the machine after `time` in milliseconds has passed.
+
+  Returns a timer reference that can be canceled with `Process.cancel_timer/1`.
+  """
+  @spec send_after(server, event, non_neg_integer()) :: reference()
   defdelegate send_after(protean, event, time), to: Server
 
-  @doc "TODO"
+  @doc """
+  Synchronously retrieve the current machine state.
+
+  TODO: Allow optional timeout as with `call/3`.
+  """
+  @spec current(server) :: State.t()
   defdelegate current(protean), to: Server
 
   @doc "TODO"
@@ -161,7 +190,7 @@ defmodule Protean do
   defdelegate stop(protean), to: Server
 
   @doc """
-  Subscribes the caller to the running Protean machine, returning a reference.
+  Subscribes the caller to a running machine, returning a reference.
 
   Processes subscribed to a machine will receive messages whenever the machine transitions. (Note
   that a machine can transition to the same state it was in previously.) By default, subscribed
@@ -180,23 +209,32 @@ defmodule Protean do
   As with monitor, if the process is already dead when calling `Protean.subscribe/2`, a `:DOWN`
   message is delivered immediately.
   """
-  @spec subscribe(GenServer.server(), keyword()) :: reference()
+  @spec subscribe(server, [subscribe_option]) :: reference()
   defdelegate subscribe(protean, opts \\ [monitor: true]), to: Server
 
-  @doc "Unsubscribes the caller from the running Protean machine."
+  @doc "Unsubscribes the caller from the machine."
+  @spec unsubscribe(server, reference()) :: :ok
   defdelegate unsubscribe(protean, ref), to: Server
 
   @doc false
   defdelegate ping(pid), to: Server
 
-  @doc "TODO"
+  @doc """
+  Returns true if the given machine state is in the given state.
+
+  Note that calling `matches?/2` on a machine process is a synchronous operation that is
+  equivalent to:
+
+      machine |> Protean.current() |> Protean.matches?(descriptor)
+
+  """
   @spec matches?(State.t(), descriptor :: term()) :: boolean()
-  @spec matches?(Interpreter.t(), descriptor :: term()) :: boolean()
-  @spec matches?(GenServer.server(), descriptor :: term()) :: boolean()
+  @spec matches?(server, descriptor :: term()) :: boolean()
   def matches?(item, descriptor)
 
-  def matches?(%State{} = state, descriptor),
-    do: State.matches?(state, descriptor)
+  def matches?(%State{} = state, descriptor) do
+    State.matches?(state, descriptor)
+  end
 
   def matches?(%Interpreter{} = interpreter, descriptor) do
     interpreter
