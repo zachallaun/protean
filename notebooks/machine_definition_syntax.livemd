@@ -298,3 +298,345 @@ ast =
     end
   end
 ```
+
+## New Syntax
+
+This is a sketch of what I think the new syntax/API should be.
+
+Main changes:
+
+1. Move away from `{"string", data}` events to generic pattern matching on any term.
+2. Move away from `Protean.send_event` etc. to `Protean.call` (sync), `Protean.send` (async), `Protean.send_after` etc. since we're now sending any term as an event. But machines will be fully compatible with the usual `send`/etc. and should be able to slot into any context that expects a GenServer-like thing. (Should look to `:gen_statem` for inspiration here.)
+3. Maybe: Move to making the module that calls `use Protean` a GenServer directly (instead of "delegating" to `Protean.Interpreter.Server`). This would give us the ability to allow users to override `handle_info` and friends to potentially bypass certain messages or provide special handling.
+
+```elixir
+defmodule MediaPlayer do
+  @moduledoc """
+  A statechart modeling media playback of a profile to multiple connected users.
+  """
+
+  use Protean
+  alias Protean.Action
+
+  alias LiveBeats.{Accounts, MediaLibrary}
+  alias LiveBeats.Accounts.{User}
+  alias LiveBeats.MediaLibrary.{Profile, Song, Events}
+
+  @pubsub LiveBeats.PubSub
+  @idle_timeout_seconds 120
+
+  @type context :: %{
+    profile: Profile.t(),
+    connected_user_ids: MapSet.t(User.t()),
+    song: Song.t() | nil,
+    played_at: DateTime.t() | nil,
+    paused_at: DateTime.t() | nil
+  }
+
+  @machine [
+    initial: "Idle",
+    context: %{
+      profile: nil,
+      song: nil,
+      connected_user_ids: MapSet.new(),
+      played_at: nil,
+      paused_at: nil
+    },
+    on: [
+      {%Events.UserConnected{}, actions: [:add_user]},
+      {%Events.UserDisconnected{}, actions: [:remove_user]},
+    ],
+    states: [
+      {
+        "Idle",
+        always: [
+          target: "Active",
+          guard: :has_users?
+        ],
+        after: [
+          delay: @idle_timeout_seconds * 1000,
+          target: "Timeout"
+        ]
+      },
+      {
+        "Active",
+        initial: "Stopped",
+        always: [
+          target: "Idle",
+          guard: [not: :has_users?]
+        ],
+        states: [
+          {
+            "Stopped",
+            entry: [:clear_song, :broadcast_song_status],
+            on: [
+              {%Events.Play{}, target: "Playing"},
+              {%Events.PlayPause{}, target: "Playing"}
+            ]
+          },
+          {
+            "Playing",
+            invoke: [
+              proc: :autoplay
+            ],
+            entry: [:set_song_playing, :broadcast_song_status],
+            on: [
+              {%Events.Pause{}, target: "Paused"},
+              {%Events.PlayPause{}, target: "Paused"},
+              {%Events.Stop{}, target: "Stopped"}
+            ]
+          },
+          {
+            "Paused",
+            entry: [:set_song_paused, :broadcast_song_status],
+            on: [
+              {%Events.Play{}, target: "Playing"},
+              {%Events.PlayPause{}, target: "Playing"},
+              {%Events.Stop{}, target: "Stopped"}
+            ]
+          }    
+        ]
+      },
+      {
+        "Timeout",
+        type: :final
+      }
+    ]
+  ]
+
+  @doc """
+  Start a linked `MediaPlayer`.
+  
+  Options:
+
+    * `:user_id` (required) - the ID of the first connected user
+    * Any other opts that a Protean machine can accept
+
+  """
+  def start_link(opts \\ []) do
+    {user_id, opts} = Keyword.pop!(opts, :user_id)
+
+    context =
+      opts
+      |> Keyword.get(:context, %{})
+      |> Map.put(connected_user_ids: MapSet.new([user_id]))
+
+    opts
+    |> Keyword.merge(context: context)
+    |> super()
+  end
+
+  @impl true
+  def invoke(:autoplay, state, _) do
+    autoplay_context =
+      state.context
+      |> Map.take([:profile, :song])
+      |> Map.put(:played_at, DateTime.utc_now())
+    
+    {MediaPlayer.Autoplay, context: autoplay_context}
+  end
+
+  @impl true
+  def guard(:has_users?, state, _) do
+    !Enum.empty?(state.context.connected_user_ids)
+  end
+
+  @impl true
+  def action(:add_user, state, %Events.UserConnected{user: user}) do
+    %{song: song} = state.context
+
+    state
+    |> current_song_event()
+    |> broadcast!(user.id)
+
+    state
+    |> Action.assign_in([:connected_user_ids], &MapSet.put(&1, user.id))
+  end
+
+  def action(:remove_user, state, %Events.UserDisconnected{user: user}) do
+    state
+    |> Action.assign_in([:connected_user_ids], &MapSet.delete(&1, user.id))
+  end
+
+  def action(:clear_song, state, _) do
+    state
+    |> Action.assign(:song, nil)
+    |> Action.assign(:played_at, nil)
+    |> Action.assign(:paused_at, nil)
+  end
+
+  def action(:broadcast_song_status, state, _) do
+    %{connected_user_ids: ids} = state.context
+    
+    state
+    |> current_song_event()
+    |> broadcast_to_all!(ids)
+
+    state
+  end
+
+  def action(:set_song_paused, state, %{song: song}) do
+    state
+    |> set_song_paused(song)
+  end
+
+  def action(:set_song_paused, %{context: %{song: song}}, %Events.) do
+    state
+    |> Action.assign(:paused_at, DateTime.truncate(DateTime.utc_now(), :second))
+  end
+
+  def action(:set_song_playing, state, %{song: song}) do
+    state
+    |> set_song_playing(song)
+  end
+
+  def action(:clear_timestamps, state, _) do
+    state
+    |> Action.assign(:played_at, nil)
+    |> Action.assign(:paused_at, nil)
+  end
+
+  defp set_song_paused(%{context: %{song: song}} = state, song) do
+    state
+    |> Action.assign(:paused_at, DateTime.truncate(DateTime.utc_now(), :second))
+  end
+
+  defp set_song_paused(state, _song), do: state
+
+  defp set_song_playing(%{context: %{song: song}} = state, song) do
+    %{paused_at: paused_at, played_at: played_at} = state.context
+
+    played_at =
+      if paused_at do
+        elapsed = DateTime.diff(paused_at, played_at, :second)
+        DateTime.add(DateTime.utc_now(), -elapsed)
+      else
+        DateTime.utc_now()
+      end
+
+    state
+    |> Action.assign(:played_at, DateTime.truncate(played_at, :second))
+    |> Action.assign(:paused_at, nil)
+  end
+
+  defp set_song_playing(state, song) do
+    state
+    |> Action.assign(:song, song)
+    |> Action.assign(:played_at, DateTime.truncate(DateTime.utc_now(), :second))
+    |> Action.assign(:paused_at, nil)
+  end
+  
+  defp elapsed_playback(state) do
+    %{played_at: played_at, paused_at: paused_at} = state.context
+
+    cond do
+      Protean.matches?(state, "Playing") ->
+        start_seconds = played_at |> DateTime.to_unix()
+        System.os_time(:second) - start_seconds
+
+      Protean.matches?(state, "Paused") ->
+        DateTime.diff(paused_at, played_at, :second)
+
+      Protean.matches?(state, "Stopped") ->
+        0
+    end
+  end
+  
+  defp current_song_event(state) do
+    %{song: song} = state.context
+    
+    cond do
+      Protean.matches?(state, "Playing") ->
+        %Events.Play{song: song, elapsed: elapsed_playback(state)}
+
+      Protean.matches?(state, "Paused") ->
+        %Events.Pause{song: song}
+
+      Protean.matches?(state, "Stopped") ->
+        %Events.Stop{song: song}
+    end
+  end
+
+  defp broadcast_to_all!(msg, ids), do: Enum.each(ids, &broadcast!(msg, &1))
+
+  defp broadcast!(msg, user_id) when is_integer(user_id) do
+    Phoenix.PubSub.broadcast!(@pubsub, "profile:#{user_id}", {__MODULE__, msg})
+  end
+end
+
+```
+
+```elixir
+defmodule MediaPlayer.AutoplayNext do
+  @moduledoc """
+  Helper statechart used to check whether the song is ending and communicate back to
+  the parent.
+  """
+
+  use Protean
+  alias Protean.Action
+
+  alias LiveBeats.MediaLibrary
+  alias LiveBeats.MediaLibrary.{Profile, Song, Events}
+
+  @auto_next_threshold_seconds 5
+
+  @type context :: %{
+          profile: Profile.t(),
+          song: Song.t(),
+          played_at: DateTime.t()
+        }
+
+  @machine [
+    initial: "AutoplayNext",
+    states: [
+      {
+        "AutoplayNext",
+        always: [
+          target: "SongEnding",
+          guard: :song_ending?
+        ],
+        after: [
+          delay: @auto_next_threshold_seconds * 1000,
+          target: "AutoplayNext"
+        ]
+      },
+      {
+        "SongEnding",
+        type: :final, entry: [:send_next_to_parent]
+      }
+    ]
+  ]
+
+  @impl true
+  def guard(:song_ending?, state, _) do
+    %{song: song, played_at: ts} = state.context
+    elapsed = DateTime.diff(DateTime.utc_now(), ts, :second)
+
+    elapsed >= song.duration - @auto_next_threshold_seconds
+  end
+
+  @impl true
+  def action(:send_next_to_parent, state, _) do
+    %{profile: profile, song: song} = state.context
+
+    next_event =
+      case MediaLibrary.get_next_song(song, profile) do
+        nil -> %Events.Stop{}
+        song -> %Events.Play{song: song}
+      end
+
+    state
+    |> Action.send(next_event, to: :parent)
+  end
+end
+```
+
+```elixir
+{:ok, pid} = MediaPlayer.start_link(user_id: 10)
+
+:ok = Protean.send(pid, %MediaLibrary.Events.Play{song: song})
+%Protean.State{} = Protean.call(pid, %MediaLibrary.Events.Pause{song: song})
+```
+
+Random thought: It should be possible to stick a machine as a producer/consumer in a GenStage pipeline, where it runs events through the machine and yields its state.
