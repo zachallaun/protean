@@ -81,7 +81,7 @@ defmodule Protean.Macros do
       def invoke(_, _, _), do: nil
 
       @impl Protean
-      def condition(_, _, _), do: false
+      def guard(_, _, _), do: false
     end
   end
 

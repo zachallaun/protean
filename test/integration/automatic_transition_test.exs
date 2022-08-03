@@ -32,7 +32,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
         d: [
           always: [
             target: "a",
-            when: "allow?"
+            guard: "allow?"
           ],
           on: [
             allow: [
@@ -57,7 +57,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     end
 
     @impl true
-    def condition("allow?", %{context: %{allow: true}}, _event), do: true
+    def guard("allow?", %{context: %{allow: true}}, _event), do: true
   end
 
   @moduletag machine: TestMachine

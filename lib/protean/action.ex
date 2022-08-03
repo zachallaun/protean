@@ -292,7 +292,7 @@ defmodule Protean.Action do
     |> then(&{:cont, &1})
   end
 
-  defp guard_allows?({_, when: guard}, interpreter) do
+  defp guard_allows?({_, guard: guard}, interpreter) do
     %{state: state, handler: handler} = interpreter
     Guard.allows?(guard, state, state.event, handler)
   end

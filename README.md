@@ -48,8 +48,8 @@ defmodule Counter do
     states: [
       active: [
         on: [
-          {"Inc", actions: :increment, when: [not: :at_max]},
-          {"Dec", actions: :decrement, when: [not: :at_min]},
+          {"Inc", actions: :increment, guard: [not: :at_max]},
+          {"Dec", actions: :decrement, guard: [not: :at_min]},
           {{"Set", _}, actions: :set_min_or_max},
           {{"Log", _}, actions: :log}
         ]
@@ -74,11 +74,11 @@ defmodule Counter do
   end
 
   @impl Protean
-  def condition(:at_max, %{context: %{max: max, count: count}}, _event) do
+  def guard(:at_max, %{context: %{max: max, count: count}}, _event) do
     max && count >= max
   end
 
-  def condition(:at_min, %{context: %{min: min, count: count}}, _event) do
+  def guard(:at_min, %{context: %{min: min, count: count}}, _event) do
     min && count <= min
   end
 end

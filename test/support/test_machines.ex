@@ -193,13 +193,13 @@ defmodule TestMachines do
       ],
       on: [
         # go: [
-        #   [target: :straight, when: "direction_straight?"],
-        #   [target: :left, when: "direction_left?"],
-        #   [target: :right, when: "direction_right?"]
+        #   [target: :straight, guard: "direction_straight?"],
+        #   [target: :left, guard: "direction_left?"],
+        #   [target: :right, guard: "direction_right?"]
         # ],
-        go: [target: "#straight", when: "direction_straight?"],
-        go: [target: "#left", when: "direction_left?"],
-        go: [target: "#right", when: "direction_right?"],
+        go: [target: "#straight", guard: "direction_straight?"],
+        go: [target: "#left", guard: "direction_left?"],
+        go: [target: "#right", guard: "direction_right?"],
         set_straight: [
           actions: [Action.assign(direction: :straight)]
         ],
@@ -213,14 +213,14 @@ defmodule TestMachines do
     )
 
     @impl true
-    def condition("direction_straight?", %{context: %{direction: :straight}}, _event), do: true
-    def condition("direction_straight?", _, _), do: false
+    def guard("direction_straight?", %{context: %{direction: :straight}}, _event), do: true
+    def guard("direction_straight?", _, _), do: false
 
-    def condition("direction_left?", %{context: %{direction: :left}}, _event), do: true
-    def condition("direction_left?", _, _), do: false
+    def guard("direction_left?", %{context: %{direction: :left}}, _event), do: true
+    def guard("direction_left?", _, _), do: false
 
-    def condition("direction_right?", %{context: %{direction: :right}}, _event), do: true
-    def condition("direction_right?", _, _), do: false
+    def guard("direction_right?", %{context: %{direction: :right}}, _event), do: true
+    def guard("direction_right?", _, _), do: false
   end
 
   def silly_direction_machine do
@@ -287,15 +287,15 @@ defmodule TestMachines do
         d: []
       ],
       on: [
-        {:goto_a, target: ".a", when: {:not, {:in, "#d"}}},
-        {:goto_b, target: ".b", when: {:in, "#a"}},
-        {:goto_c, target: ".c", when: {:or, [{:in, "#d"}, {:in, "#b"}]}},
-        {{:goto_d, _}, target: ".d", when: {:and, [{:in, "#c"}, "asked_nicely"]}}
+        {:goto_a, target: ".a", guard: {:not, {:in, "#d"}}},
+        {:goto_b, target: ".b", guard: {:in, "#a"}},
+        {:goto_c, target: ".c", guard: {:or, [{:in, "#d"}, {:in, "#b"}]}},
+        {{:goto_d, _}, target: ".d", guard: {:and, [{:in, "#c"}, "asked_nicely"]}}
       ]
     )
 
     @impl true
-    def condition("asked_nicely", _state, {_, :please}), do: true
+    def guard("asked_nicely", _state, {_, :please}), do: true
   end
 
   def higher_order_guard_machine_1 do
@@ -314,15 +314,15 @@ defmodule TestMachines do
         d: []
       ],
       on: [
-        {:goto_a, target: ".a", when: [:not, in: "d"]},
-        {:goto_b, target: ".b", when: [in: "a"]},
-        {:goto_c, target: ".c", when: [:or, in: "d", in: "b"]},
-        {{:goto_d, _}, target: ".d", when: ["asked_nicely", in: "c"]}
+        {:goto_a, target: ".a", guard: [:not, in: "d"]},
+        {:goto_b, target: ".b", guard: [in: "a"]},
+        {:goto_c, target: ".c", guard: [:or, in: "d", in: "b"]},
+        {{:goto_d, _}, target: ".d", guard: ["asked_nicely", in: "c"]}
       ]
     )
 
     @impl true
-    def condition("asked_nicely", _state, {_, :please}), do: true
+    def guard("asked_nicely", _state, {_, :please}), do: true
   end
 
   def higher_order_guard_machine_2 do

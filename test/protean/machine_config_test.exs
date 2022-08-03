@@ -34,7 +34,7 @@ defmodule Protean.MachineConfigTest do
           after: [
             [
               delay: 1000,
-              when: "some_condition",
+              guard: "some_condition",
               target: "c"
             ],
             [
@@ -53,7 +53,7 @@ defmodule Protean.MachineConfigTest do
             Action.invoke(:cancel, "$protean.after.2000-#")
           ],
           on: [
-            {"$protean.after.1000-#", target: "c", when: "some_condition"},
+            {"$protean.after.1000-#", target: "c", guard: "some_condition"},
             {"$protean.after.2000-#", target: "c"}
           ]
         ]

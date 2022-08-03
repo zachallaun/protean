@@ -22,7 +22,7 @@ end
 
 defimpl Protean.Guard, for: BitString do
   def allows?(name, state, event, handler) do
-    handler.condition(name, state, event)
+    handler.guard(name, state, event)
   end
 end
 

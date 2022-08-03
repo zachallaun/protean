@@ -16,9 +16,9 @@ defmodule ProteanIntegration.ChooseTest do
               "make_a_choice",
               actions: [
                 Action.choose([
-                  {"set_data_a", when: "switch_on"},
-                  {"set_data_b", when: "switch_off"},
-                  {"set_data_d", when: "switch_off"},
+                  {"set_data_a", guard: "switch_on"},
+                  {"set_data_b", guard: "switch_off"},
+                  {"set_data_d", guard: "switch_off"},
                   "set_data_c"
                 ])
               ]
@@ -44,15 +44,15 @@ defmodule ProteanIntegration.ChooseTest do
 
     def action("make_a_choice", state, _event) do
       Action.choose(state, [
-        {"set_data_a", when: "switch_on"},
-        {"set_data_b", when: "switch_off"},
-        {"set_data_d", when: "switch_off"},
+        {"set_data_a", guard: "switch_on"},
+        {"set_data_b", guard: "switch_off"},
+        {"set_data_d", guard: "switch_off"},
         "set_data_c"
       ])
     end
 
     @impl Protean
-    def condition("switch_" <> value, %{context: %{switch: value}}, _event), do: true
+    def guard("switch_" <> value, %{context: %{switch: value}}, _event), do: true
   end
 
   describe "choose action" do

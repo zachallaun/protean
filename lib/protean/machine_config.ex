@@ -252,7 +252,7 @@ defmodule Protean.MachineConfig do
       target_ids: target_ids,
       match?: matcher,
       actions: parse_actions(transition[:actions]),
-      guard: parse_guard(transition[:when])
+      guard: parse_guard(transition[:guard])
     }
     |> add_internal(target_ids, transition[:internal])
   end

@@ -104,13 +104,13 @@ defmodule Protean do
             on: [
               {
                 {:user_commit, _},
-                when: "user_valid?",
+                guard: "user_valid?",
                 actions: ["broadcast"],
                 target: "viewing_user"
               },
               {
                 {:user_commit, _},
-                when: {:not, "user_valid?"},
+                guard: {:not, "user_valid?"},
                 actions: ["show_invalid_user_error"]
               }
             ]
@@ -119,11 +119,11 @@ defmodule Protean do
       )
 
       @impl Protean
-      def condition("user_valid?", state, {_, user}) do
+      def guard("user_valid?", state, {_, user}) do
         User.changeset(%User{}, user).valid?
       end
   """
-  @callback condition(Action.name(), State.t(), event) :: boolean()
+  @callback guard(Action.name(), State.t(), event) :: boolean()
 
   defmacro __using__(opts) do
     unless __CALLER__.module do
