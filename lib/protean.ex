@@ -241,7 +241,7 @@ defmodule Protean do
   defdelegate ping(pid), to: Server
 
   @doc """
-  Returns true if the given machine state is in the given state.
+  Returns true if the machine is currently in the given state.
 
   Note that calling `matches?/2` on a machine process is a synchronous operation that is
   equivalent to:
