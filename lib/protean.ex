@@ -24,6 +24,7 @@ defmodule Protean do
   @type interpreter_option ::
           {:machine, Protean.MachineConfig.t()}
           | {:module, module()}
+          | {:context, State.context()}
           | {:parent, server | pid()}
           | {:supervisor, Supervisor.name()}
 
@@ -206,6 +207,8 @@ defmodule Protean do
 
   ## Options
 
+    * `:context` - context map that will be merged into the default context defined by the
+      machine.
     * `:machine` - defaults to `module.machine()` - `%Protean.MachineConfig{}` that will be
       executed by the Protean interpreter.
     * `:module` - defaults to `module` - callback module used for actions, guards, invoke,

@@ -55,10 +55,12 @@ defmodule Protean.Interpreter do
   @spec new([Protean.intepreter_option()]) :: Interpreter.t()
   def new(opts) do
     config = Keyword.fetch!(opts, :machine)
+    state = MachineConfig.initial_state(config)
+    initial_context = Keyword.get(opts, :context, %{})
 
     %Interpreter{
       config: config,
-      state: MachineConfig.initial_state(config),
+      state: State.assign(state, initial_context),
       parent: Keyword.get(opts, :parent),
       supervisor: Keyword.get(opts, :supervisor)
     }

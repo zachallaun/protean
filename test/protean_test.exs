@@ -162,4 +162,31 @@ defmodule ProteanTest do
   test "otp callbacks only defined if defmachine/1 is used" do
     refute Kernel.function_exported?(Outer, :start_link, 1)
   end
+
+  defmodule DefaultContext do
+    use Protean
+
+    defmachine(
+      context: %{data: :foo},
+      initial: "init",
+      states: [init: []]
+    )
+  end
+
+  describe "machines with context:" do
+    test "started with default context" do
+      {:ok, pid} = DefaultContext.start_link()
+      assert Protean.current(pid).context == %{data: :foo}
+    end
+
+    test "started with replacement context" do
+      {:ok, pid} = DefaultContext.start_link(context: %{data: :bar})
+      assert Protean.current(pid).context == %{data: :bar}
+    end
+
+    test "started with added context" do
+      {:ok, pid} = DefaultContext.start_link(context: %{bar: :baz})
+      assert Protean.current(pid).context == %{data: :foo, bar: :baz}
+    end
+  end
 end
