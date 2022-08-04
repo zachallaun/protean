@@ -30,10 +30,11 @@ defmodule Protean do
   @type subscribe_option :: {:monitor, boolean()}
 
   @doc """
-  Used to define invoked services at runtime. Returns a value or child spec usable by the invoke
-  type.
+  Callback for invoked processes specified during machine execution.
 
-  ### Example
+  Should return a value or child specification for the type of process being invoked.
+
+  ## Example
 
       defmachine(
         # ...
@@ -42,60 +43,65 @@ defmodule Protean do
           awaiting_task: [
             invoke: [
               task: "my_task",
-              done: "task_complete"
+              done: "completed"
             ]
           ],
-          task_complete: [
+          completed: [
             # ...
           ]
         ]
       )
 
       @impl Protean
-      def invoke("my_task", _state, {"trigger", data}) do
-        {__MODULE__, :run_task, [data]}
+      def invoke("my_task", _state, event_data) do
+        {__MODULE__, :run_my_task, [event_data]}
       end
+
   """
   @callback invoke(action :: term(), State.t(), event) :: term()
 
   @doc """
-  Used to execute actions in response to machine transitions.
+  Callback for actions specified in response to a transition.
 
   Receives the current machine state and event triggering the action as arguments and must return
   the machine state. It is possible to attach actions to the machine state to indicate that they
   should be performed immediately following this action. See `Protean.Action`.
 
-  ### Example
+  ## Example
 
       defmachine(
         # ...
-        states: [
-          # ...
-          state: [
-            on: [
-              {{:data, _any}, target: "data_received", actions: "assign_and_send_data"}
-            ]
-          ]
+        on: [
+          {
+            {:data, _any},
+            target: :data_received,
+            actions: [:assign_data, :broadcast_data]
+          }
         ]
       )
 
       @impl Protean
-      def action("assign_and_send_data", state, {:data, data}) do
-        %{service: pid} = state.context
+      def action(:assign_data, state, {:data, data}) do
+        state
+        |> Protean.Action.assign(:last_received, data)
+      end
+
+      def action(:broadcas_data, state, _) do
+        %{notify: pid, last_received: data} = state.context
 
         PubSub.broadcast!(@pubsub, @topic, data)
 
         state
-        |> Protean.Action.send({"data_received", data}, to: pid)
-        |> Protean.Action.assign(:last_received_data, data)
+        |> Protean.Action.send({:data, data}, to: pid)
       end
+
   """
   @callback action(action :: term(), State.t(), event) :: State.t()
 
   @doc """
-  Used to determine whether a transition should take place.
+  Callback to determine whether a conditional transition should occur.
 
-  ### Example
+  ## Example
 
       defmachine(
         # ...
@@ -104,13 +110,13 @@ defmodule Protean do
             on: [
               {
                 {:user_commit, _},
-                guard: "user_valid?",
+                guard: :valid_user?,
                 actions: ["broadcast"],
                 target: "viewing_user"
               },
               {
                 {:user_commit, _},
-                guard: {:not, "user_valid?"},
+                guard: {:not, :valid_user?},
                 actions: ["show_invalid_user_error"]
               }
             ]
@@ -119,21 +125,52 @@ defmodule Protean do
       )
 
       @impl Protean
-      def guard("user_valid?", state, {_, user}) do
+      def guard(:valid_user?, state, {_, user}) do
         User.changeset(%User{}, user).valid?
       end
+
   """
   @callback guard(action :: term(), State.t(), event) :: boolean()
 
-  defmacro __using__(opts) do
+  defmodule ConfigError do
+    defexception [:message]
+  end
+
+  @doc false
+  defmacro __using__(_opts) do
     unless __CALLER__.module do
       raise "`use Protean` outside of a module definition is not currently supported"
     end
 
     quote generated: true, location: :keep do
-      use Protean.Macros, unquote(opts)
-      :ok
+      import Protean, only: [defmachine: 1]
+      @behaviour Protean
+      @before_compile Protean
     end
+  end
+
+  @doc false
+  defmacro __before_compile__(_env) do
+    unless Module.defines?(__CALLER__.module, {:machine, 0}, :def) do
+      raise ConfigError,
+        message: "Protean machine definition not found. See `Protean.defmachine/1`."
+    end
+
+    [
+      def_default_impls(),
+      def_default_otp()
+    ]
+  end
+
+  @doc """
+  Defines a Protean machine.
+
+  TODO: Full config docs
+  """
+  defmacro defmachine(config) do
+    config
+    |> with_event_matchers()
+    |> make_machine_function()
   end
 
   @doc """
@@ -301,5 +338,66 @@ defmodule Protean do
 
   def matches?(protean, descriptor) do
     Server.matches?(protean, descriptor)
+  end
+
+  # Internal helpers
+
+  defp with_event_matchers(config) do
+    Macro.prewalk(config, fn
+      {:on, transitions} ->
+        {:on,
+         Enum.map(transitions, fn {pattern, transition} ->
+           {make_match_fun(pattern), transition}
+         end)}
+
+      other ->
+        other
+    end)
+  end
+
+  defp make_match_fun(pattern) do
+    quote(do: fn expr -> match?(unquote(pattern), expr) end)
+  end
+
+  defp make_machine_function(config) do
+    quote location: :keep do
+      def machine do
+        Protean.MachineConfig.new(unquote(config), callback_module: __MODULE__)
+      end
+    end
+  end
+
+  defp def_default_impls do
+    quote generated: true, location: :keep do
+      @impl Protean
+      def action(_, _, _), do: nil
+
+      @impl Protean
+      def invoke(_, _, _), do: nil
+
+      @impl Protean
+      def guard(_, _, _), do: false
+    end
+  end
+
+  defp def_default_otp do
+    quote generated: true, location: :keep do
+      def child_spec(opts) do
+        {id, opts} = Keyword.pop(opts, :id, __MODULE__)
+
+        spec = %{
+          id: id,
+          start: {__MODULE__, :start_link, [opts]}
+        }
+
+        Supervisor.child_spec(spec, [])
+      end
+
+      def start_link(opts \\ []) do
+        Protean.start_link(__MODULE__, opts)
+      end
+
+      defoverridable child_spec: 1, start_link: 1
+    end
   end
 end
