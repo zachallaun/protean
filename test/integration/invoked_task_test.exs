@@ -172,7 +172,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
   describe "ResolvedTaskInvoke:" do
     @describetag machine: ResolvedTaskInvoke
 
-    test "tasks can be resolved by handlers", %{machine: machine} do
+    test "tasks can be resolved by callback module", %{machine: machine} do
       assert_protean(machine,
         sleep: 30,
         matches: "success"

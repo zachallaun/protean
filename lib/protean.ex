@@ -17,13 +17,14 @@ defmodule Protean do
   @typedoc "Any message sent to a Protean machine."
   @type event :: term()
 
-  @typedoc "Option values for `start*` functions."
-  @type option ::
-          {:machine, Protean.Machine.t()}
-          | {:handler, module()}
+  @type interpreter_option ::
+          {:machine, Protean.MachineConfig.t()}
+          | {:module, module()}
           | {:parent, server | pid()}
           | {:supervisor, Supervisor.name()}
-          | GenServer.option()
+
+  @typedoc "Option values for `start*` functions."
+  @type option :: interpreter_option | GenServer.option()
 
   @typedoc "Options for `subscribe/2`."
   @type subscribe_option :: {:monitor, boolean()}
@@ -146,9 +147,9 @@ defmodule Protean do
 
   ## Options
 
-    * `:machine` - defaults to `module.machine()` - `%Protean.Machine{}` that will be
+    * `:machine` - defaults to `module.machine()` - `%Protean.MachineConfig{}` that will be
       executed by the Protean interpreter.
-    * `:handler` - defaults to `module` - callback module used for actions, guards, invoke,
+    * `:module` - defaults to `module` - callback module used for actions, guards, invoke,
       etc. See "Callbacks".
     * `:parent` - defaults to `self()` - process id of the parent that will receive events from
       the machine if a `Protean.Action.send(..., to: :parent)` action is used or when the machine
@@ -162,7 +163,7 @@ defmodule Protean do
   def start_link(module, opts \\ []) do
     defaults = [
       machine: opts[:machine] || module.machine(),
-      handler: module,
+      module: module,
       parent: self(),
       supervisor: Protean.Supervisor
     ]

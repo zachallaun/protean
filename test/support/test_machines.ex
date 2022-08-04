@@ -1,7 +1,7 @@
 defmodule TestMachines do
   alias Protean.Action
   alias Protean.Interpreter
-  alias Protean.Machine
+  alias Protean.MachineConfig
 
   def with_test_machine(%{machine: machine} = context) do
     context
@@ -19,23 +19,22 @@ defmodule TestMachines do
     machine = apply(TestMachines, machine, [])
 
     case machine do
-      %Machine{} = machine ->
-        %{machine: machine, initial: Machine.initial_state(machine)}
+      %MachineConfig{} = config ->
+        %{machine: config, initial: MachineConfig.initial_state(config)}
 
       module when is_atom(module) ->
-        machine = module.machine()
+        config = module.machine()
 
         %{
-          machine: machine,
-          handler: module,
-          initial: Machine.initial_state(machine),
-          interpreter: Interpreter.new(machine: machine, handler: module)
+          machine: config,
+          initial: MachineConfig.initial_state(config),
+          interpreter: Interpreter.new(machine: config)
         }
     end
   end
 
   def simple_machine_1 do
-    Protean.Machine.new(
+    Protean.MachineConfig.new(
       type: :compound,
       initial: :state_a,
       states: [
@@ -55,7 +54,7 @@ defmodule TestMachines do
   end
 
   def simple_machine_2 do
-    Protean.Machine.new(
+    Protean.MachineConfig.new(
       initial: :state_a,
       states: [
         state_a: [
@@ -86,7 +85,7 @@ defmodule TestMachines do
   end
 
   def parallel_machine_1 do
-    Protean.Machine.new(
+    Protean.MachineConfig.new(
       type: :parallel,
       states: [
         state_a: [],
@@ -96,7 +95,7 @@ defmodule TestMachines do
   end
 
   def machine_with_actions_1 do
-    Protean.Machine.new(
+    Protean.MachineConfig.new(
       initial: :state_a,
       states: [
         state_a: [
@@ -128,7 +127,7 @@ defmodule TestMachines do
   end
 
   def parallel_machine_with_actions_1 do
-    Protean.Machine.new(
+    Protean.MachineConfig.new(
       initial: :parallel_state_a,
       states: [
         parallel_state_a: [

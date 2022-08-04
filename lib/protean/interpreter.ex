@@ -6,13 +6,13 @@ defmodule Protean.Interpreter do
   alias __MODULE__
   alias Protean.Action
   alias Protean.Events
-  alias Protean.Machine
+  alias Protean.MachineConfig
+  alias Protean.Machinery
   alias Protean.State
 
   defstruct [
-    :machine,
+    :config,
     :state,
-    :handler,
     :parent,
     :supervisor,
     running: false,
@@ -22,9 +22,8 @@ defmodule Protean.Interpreter do
   ]
 
   @type t :: %Interpreter{
-          machine: Machine.t(),
+          config: MachineConfig.t(),
           state: State.t(),
-          handler: module(),
           parent: pid(),
           supervisor: Supervisor.supervisor(),
           running: boolean(),
@@ -43,13 +42,6 @@ defmodule Protean.Interpreter do
             interpreter_alias: reference()
           }
 
-  @type options :: [option]
-  @type option ::
-          {:machine, Machine.t()}
-          | {:handler, module()}
-          | {:parent, GenServer.server()}
-          | {:supervisor, Supervisor.supervisor()}
-
   # Partial Access behaviour (not defining `pop/2`)
   @doc false
   def fetch(interpreter, key), do: Map.fetch(interpreter, key)
@@ -60,14 +52,13 @@ defmodule Protean.Interpreter do
   Create a new `Interpreter`. The returned interpreter will still need to be started, which could
   result in additional side-effects. See `start/1`.
   """
-  @spec new(options) :: Interpreter.t()
+  @spec new([Protean.intepreter_option()]) :: Interpreter.t()
   def new(opts) do
-    machine = Keyword.fetch!(opts, :machine)
+    config = Keyword.fetch!(opts, :machine)
 
     %Interpreter{
-      machine: machine,
-      state: Machine.initial_state(machine),
-      handler: Keyword.fetch!(opts, :handler),
+      config: config,
+      state: MachineConfig.initial_state(config),
       parent: Keyword.get(opts, :parent),
       supervisor: Keyword.get(opts, :supervisor)
     }
@@ -276,13 +267,13 @@ defmodule Protean.Interpreter do
   end
 
   @spec select_automatic_transitions(t) :: [Transition.t()]
-  defp select_automatic_transitions(%{machine: machine, state: state}) do
-    Machine.select_automatic_transitions(machine, state)
+  defp select_automatic_transitions(%{config: machine, state: state}) do
+    Machinery.select_automatic_transitions(machine, state)
   end
 
   @spec select_transitions(t, Protean.event()) :: [Transition.t()]
-  defp select_transitions(%{machine: machine, state: state}, event) do
-    Machine.select_transitions(machine, state, event)
+  defp select_transitions(%{config: machine, state: state}, event) do
+    Machinery.select_transitions(machine, state, event)
   end
 
   @spec autoforward_event(t, Protean.event()) :: t
@@ -317,16 +308,16 @@ defmodule Protean.Interpreter do
 
   # A microstep fully processes a set of transitions, updating the state configuration and
   # executing any resulting actions.
-  defp microstep(transitions, %Interpreter{state: state, machine: machine} = interpreter) do
+  defp microstep(transitions, %Interpreter{state: state, config: machine} = interpreter) do
     {actions, state} =
       machine
-      |> Machine.take_transitions(state, transitions)
+      |> Machinery.take_transitions(state, transitions)
       |> State.pop_actions()
 
     final_states =
       state.value
       |> MapSet.difference(interpreter.state.value)
-      |> Machine.final_ancestors(machine, state)
+      |> Machinery.final_ancestors(machine, state)
 
     final_states
     |> Enum.map(&Events.platform(:done, &1))

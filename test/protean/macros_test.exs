@@ -1,26 +1,26 @@
 defmodule Protean.MacrosTest do
   use ExUnit.Case
 
-  alias Protean.Machine
+  alias Protean.MachineConfig
 
   defmodule MachineAsAttribute do
     use Protean
 
-    defmachine [
+    defmachine(
       initial: :a,
       states: [a: []]
-    ]
+    )
   end
 
   test "machines can be specified with defmachine" do
-    assert %Machine{} = MachineAsAttribute.machine()
+    assert %MachineConfig{} = MachineAsAttribute.machine()
   end
 
   defmodule MachineAsFunction do
     use Protean
 
     def machine do
-      Protean.Machine.new(
+      Protean.MachineConfig.new(
         initial: :a,
         states: [a: []]
       )
@@ -28,13 +28,13 @@ defmodule Protean.MacrosTest do
   end
 
   test "machines can be specified in a function" do
-    assert %Machine{} = MachineAsAttribute.machine()
+    assert %MachineConfig{} = MachineAsAttribute.machine()
   end
 
   defmodule InlineFunctionAttribute do
     use Protean
 
-    defmachine [
+    defmachine(
       context: %{},
       initial: :a,
       states: [
@@ -44,10 +44,10 @@ defmodule Protean.MacrosTest do
           ]
         ]
       ]
-    ]
+    )
   end
 
   test "machines specified with defmachine allow inline functions" do
-    assert %Machine{} = InlineFunctionAttribute.machine()
+    assert %MachineConfig{} = InlineFunctionAttribute.machine()
   end
 end

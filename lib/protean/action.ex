@@ -86,15 +86,16 @@ defmodule Protean.Action do
   import Kernel, except: [send: 2]
 
   alias Protean.Events
-  alias Protean.Interpreter
   alias Protean.Guard
+  alias Protean.Interpreter
   alias Protean.State
 
   @typedoc """
-  An action is a 2-element tuple, where `handler` implements the `Protean.Action` behaviour and
-  `action_arg` is an argument that will be passed back to the handler during execution.
+  An action is a 2-element tuple, where `action_module` implements the `Protean.Action`
+  behaviour and `action_arg` is an argument that will be passed back to the module during
+  execution.
   """
-  @type action :: {handler :: module(), action_arg :: term()}
+  @type action :: {action_module :: module(), action_arg :: term()}
 
   @type exec_action_return ::
           {:cont, Interpreter.t()}
@@ -114,13 +115,13 @@ defmodule Protean.Action do
 
   @doc "Executes an action given an interpreter. See `c:exec_action/2`."
   @spec exec(action | term(), Interpreter.t()) :: exec_action_return
-  def exec({handler, arg}, interpreter) do
-    case handler.exec_action(arg, interpreter) do
+  def exec({module, arg}, interpreter) do
+    case module.exec_action(arg, interpreter) do
       {:cont, interpreter, []} -> {:cont, interpreter}
       {:cont, interpreter, actions} when is_list(actions) -> {:cont, interpreter, actions}
       {:cont, interpreter} -> {:cont, interpreter}
       {:halt, interpreter} -> {:halt, interpreter}
-      other -> raise "Unknown return from #{inspect(handler)}.exec_action/2: #{inspect(other)}"
+      other -> raise "Unknown return from #{inspect(module)}.exec_action/2: #{inspect(other)}"
     end
   end
 
@@ -228,9 +229,9 @@ defmodule Protean.Action do
   # Action callbacks
 
   def exec_action({:delegate, action}, interpreter) do
-    %{state: state, handler: handler} = interpreter
+    %{state: state, config: config} = interpreter
 
-    case handler.action(action, state, state.event) do
+    case config.callback_module.action(action, state, state.event) do
       nil -> {:cont, interpreter}
       %State{} = state -> {:cont, interpreter, State.actions(state)}
     end
@@ -296,9 +297,9 @@ defmodule Protean.Action do
   end
 
   def exec_action({:invoke, invoke_type, name, id, opts}, interpreter) when is_binary(name) do
-    %{state: state, handler: handler} = interpreter
+    %{state: state, config: config} = interpreter
 
-    to_invoke = handler.invoke(name, state, state.event)
+    to_invoke = config.callback_module.invoke(name, state, state.event)
 
     exec_action({:invoke, invoke_type, to_invoke, id, opts}, interpreter)
   end
@@ -377,8 +378,8 @@ defmodule Protean.Action do
   end
 
   defp guard_allows?({_, guard: guard}, interpreter) do
-    %{state: state, handler: handler} = interpreter
-    Guard.allows?(guard, state, state.event, handler)
+    %{state: state, config: config} = interpreter
+    Guard.allows?(guard, state, state.event, config.callback_module)
   end
 
   defp guard_allows?(_, _), do: true

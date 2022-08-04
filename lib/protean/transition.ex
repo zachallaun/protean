@@ -37,9 +37,9 @@ defmodule Protean.Transition do
   @doc """
   Checks whether the transition is enabled for the given event.
   """
-  @spec enabled?(t, Protean.event() | nil, State.t(), handler :: module()) :: boolean()
-  def enabled?(transition, event, state, handler) do
-    matches?(transition, event) && guard_allows?(transition, state, event, handler)
+  @spec enabled?(t, Protean.event() | nil, State.t(), callback_module :: module()) :: boolean()
+  def enabled?(transition, event, state, module) do
+    matches?(transition, event) && guard_allows?(transition, state, event, module)
   end
 
   defp matches?(%Transition{match?: nil}, _), do: true
@@ -49,7 +49,7 @@ defmodule Protean.Transition do
 
   defp guard_allows?(%Transition{guard: nil}, _, _, _), do: true
 
-  defp guard_allows?(%Transition{guard: guard}, state, event, handler) do
-    Guard.allows?(guard, state, event, handler)
+  defp guard_allows?(%Transition{guard: guard}, state, event, module) do
+    Guard.allows?(guard, state, event, module)
   end
 end

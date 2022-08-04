@@ -1,20 +1,11 @@
 defmodule Protean.State do
-  @moduledoc """
-  The Protean machine state.
-
-  A `%Protean.State{}` struct encompasses the current state of a machine, including its state
-  configuration (value), the event that triggered a transition to this state, the current context
-  (extended state), and other private state used internally by Protean.
-
-  Additionally, the action callback `c:pure/3` receives and returns state to update the context
-  and schedule side-effects. See `Protean.Action`.
-  """
+  @moduledoc false
 
   alias __MODULE__
   alias Protean.Action
   alias Protean.Node
 
-  @derive {Inspect, only: [:value, :event, :context, :response]}
+  @derive {Inspect, only: [:value, :event, :context]}
   defstruct [
     :value,
     :event,
@@ -83,6 +74,18 @@ defmodule Protean.State do
     |> Enum.reverse()
   end
 
+  @doc "Assign a new set of active states."
+  @spec assign_active(t, [Node.t(), ...]) :: State.t()
+  @spec assign_active(t, [Node.id(), ...]) :: State.t()
+  def assign_active(state, [%Node{} | _] = nodes) do
+    node_ids = Enum.map(nodes, & &1.id)
+    %{state | value: MapSet.new(node_ids)}
+  end
+
+  def assign_active(state, ids) do
+    %{state | value: MapSet.new(ids)}
+  end
+
   @doc """
   Assign data to a state's context.
 
@@ -123,10 +126,6 @@ defmodule Protean.State do
   @doc false
   def pop_actions(state),
     do: {actions(state), assign_actions(state)}
-
-  @doc false
-  def assign_value(state, value),
-    do: %{state | value: MapSet.new(value)}
 
   @doc false
   def put_answer(state, answer),

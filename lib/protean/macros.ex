@@ -54,7 +54,7 @@ defmodule Protean.Macros do
   defp make_machine_function(config) do
     quote location: :keep do
       def machine do
-        Protean.Machine.new(unquote(config), handler: __MODULE__)
+        Protean.MachineConfig.new(unquote(config), callback_module: __MODULE__)
       end
     end
   end

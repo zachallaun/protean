@@ -25,6 +25,8 @@ defmodule Protean.Node do
   """
   @type t :: atomic | final | compound | parallel
 
+  @type nodes :: [t]
+
   @typedoc """
   A leaf Node is one that cannot have child states.
   """
@@ -150,6 +152,18 @@ defmodule Protean.Node do
   @spec root?(id) :: id
   def root?([_]), do: true
   def root?(_), do: false
+
+  @doc "Sort the given nodes in entry order."
+  @spec entry_order(nodes) :: nodes
+  def entry_order(nodes) do
+    Enum.sort_by(nodes, & &1.order, :asc)
+  end
+
+  @doc "Sort the given nodes in exit order."
+  @spec exit_order(nodes) :: nodes
+  def exit_order(nodes) do
+    Enum.sort_by(nodes, & &1.order, :desc)
+  end
 
   @doc """
   Tests whether `descendant_id` is in fact a descendant of `ancestor_id`.

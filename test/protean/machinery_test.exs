@@ -1,7 +1,7 @@
-defmodule Protean.MachineTest do
+defmodule Protean.MachineryTest do
   use ExUnit.Case
 
-  alias Protean.Machine
+  alias Protean.Machinery
 
   setup context do
     TestMachines.with_test_machine(context)
@@ -10,34 +10,21 @@ defmodule Protean.MachineTest do
   describe "simple compound machine" do
     @describetag machine: :simple_machine_1
 
-    test "has an initial state", %{machine: machine} do
-      assert %Protean.State{} = Machine.initial_state(machine)
-    end
-
     test "ignores unknown events", %{machine: machine, initial: initial} do
-      maybe_different = Machine.transition(machine, initial, "UNKNOWN_EVENT")
+      maybe_different = Machinery.transition(machine, initial, "UNKNOWN_EVENT")
       assert maybe_different == initial
     end
 
     test "transitions to atomic nodes", %{machine: machine, initial: initial} do
-      next = Machine.transition(machine, initial, :event_a)
+      next = Machinery.transition(machine, initial, :event_a)
       assert next.value == MapSet.new([["state_b", "#"]])
     end
   end
 
   @tag machine: :simple_machine_2
   test "transitions when parent responds to event", %{machine: machine, initial: initial} do
-    next = Machine.transition(machine, initial, :event_a)
+    next = Machinery.transition(machine, initial, :event_a)
     assert next.value == MapSet.new([["state_b", "#"]])
-  end
-
-  describe "simple parallel machine" do
-    @describetag machine: :parallel_machine_1
-
-    test "has an initial state", %{machine: machine} do
-      assert Machine.initial_state(machine).value ==
-               MapSet.new([["state_a", "#"], ["state_b", "#"]])
-    end
   end
 
   describe "machine with basic actions" do
@@ -51,7 +38,7 @@ defmodule Protean.MachineTest do
       machine: machine,
       initial: initial
     } do
-      state = Machine.transition(machine, initial, :event_a)
+      state = Machinery.transition(machine, initial, :event_a)
       assert state.value == MapSet.new([["state_b", "#"]])
       assert state.private.actions == ["entry_a", "exit_a", "event_a_action", "entry_b"]
     end
@@ -71,7 +58,7 @@ defmodule Protean.MachineTest do
     end
 
     test "can transition within a parallel state", %{machine: machine, initial: initial} do
-      state = Machine.transition(machine, initial, :foo_event)
+      state = Machinery.transition(machine, initial, :foo_event)
 
       assert state.value ==
                MapSet.new([
