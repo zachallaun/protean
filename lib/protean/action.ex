@@ -1,15 +1,86 @@
 defmodule Protean.Action do
   @moduledoc """
-  Protean manages state, processes, and side-effects through the execution of _actions_, which
-  are data descriptors of things that should happen as a part of the machine lifecycle.
+  Protean manages state, processes, and side-effects through **actions**, data structures
+  describing things that should occur as a result of a transition.
 
-  Protean actions are `{module, arg}` tuples where the module is expected to implement
-  `c:exec_action/2` defined by this module. However, Protean defines action creators and
-  additional syntax sugar such that fully custom actions should be rare.
+  When a Protean machine transitions from one state to the next (or even "self-transitions" back
+  to the same state), the interpreter collects any actions that should be performed as a result
+  of that transition. Actions are then executed in a specific order:
 
-  ### Actions
+  * Exit actions - Any `:exit` actions specified on states that are exiting as a result of the
+    transition.
+  * Transition actions - Any `:actions` specified on the transition that responded to the event.
+  * Entry actions - Any `:entry` actions specified on the states being entered.
 
-  See individual action documentation below for details.
+  The execution of an action can change the state of the machine (it's context, for example), or
+  run some side-effect (like broadcasting a PubSub message). Action execution can additionally
+  produce more actions that will be executed immediately before moving onto the next top-level
+  action as described above.
+
+  ## High-level API
+
+  The most common way to use actions is through the `c:Protean.action/3` callback. This callback
+  is run when an action is specified like this:
+
+      [
+        # ...
+        on: [
+          {:some_event, actions: [:first_action, :second_action]}
+        ]
+      ]
+
+  These are then handled in callbacks:
+
+      @impl Protean
+      def action(:first_action, state, _event) do
+        # ...
+        state
+      end
+
+      def action(:second_action, state, _event) do
+        # ...
+        state
+      end
+
+  Action callbacks must always return the machine state, but they can attach actions to that
+  state that will be immediately executed by the interpreter. For instance:
+
+      def action(:update_data, state, {:data_updated, changes}) do
+        state
+        |> Action.assign_in([:data], &Map.merge(&1, changes))
+      end
+
+  In this case, `assign_in/3` is being used to update some data in the machine `:context`.
+  But, we could perform additional actions if we wish, such as:
+
+      def action(:update_data, state, {:data_updated, changes}) do
+        %{topic: topic, other_process: pid, data: data} = state.context
+        new_data = Map.merge(data, changes)
+
+        PubSub.broadcast!(@pubsub, topic, {:data_updated, changes})
+
+        state
+        |> Action.send({:data_commited, new_data}, to: pid)
+        |> Action.assign(:data, new_data)
+      end
+
+  Note: Best practice is to let the interpreter execute as many actions as possible, as opposed to
+  performing explicit side-effects in the callback. This is because actions can potentially halt
+  the execution of any remaining actions, but side-effects executed in the callback will occur
+  before any of the returned actions can be executed.
+
+  `Protean.Action` provides a number of helpers for specifying actions. See individual function
+  documentation for more.
+
+  ## Low-level API: the action behaviour
+
+  Ultimately, all actions are resolving to `t:action()`, a two-element tuple of a module and an
+  argument. The module is expected to implement the `Protean.Action` behaviour (see "Callbacks").
+
+  Many of Protean's more "dynamic" features boil down to syntax sugar over actions, including
+  `:invoke` and delayed transitions using `:after`. Modules implementing the action behaviour
+  have direct access to the interpreter and therefore must be careful, well, not to muck anything
+  up.
   """
 
   import Kernel, except: [send: 2]
@@ -58,6 +129,11 @@ defmodule Protean.Action do
     |> delegate()
     |> exec(interpreter)
   end
+
+  @doc "TODO"
+  @doc type: :action
+  @spec put(State.t(), action) :: State.t()
+  def put(%State{} = state, {_mod, _arg} = action), do: put_action(action, state)
 
   @doc "TODO"
   @doc type: :action
