@@ -214,7 +214,7 @@ In the above example, any processes that are spawned by the Protean interpreter 
 
 ## Documentation
 
-Documentation can be found [on hexdocs](https://hexdocs.pm/protean/readme.html).
+Documentation can be found [on hexdocs](https://hexdocs.pm/protean/).
 Things are changing pretty regularly, however, and some documentation is certainly out-of-sync.
 
 ## Todo
@@ -231,6 +231,7 @@ Things are changing pretty regularly, however, and some documentation is certain
 - [ ] Fix all "FIXME"
 - [ ] Fix all "TODO"
 - [ ] Stricter machine config parsing with helpful error messages
+- [ ] Differentiate between internal and external events (internal events should not trigger catch-all )
 
 ## Installation
 
