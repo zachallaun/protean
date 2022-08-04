@@ -11,6 +11,7 @@ defmodule Protean do
   alias Protean.Interpreter.Server
   alias Protean.State
 
+  @protean_self :"$protean.self"
   @protean_options :"$protean.options"
   @allowed_options [:callback_module]
 
@@ -152,7 +153,7 @@ defmodule Protean do
     Module.put_attribute(__CALLER__.module, @protean_options, opts)
 
     quote do
-      import Protean, only: [defmachine: 1]
+      import Protean, only: [defmachine: 1, defmachine: 2]
       @behaviour Protean
       @before_compile Protean
     end
@@ -173,14 +174,25 @@ defmodule Protean do
 
   TODO: Full config docs
   """
-  defmacro defmachine(config) do
+  defmacro defmachine(name \\ @protean_self, config) do
     opts = Module.get_attribute(__CALLER__.module, @protean_options)
-
     callback_module = Keyword.get(opts, :callback_module, __CALLER__.module)
 
-    config
-    |> with_event_matchers()
-    |> make_machine_function(callback_module)
+    machine_function =
+      config
+      |> with_event_matchers()
+      |> make_machine_function(callback_module)
+
+    if name === @protean_self do
+      machine_function
+    else
+      quote do
+        defmodule unquote(name) do
+          use Protean
+          unquote(machine_function)
+        end
+      end
+    end
   end
 
   @doc """
@@ -370,7 +382,7 @@ defmodule Protean do
   end
 
   defp make_machine_function(config, callback_module) do
-    quote location: :keep do
+    quote do
       def machine do
         Protean.MachineConfig.new(unquote(config), callback_module: unquote(callback_module))
       end

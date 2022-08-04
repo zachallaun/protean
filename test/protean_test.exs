@@ -116,11 +116,50 @@ defmodule ProteanTest do
     end
   end
 
-  @tag here: true
   @tag machine: MachineWithoutCallbacks
   test "separate callback_module can be specified", %{machine: machine} do
     assert_protean(machine,
       context: [data: :foo]
     )
+  end
+
+  defmodule Outer do
+    use Protean
+
+    defmachine(Inner1,
+      initial: "init",
+      states: [
+        init: [
+          entry: :first_action
+        ]
+      ]
+    )
+
+    defmachine(Inner2,
+      initial: "init",
+      states: [
+        init: [
+          entry: :second_action
+        ]
+      ]
+    )
+
+    @impl true
+    def action(action, state, _) do
+      state
+      |> Protean.Action.assign(:data, action)
+    end
+  end
+
+  @tag machines: [Outer.Inner1, Outer.Inner2]
+  test "defmachine/2 defines nested modules with a shared callback module", context do
+    [%{machine: inner1}, %{machine: inner2}] = context[:machines]
+
+    assert_protean(inner1, context: [data: :first_action])
+    assert_protean(inner2, context: [data: :second_action])
+  end
+
+  test "otp callbacks only defined if defmachine/1 is used" do
+    refute Kernel.function_exported?(Outer, :start_link, 1)
   end
 end
