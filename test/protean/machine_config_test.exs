@@ -2,10 +2,13 @@ defmodule Protean.MachineConfigTest do
   use ExUnit.Case
 
   alias Protean.Action
+  alias Protean.Events
   alias Protean.MachineConfig
 
   describe "delayed transition syntax:" do
     test "single transition" do
+      platform_event = Events.platform(:after, {["#"], 2000})
+
       [
         [
           after: [
@@ -15,13 +18,13 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.invoke(:delayed_send, "$protean.after.2000-#", 2000)
+            Action.invoke(:delayed_send, platform_event, 2000)
           ],
           exit: [
-            Action.invoke(:cancel, "$protean.after.2000-#")
+            Action.invoke(:cancel, platform_event)
           ],
           on: [
-            {"$protean.after.2000-#", target: "b"}
+            {platform_event, target: "b"}
           ]
         ]
       ]
@@ -45,16 +48,16 @@ defmodule Protean.MachineConfigTest do
         ],
         [
           entry: [
-            Action.invoke(:delayed_send, "$protean.after.1000-#", 1000),
-            Action.invoke(:delayed_send, "$protean.after.2000-#", 2000)
+            Action.invoke(:delayed_send, Events.platform(:after, {["#"], 1000}), 1000),
+            Action.invoke(:delayed_send, Events.platform(:after, {["#"], 2000}), 2000)
           ],
           exit: [
-            Action.invoke(:cancel, "$protean.after.1000-#"),
-            Action.invoke(:cancel, "$protean.after.2000-#")
+            Action.invoke(:cancel, Events.platform(:after, {["#"], 1000})),
+            Action.invoke(:cancel, Events.platform(:after, {["#"], 2000}))
           ],
           on: [
-            {"$protean.after.1000-#", target: "c", guard: "some_condition"},
-            {"$protean.after.2000-#", target: "c"}
+            {Events.platform(:after, {["#"], 1000}), target: "c", guard: "some_condition"},
+            {Events.platform(:after, {["#"], 2000}), target: "c"}
           ]
         ]
       ]
@@ -85,7 +88,7 @@ defmodule Protean.MachineConfigTest do
           ],
           on: [
             {fn -> :ok end, target: "done_state"},
-            {"$protean.invoke.error-task_id", target: "error_state"}
+            {Events.platform(:invoke, :error, "task_id"), target: "error_state"}
           ]
         ]
       ]
@@ -111,7 +114,7 @@ defmodule Protean.MachineConfigTest do
           ],
           on: [
             {fn -> :ok end, target: "done_state"},
-            {"$protean.invoke.error-proc_id", target: "error_state"}
+            {Events.platform(:invoke, :error, "proc_id"), target: "error_state"}
           ]
         ]
       ]
@@ -134,7 +137,7 @@ defmodule Protean.MachineConfigTest do
           a: []
         ],
         on: [
-          {"$protean.done-#", target: "other"}
+          {Events.platform(:done, ["#"]), target: "other"}
         ]
       ]
     ]

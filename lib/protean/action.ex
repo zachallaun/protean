@@ -14,10 +14,10 @@ defmodule Protean.Action do
 
   import Kernel, except: [send: 2]
 
+  alias Protean.Events
   alias Protean.Interpreter
   alias Protean.Guard
   alias Protean.State
-  alias Protean.Utils
 
   @typedoc """
   An action is a 2-element tuple, where `handler` implements the `Protean.Action` behaviour and
@@ -242,7 +242,7 @@ defmodule Protean.Action do
   end
 
   def exec_action({:invoke, :task, task, id, opts}, interpreter) do
-    on_done = Utils.internal_event(:invoke, :done, id)
+    on_done = Events.platform(:invoke, :done, id)
 
     child_spec_fun = fn pid ->
       Task.child_spec(fn -> Kernel.send(pid, {on_done, run_task(task)}) end)
@@ -252,7 +252,7 @@ defmodule Protean.Action do
   end
 
   def exec_action({:invoke, :stream, stream, id, opts}, interpreter) do
-    on_done = Utils.internal_event(:invoke, :done, id)
+    on_done = Events.platform(:invoke, :done, id)
 
     child_spec_fun = fn pid ->
       Task.child_spec(fn ->

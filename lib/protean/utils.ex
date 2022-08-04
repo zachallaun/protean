@@ -1,22 +1,6 @@
 defmodule Protean.Utils do
   @moduledoc false
 
-  @internal_prefix "$protean"
-
-  @doc """
-  Generate the event name for an internal Protean event.
-  """
-  def internal_event(:init), do: "#{@internal_prefix}.init"
-
-  def internal_event(:done, node_id), do: "#{@internal_prefix}.done-#{human_id(node_id)}"
-
-  def internal_event(:after, node_id, delay) do
-    "#{@internal_prefix}.after.#{delay}-#{human_id(node_id)}"
-  end
-
-  def internal_event(:invoke, :done, id), do: "#{@internal_prefix}.invoke.done-#{id}"
-  def internal_event(:invoke, :error, id), do: "#{@internal_prefix}.invoke.error-#{id}"
-
   @doc false
   def human_id(node_id) do
     node_id

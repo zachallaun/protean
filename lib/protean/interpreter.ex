@@ -5,9 +5,9 @@ defmodule Protean.Interpreter do
 
   alias __MODULE__
   alias Protean.Action
+  alias Protean.Events
   alias Protean.Machine
   alias Protean.State
-  alias Protean.Utils
 
   defstruct [
     :machine,
@@ -88,7 +88,7 @@ defmodule Protean.Interpreter do
   @spec start(t) :: t
   def start(%Interpreter{running: false} = interpreter) do
     %{interpreter | running: true}
-    |> add_internal(Utils.internal_event(:init))
+    |> add_internal(Events.platform(:init))
     |> run_interpreter()
   end
 
@@ -120,6 +120,12 @@ defmodule Protean.Interpreter do
 
   """
   @spec handle_event(t, Protean.event()) :: {{:ok, term()}, t} | {nil, t}
+  def handle_event(%Interpreter{running: true} = interpreter, %Events.Platform{} = event) do
+    interpreter
+    |> process_event(event, false)
+    |> pop_answer()
+  end
+
   def handle_event(%Interpreter{running: true} = interpreter, event) do
     interpreter
     |> autoforward_event(event)
@@ -153,7 +159,7 @@ defmodule Protean.Interpreter do
   def notify_process_down(%Interpreter{} = interpreter, reason, id: id) do
     interpreter =
       if invoke_error?(reason) do
-        add_internal(interpreter, Utils.internal_event(:invoke, :error, id))
+        add_internal(interpreter, Events.platform(:invoke, :error, id))
       else
         interpreter
       end
@@ -215,18 +221,26 @@ defmodule Protean.Interpreter do
 
       {{:value, event}, queue} ->
         %{interpreter | internal_queue: queue}
-        |> process_event(event)
+        |> process_event(event, false)
     end
   end
 
-  defp process_event(interpreter, event) do
+  defp process_event(interpreter, event, external? \\ true) do
     interpreter_with_event = set_event(interpreter, event)
     transitions = select_transitions(interpreter_with_event, event)
 
-    transitions
-    |> microstep(interpreter_with_event)
-    |> run_interpreter()
-    |> notify_subscribers()
+    case external? do
+      true ->
+        transitions
+        |> microstep(interpreter_with_event)
+        |> run_interpreter()
+        |> notify_subscribers()
+
+      false ->
+        transitions
+        |> microstep(interpreter)
+        |> run_interpreter()
+    end
   end
 
   defp notify_subscribers(interpreter) do
@@ -315,7 +329,7 @@ defmodule Protean.Interpreter do
       |> Machine.final_ancestors(machine, state)
 
     final_states
-    |> Enum.map(&Utils.internal_event(:done, &1))
+    |> Enum.map(&Events.platform(:done, &1))
     |> Enum.reduce(interpreter, &add_internal(&2, &1))
     |> with_state(state)
     |> exec_all(actions)

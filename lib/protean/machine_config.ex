@@ -5,6 +5,7 @@ defmodule Protean.MachineConfig do
   """
 
   alias Protean.Action
+  alias Protean.Events
   alias Protean.Node
   alias Protean.Transition
   alias Protean.Utils
@@ -99,7 +100,7 @@ defmodule Protean.MachineConfig do
           []
 
         done ->
-          [{Utils.internal_event(:done, id), done}]
+          [{Events.platform(:done, id), done}]
           |> parse_transitions(id)
       end
 
@@ -154,8 +155,8 @@ defmodule Protean.MachineConfig do
 
   defp parse_invoke_config(config, node_id) do
     id = config[:id] || Utils.uuid4()
-    on_done = Utils.internal_event(:invoke, :done, id)
-    on_error = Utils.internal_event(:invoke, :error, id)
+    on_done = Events.platform(:invoke, :done, id)
+    on_error = Events.platform(:invoke, :error, id)
 
     transitions =
       [
@@ -200,11 +201,11 @@ defmodule Protean.MachineConfig do
 
   defp parse_delayed_transition(config, id) do
     {delay, config} = Keyword.pop!(config, :delay)
-    event_name = Utils.internal_event(:after, id, delay)
+    event = Events.platform(:after, {id, delay})
 
-    [entry_action] = parse_actions(Action.invoke(:delayed_send, event_name, delay))
-    [exit_action] = parse_actions(Action.invoke(:cancel, event_name))
-    transition = parse_transition({event_name, config}, id)
+    [entry_action] = parse_actions(Action.invoke(:delayed_send, event, delay))
+    [exit_action] = parse_actions(Action.invoke(:cancel, event))
+    transition = parse_transition({event, config}, id)
 
     {entry_action, exit_action, transition}
   end

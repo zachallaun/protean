@@ -11,7 +11,7 @@ defmodule ProteanIntegration.AskAnswerTest do
         {
           "Yield",
           on: [
-            {:foo, target: "Skip", actions: :answer}
+            {_, target: "Skip", actions: :answer}
           ]
         },
         {

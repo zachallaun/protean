@@ -220,18 +220,12 @@ Things are changing pretty regularly, however, and some documentation is certain
 ## Todo
 
 - [ ] Actions
-  - [x] Send event to self
-  - [x] Send event to service
-  - [x] Send event to parent
-  - [x] Delayed sends
   - [ ] Spawn in assigns
   - [ ] Raise action (queues event in internal queue)
   - [ ] Respond action
   - [ ] Forward action
   - [ ] Escalate action
-  - [x] Choose action
 - [ ] Parallel states
-  - [x] Basic implementation
   - [ ] Correct transition conflict handling
 - [ ] History states
 - [ ] Fix all "FIXME"

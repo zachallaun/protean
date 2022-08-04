@@ -11,6 +11,7 @@ defmodule Protean.Transition do
 
   alias __MODULE__
   alias Protean.Action
+  alias Protean.Events
   alias Protean.Guard
   alias Protean.Node
   alias Protean.State
@@ -42,6 +43,7 @@ defmodule Protean.Transition do
   end
 
   defp matches?(%Transition{match?: nil}, _), do: true
+  defp matches?(%Transition{match?: match}, %Events.Platform{} = event), do: match == event
   defp matches?(%Transition{match?: match?}, event) when is_function(match?), do: match?.(event)
   defp matches?(%Transition{match?: match}, event), do: match == event
 
