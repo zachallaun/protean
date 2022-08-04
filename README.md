@@ -240,7 +240,7 @@ This package is under active development and is pre-0.1. If you would like to ex
 ```elixir
 def deps do
   [
-    {:protean, git: "https://github.com/zachallaun/protean.git"}
+    {:protean, github: "zachallaun/protean"}
   ]
 end
 ```
