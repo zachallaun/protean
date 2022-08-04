@@ -11,6 +11,9 @@ defmodule Protean do
   alias Protean.Interpreter.Server
   alias Protean.State
 
+  @protean_options :"$protean.options"
+  @allowed_options [:callback_module]
+
   @typedoc "A running Protean machine process."
   @type server :: GenServer.server()
 
@@ -24,10 +27,13 @@ defmodule Protean do
           | {:supervisor, Supervisor.name()}
 
   @typedoc "Option values for `start*` functions."
-  @type option :: interpreter_option | GenServer.option()
+  @type start_option :: interpreter_option | GenServer.option()
 
-  @typedoc "Options for `subscribe/2`."
+  @typedoc "Option values for `subscribe/2`."
   @type subscribe_option :: {:monitor, boolean()}
+
+  @typedoc "Option values for `use Protean`."
+  @type using_option :: {:callback_module, module()}
 
   @doc """
   Callback for invoked processes specified during machine execution.
@@ -136,13 +142,16 @@ defmodule Protean do
     defexception [:message]
   end
 
-  @doc false
-  defmacro __using__(_opts) do
+  @spec __using__([using_option()]) :: term()
+  defmacro __using__(opts \\ []) do
     unless __CALLER__.module do
       raise "`use Protean` outside of a module definition is not currently supported"
     end
 
-    quote generated: true, location: :keep do
+    opts = Keyword.take(opts, @allowed_options)
+    Module.put_attribute(__CALLER__.module, @protean_options, opts)
+
+    quote do
       import Protean, only: [defmachine: 1]
       @behaviour Protean
       @before_compile Protean
@@ -150,15 +159,12 @@ defmodule Protean do
   end
 
   @doc false
-  defmacro __before_compile__(_env) do
-    unless Module.defines?(__CALLER__.module, {:machine, 0}, :def) do
-      raise ConfigError,
-        message: "Protean machine definition not found. See `Protean.defmachine/1`."
-    end
+  defmacro __before_compile__(env) do
+    defined_machine? = Module.defines?(env.module, {:machine, 0}, :def)
 
     [
       def_default_impls(),
-      def_default_otp()
+      defined_machine? && def_default_otp()
     ]
   end
 
@@ -168,9 +174,13 @@ defmodule Protean do
   TODO: Full config docs
   """
   defmacro defmachine(config) do
+    opts = Module.get_attribute(__CALLER__.module, @protean_options)
+
+    callback_module = Keyword.get(opts, :callback_module, __CALLER__.module)
+
     config
     |> with_event_matchers()
-    |> make_machine_function()
+    |> make_machine_function(callback_module)
   end
 
   @doc """
@@ -196,7 +206,7 @@ defmodule Protean do
     * Any option accepted by `GenServer.start_link/3`.
 
   """
-  @spec start_link(module(), [option]) :: GenServer.on_start()
+  @spec start_link(module(), [start_option]) :: GenServer.on_start()
   def start_link(module, opts \\ []) do
     defaults = [
       machine: opts[:machine] || module.machine(),
@@ -359,10 +369,10 @@ defmodule Protean do
     quote(do: fn expr -> match?(unquote(pattern), expr) end)
   end
 
-  defp make_machine_function(config) do
+  defp make_machine_function(config, callback_module) do
     quote location: :keep do
       def machine do
-        Protean.MachineConfig.new(unquote(config), callback_module: __MODULE__)
+        Protean.MachineConfig.new(unquote(config), callback_module: unquote(callback_module))
       end
     end
   end

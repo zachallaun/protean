@@ -92,4 +92,35 @@ defmodule ProteanTest do
       assert Protean.current(machine) |> Protean.matches?("init")
     end
   end
+
+  defmodule MachineWithoutCallbacks do
+    use Protean, callback_module: ProteanTest.CallbackModule
+
+    defmachine(
+      initial: "init",
+      states: [
+        init: [
+          entry: :my_action
+        ]
+      ]
+    )
+  end
+
+  defmodule CallbackModule do
+    use Protean
+
+    @impl true
+    def action(:my_action, state, _) do
+      state
+      |> Protean.Action.assign(:data, :foo)
+    end
+  end
+
+  @tag here: true
+  @tag machine: MachineWithoutCallbacks
+  test "separate callback_module can be specified", %{machine: machine} do
+    assert_protean(machine,
+      context: [data: :foo]
+    )
+  end
 end
