@@ -70,7 +70,7 @@ defmodule Protean do
       end
 
   """
-  @callback invoke(action :: term(), State.t(), event) :: term()
+  @callback invoke(term(), State.t(), event) :: term()
 
   @doc """
   Callback for actions specified in response to a transition.
@@ -108,7 +108,7 @@ defmodule Protean do
       end
 
   """
-  @callback action(action :: term(), State.t(), event) :: State.t()
+  @callback action(term(), State.t(), event) :: State.t()
 
   @doc """
   Callback to determine whether a conditional transition should occur.
@@ -142,7 +142,35 @@ defmodule Protean do
       end
 
   """
-  @callback guard(action :: term(), State.t(), event) :: boolean()
+  @callback guard(term(), State.t(), event) :: boolean()
+
+  @doc """
+  Callback for defining dynamic delays.
+
+  ## Example
+
+      defmachine(
+        # ...
+        states: [
+          will_transition: [
+            after: [
+              delay: "my_delay",
+              target: "new_state"
+            ]
+          ],
+          new_state: [
+            # ...
+          ]
+        ]
+      )
+
+      @impl Protean
+      def delay("my_delay", state, _) do
+        state.context[:configured_delay] || 1000
+      end
+
+  """
+  @callback delay(term(), State.t(), event) :: non_neg_integer()
 
   defmodule ConfigError do
     defexception [:message]
@@ -415,6 +443,9 @@ defmodule Protean do
 
       @impl Protean
       def guard(_, _, _), do: false
+
+      @impl Protean
+      def delay(_, _, _), do: 0
     end
   end
 

@@ -201,7 +201,7 @@ defmodule Protean.Parser do
     {delay, config} = Keyword.pop!(config, :delay)
     event = Events.platform(:after, {id, delay})
 
-    [entry_action] = parse_actions(Action.invoke(:delayed_send, event, delay))
+    [entry_action] = parse_actions(Action.invoke(:delayed_send, delay, event))
     [exit_action] = parse_actions(Action.invoke(:cancel, event))
     transition = parse_transition({event, config}, id)
 

@@ -50,36 +50,68 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     end
   end
 
-  @moduletag machine: TestMachine
+  describe "delayed transitions:" do
+    @describetag machine: TestMachine
 
-  test "takes automatic delayed transitions", %{machine: machine} do
-    assert_protean(machine,
-      sleep: 100,
-      matches: "c"
-    )
+    test "takes automatic delayed transitions", %{machine: machine} do
+      assert_protean(machine,
+        sleep: 100,
+        matches: "c"
+      )
+    end
+
+    test "delayed transitions can be short-circuited by transitioning early",
+         %{machine: machine} do
+      assert_protean(machine,
+        call: :goto_c,
+        sleep: 50,
+        matches: "c"
+      )
+    end
+
+    test "short-circuited transitions don't execute actions", %{machine: machine} do
+      assert_protean(machine,
+        context: [path: [[["a", "#"]]]],
+        call: :goto_d,
+        sleep: 50,
+        context: [path: [[["d", "#"]], [["a", "#"]]]]
+      )
+    end
+
+    test "short-circuited transitions don't still send event", %{machine: machine} do
+      assert_protean(machine,
+        call: :goto_c,
+        sleep: 50
+      )
+    end
   end
 
-  test "delayed transitions can be short-circuited by transitioning early", %{machine: machine} do
-    assert_protean(machine,
-      call: :goto_c,
-      sleep: 50,
-      matches: "c"
+  defmodule DynamicDelay do
+    use Protean
+
+    defmachine(
+      initial: "will_transition",
+      states: [
+        will_transition: [
+          after: [
+            delay: "some_delay",
+            target: "new_state"
+          ]
+        ],
+        new_state: []
+      ]
     )
+
+    @impl Protean
+    def delay("some_delay", _, _), do: 50
   end
 
-  test "short-circuited transitions don't execute actions", %{machine: machine} do
+  @tag machine: DynamicDelay
+  test "delays defined by callback", %{machine: machine} do
     assert_protean(machine,
-      context: [path: [[["a", "#"]]]],
-      call: :goto_d,
-      sleep: 50,
-      context: [path: [[["d", "#"]], [["a", "#"]]]]
-    )
-  end
-
-  test "short-circuited transitions don't still send event", %{machine: machine} do
-    assert_protean(machine,
-      call: :goto_c,
-      sleep: 50
+      matches: "will_transition",
+      sleep: 80,
+      matches: "new_state"
     )
   end
 end

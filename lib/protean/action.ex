@@ -228,13 +228,8 @@ defmodule Protean.Action do
     new({:invoke, :task, task, id, opts})
   end
 
-  def invoke(:delayed_send, id, delay, opts) do
-    f = fn ->
-      :timer.sleep(delay)
-      id
-    end
-
-    new({:invoke, :function, f, id, opts})
+  def invoke(:delayed_send, delay, id, opts) do
+    new({:invoke, :delayed_send, delay, id, opts})
   end
 
   def invoke(:stream, stream, id, opts) do
@@ -315,12 +310,23 @@ defmodule Protean.Action do
     {:cont, interpreter}
   end
 
+  def exec_action({:invoke, :delayed_send, name, id, opts}, interpreter) when is_binary(name) do
+    delay = run_callback(:delay, name, interpreter)
+    exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter)
+  end
+
   def exec_action({:invoke, invoke_type, name, id, opts}, interpreter) when is_binary(name) do
-    %{state: state, config: config} = interpreter
-
-    to_invoke = config.callback_module.invoke(name, state, state.event)
-
+    to_invoke = run_callback(:invoke, name, interpreter)
     exec_action({:invoke, invoke_type, to_invoke, id, opts}, interpreter)
+  end
+
+  def exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter) do
+    f = fn ->
+      :timer.sleep(delay)
+      id
+    end
+
+    exec_action({:invoke, :function, f, id, opts}, interpreter)
   end
 
   def exec_action({:invoke, :proc, proc, id, opts}, interpreter) do
@@ -421,4 +427,10 @@ defmodule Protean.Action do
 
   defp run_task({m, f, a}), do: apply(m, f, a)
   defp run_task(f) when is_function(f), do: f.()
+
+  defp run_callback(callback_name, arg, interpreter) do
+    %{state: state, config: config} = interpreter
+
+    apply(config.callback_module, callback_name, [arg, state, state.event])
+  end
 end

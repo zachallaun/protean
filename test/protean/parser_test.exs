@@ -18,7 +18,7 @@ defmodule Protean.ParserTest do
         ],
         [
           entry: [
-            Action.invoke(:delayed_send, platform_event, 2000)
+            Action.invoke(:delayed_send, 2000, platform_event)
           ],
           exit: [
             Action.invoke(:cancel, platform_event)
@@ -48,8 +48,8 @@ defmodule Protean.ParserTest do
         ],
         [
           entry: [
-            Action.invoke(:delayed_send, Events.platform(:after, {["#"], 1000}), 1000),
-            Action.invoke(:delayed_send, Events.platform(:after, {["#"], 2000}), 2000)
+            Action.invoke(:delayed_send, 1000, Events.platform(:after, {["#"], 1000})),
+            Action.invoke(:delayed_send, 2000, Events.platform(:after, {["#"], 2000}))
           ],
           exit: [
             Action.invoke(:cancel, Events.platform(:after, {["#"], 1000})),
