@@ -1,8 +1,6 @@
-defmodule Protean.MachineConfig do
-  @moduledoc """
-  This module provides utilities to convert from the "shorthand" machine config
-  format used when defining a machine to the structured format used internally.
-  """
+defmodule Protean.Parser do
+  # Parses machine definitions into the internal MachineConfiguration format
+  @moduledoc false
 
   alias Protean.Action
   alias Protean.Events

@@ -1,9 +1,9 @@
-defmodule Protean.MachineConfigTest do
+defmodule Protean.ParserTest do
   use ExUnit.Case
 
   alias Protean.Action
   alias Protean.Events
-  alias Protean.MachineConfig
+  alias Protean.Parser
 
   describe "delayed transition syntax:" do
     test "single transition" do
@@ -145,7 +145,7 @@ defmodule Protean.MachineConfigTest do
   end
 
   defp assert_parsed_same(nodes) do
-    [parsed1, parsed2] = Enum.map(nodes, &MachineConfig.parse_node/1)
+    [parsed1, parsed2] = Enum.map(nodes, &Parser.parse_node/1)
     assert parsed_same?(parsed1, parsed2)
   end
 

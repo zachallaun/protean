@@ -11,8 +11,8 @@ defmodule Protean.Machine do
   """
 
   alias __MODULE__
-  alias Protean.MachineConfig
   alias Protean.Node
+  alias Protean.Parser
   alias Protean.State
   alias Protean.Transition
   alias Protean.Utils
@@ -33,7 +33,7 @@ defmodule Protean.Machine do
         }
 
   def new(config, opts \\ []) do
-    {root, context} = MachineConfig.parse!(config)
+    {root, context} = Parser.parse!(config)
     idmap = Utils.Tree.tree_reduce(root, &idmap_reducer/2, %{})
 
     %Machine{
