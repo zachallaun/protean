@@ -95,6 +95,10 @@ defmodule Protean.TestCase do
   """
   def assert_protean(pid, instructions) do
     Enum.each(instructions, fn
+      {:ask, {event, expected_answer}} ->
+        {actual_answer, _} = Protean.ask(pid, event)
+        assert actual_answer == expected_answer
+
       # Actions
       {:call, event} ->
         Protean.call(pid, event)

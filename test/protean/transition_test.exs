@@ -22,14 +22,13 @@ defmodule Protean.TransitionTest do
 
     @tag machine: :auto_transition_machine_2
     test "trigger actions in correct order", %{interpreter: interpreter} do
-      state =
+      {_, interpreter} =
         interpreter
         |> Interpreter.start()
         |> Interpreter.handle_event(:goto_b)
-        |> Interpreter.state()
 
-      assert Protean.matches?(state, :d)
-      assert state.context[:acc] == ["auto_to_d", "auto_to_c"]
+      assert Protean.matches?(interpreter, :d)
+      assert interpreter.state.context[:acc] == ["auto_to_d", "auto_to_c"]
     end
   end
 end

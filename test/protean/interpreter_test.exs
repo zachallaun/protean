@@ -32,13 +32,11 @@ defmodule Protean.InterpreterTest do
 
     test "transitions based on guard conditions", %{interpreter: interpreter} do
       with interpreter <- Interpreter.start(interpreter) do
-        interpreter = Interpreter.handle_event(interpreter, :go)
+        {_, interpreter} = Interpreter.handle_event(interpreter, :go)
         assert Interpreter.state(interpreter).value == MapSet.new([["straight", "#"]])
 
-        interpreter =
-          interpreter
-          |> Interpreter.handle_event(:set_left)
-          |> Interpreter.handle_event(:go)
+        {_, interpreter} = Interpreter.handle_event(interpreter, :set_left)
+        {_, interpreter} = Interpreter.handle_event(interpreter, :go)
 
         assert Interpreter.state(interpreter).value == MapSet.new([["left", "#"]])
       end
@@ -59,31 +57,31 @@ defmodule Protean.InterpreterTest do
     with interpreter <- Interpreter.start(interpreter) do
       assert Protean.matches?(interpreter, "a")
 
-      interpreter = Interpreter.handle_event(interpreter, :goto_c)
+      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_c)
       assert Protean.matches?(interpreter, "a")
 
-      interpreter = Interpreter.handle_event(interpreter, :goto_b)
+      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_b)
       assert Protean.matches?(interpreter, "b")
 
-      interpreter = Interpreter.handle_event(interpreter, {:goto_d, nil})
+      {_, interpreter} = Interpreter.handle_event(interpreter, {:goto_d, nil})
       assert Protean.matches?(interpreter, "b")
 
-      interpreter = Interpreter.handle_event(interpreter, :goto_c)
+      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_c)
       assert Protean.matches?(interpreter, "c")
 
-      interpreter = Interpreter.handle_event(interpreter, {:goto_d, nil})
+      {_, interpreter} = Interpreter.handle_event(interpreter, {:goto_d, nil})
       assert Protean.matches?(interpreter, "c")
 
-      interpreter = Interpreter.handle_event(interpreter, {:goto_d, :please})
+      {_, interpreter} = Interpreter.handle_event(interpreter, {:goto_d, :please})
       assert Protean.matches?(interpreter, "d")
 
-      interpreter = Interpreter.handle_event(interpreter, :goto_a)
+      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_a)
       assert Protean.matches?(interpreter, "d")
 
-      interpreter = Interpreter.handle_event(interpreter, :goto_c)
+      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_c)
       assert Protean.matches?(interpreter, "c")
 
-      interpreter = Interpreter.handle_event(interpreter, :goto_a)
+      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_a)
       assert Protean.matches?(interpreter, "a")
     end
   end

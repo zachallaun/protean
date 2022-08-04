@@ -98,6 +98,13 @@ defmodule Protean.Action do
   end
 
   @doc "TODO"
+  def answer(%State{} = state, value), do: answer(value) |> put_action(state)
+
+  def answer(value) do
+    {__MODULE__, {:answer, value}}
+  end
+
+  @doc "TODO"
   def send(%State{} = state, event, opts) do
     send(event, opts) |> put_action(state)
   end
@@ -172,6 +179,11 @@ defmodule Protean.Action do
       end
 
     exec_action({:assign, :merge, assigns}, interpreter)
+  end
+
+  def exec_action({:answer, value}, interpreter) do
+    %{state: state} = interpreter
+    {:cont, %{interpreter | state: State.put_answer(state, value)}}
   end
 
   def exec_action({:send, event, to}, interpreter) do

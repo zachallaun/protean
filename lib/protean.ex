@@ -172,12 +172,28 @@ defmodule Protean do
   end
 
   @doc """
-  Makes a synchronous call to the machine and waits for it to execute any transitions
-  that result from the given event.
+  Makes a synchronous call to the machine and waits for it to execute any transitions that
+  result from the given event, returning a possible answer and the new machine state.
 
-  Shares semantics with `GenServer.call/3`.
+  Returns one of:
+
+    * `{{:ok, answer}, state}` - Returned if any actions executed as a result of the event set an
+      answer through the use of `Action.answer/2`.
+    * `{nil, state}` - Returned if no actions execute or if no executed actions set an answer.
+
+  Answers are only returned to the caller if they result from the given event. If an asynchronous
+  call, through `send/2` for example, would have resulted in an answer, it will be "lost".
   """
-  @spec call(server, event) :: State.t()
+  @spec ask(server, event, timeout()) :: {{:ok, term()}, State.t()} | {nil, State.t()}
+  defdelegate ask(protean, event), to: Server
+  defdelegate ask(protean, event, timeout), to: Server
+
+  @doc """
+  Makes a synchronous call to the machine and waits for it to execute any transitions
+  that result from the given event, returning the new machine state.
+
+  Shares semantics with `GenServer.call/3`. See those docs for `timeout` behavior.
+  """
   @spec call(server, event, timeout()) :: State.t()
   defdelegate call(protean, event), to: Server
   defdelegate call(protean, event, timeout), to: Server

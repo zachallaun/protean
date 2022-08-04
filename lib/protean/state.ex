@@ -14,13 +14,14 @@ defmodule Protean.State do
   alias Protean.Action
   alias Protean.Node
 
-  @derive {Inspect, only: [:value, :event, :context]}
+  @derive {Inspect, only: [:value, :event, :context, :response]}
   defstruct [
     :value,
     :event,
     context: %{},
     private: %{
-      actions: []
+      actions: [],
+      answer: nil
     }
   ]
 
@@ -36,7 +37,8 @@ defmodule Protean.State do
   @type context :: %{any => any}
 
   @opaque private_state :: %{
-            actions: [Action.unresolved()]
+            actions: [Action.unresolved()],
+            answer: {:ok, term()} | nil
           }
 
   @doc false
@@ -125,4 +127,12 @@ defmodule Protean.State do
   @doc false
   def assign_value(state, value),
     do: %{state | value: MapSet.new(value)}
+
+  @doc false
+  def put_answer(state, answer),
+    do: put_in(state.private.answer, {:ok, answer})
+
+  @doc false
+  def pop_answer(state),
+    do: {state.private.answer, put_in(state.private.answer, nil)}
 end

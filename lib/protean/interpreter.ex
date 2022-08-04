@@ -111,15 +111,28 @@ defmodule Protean.Interpreter do
   @doc """
   Handle an event, executing any transitions, actions, and side-effects associated with the
   current machine state.
+
+  Returns a possible answer and the interpreter state:
+
+    * `{{:ok, answer}, interpreter}` - if any actions resulting from handling the event set an
+      answer on the machine state;
+    * `{nil, interpreter}` - if no actions ran or none that ran set an answer.
+
   """
-  @spec handle_event(t, Protean.event()) :: t
+  @spec handle_event(t, Protean.event()) :: {{:ok, term()}, t} | {nil, t}
   def handle_event(%Interpreter{running: true} = interpreter, event) do
     interpreter
     |> autoforward_event(event)
     |> process_event(event)
+    |> pop_answer()
   end
 
-  def handle_event(interpreter, _event), do: interpreter
+  def handle_event(interpreter, _event), do: {nil, interpreter}
+
+  defp pop_answer(%Interpreter{state: state} = interpreter) do
+    {answer, state} = State.pop_answer(state)
+    {answer, with_state(interpreter, state)}
+  end
 
   def subscribe(interpreter, subscriber) do
     update_in(interpreter.subscribed, &[subscriber | &1])
@@ -319,11 +332,13 @@ defmodule Protean.Interpreter do
 
   defp exec_all(interpreter, []), do: interpreter
 
-  defp add_internal(interpreter, event) do
+  @doc false
+  def add_internal(interpreter, event) do
     update_in(interpreter.internal_queue, &:queue.in(event, &1))
   end
 
-  defp with_state(interpreter, state) do
+  @doc false
+  def with_state(interpreter, state) do
     put_in(interpreter.state, state)
   end
 end

@@ -16,21 +16,20 @@ defmodule Protean.Interpreter.Server do
 
   # Client API
 
-  @doc false
-  @spec start_link(server_options) :: GenServer.on_start()
   def start_link(opts) do
     {gen_server_opts, interpreter_opts} = Keyword.split(opts, @gen_server_options)
 
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
   end
 
-  @doc false
-  @spec call(GenServer.server(), Protean.event(), timeout()) :: State.t()
-  def call(pid, event, timeout), do: GenServer.call(pid, event, timeout)
-  def call(pid, event), do: GenServer.call(pid, event)
+  def call(server, event, timeout \\ 5000) do
+    GenServer.call(server, event, timeout)
+  end
 
-  @doc false
-  @spec send(GenServer.server(), Protean.event()) :: :ok
+  def ask(server, event, timeout \\ 5000) do
+    GenServer.call(server, {@prefix, :ask, event}, timeout)
+  end
+
   def send(server, event) do
     server
     |> resolve_server_to_pid()
@@ -39,35 +38,22 @@ defmodule Protean.Interpreter.Server do
     :ok
   end
 
-  @doc false
-  @spec send_after(GenServer.server(), Protean.event(), non_neg_integer()) :: reference()
   def send_after(server, event, time) do
     server
     |> resolve_server_to_pid()
     |> Process.send_after(event, time)
   end
 
-  @doc false
-  @spec current(GenServer.server()) :: State.t()
   def current(pid) do
     GenServer.call(pid, {@prefix, :current_state})
   end
 
-  @doc """
-  Get the current machine state and check whether it matches the given descriptor. See
-  `Protean.State.matches?/2` for descriptor usage.
-  """
-  @spec matches?(GenServer.server(), descriptor :: term()) :: boolean()
   def matches?(pid, pattern) do
     pid
     |> current()
     |> State.matches?(pattern)
   end
 
-  @doc """
-  Stop the service, terminating the process.
-  """
-  @spec stop(GenServer.server(), reason :: term()) :: :ok
   def stop(pid, reason \\ :default)
   def stop(pid, :default), do: GenServer.stop(pid, {:shutdown, current(pid)})
   def stop(pid, reason), do: GenServer.stop(pid, reason)
@@ -121,8 +107,15 @@ defmodule Protean.Interpreter.Server do
     {:reply, :ok, interpreter}
   end
 
+  def handle_call({@prefix, :ask, event}, _from, interpreter) do
+    {answer, interpreter} = Interpreter.handle_event(interpreter, event)
+
+    {:reply, {answer, Interpreter.state(interpreter)}, interpreter,
+     {:continue, {@prefix, :check_running}}}
+  end
+
   def handle_call(event, _from, interpreter) do
-    interpreter = Interpreter.handle_event(interpreter, event)
+    {_answer, interpreter} = Interpreter.handle_event(interpreter, event)
     {:reply, Interpreter.state(interpreter), interpreter, {:continue, {@prefix, :check_running}}}
   end
 
@@ -138,8 +131,8 @@ defmodule Protean.Interpreter.Server do
   end
 
   def handle_cast(event, interpreter) do
-    {:noreply, Interpreter.handle_event(interpreter, event),
-     {:continue, {@prefix, :check_running}}}
+    {_answer, interpreter} = Interpreter.handle_event(interpreter, event)
+    {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
   end
 
   @impl true
@@ -152,10 +145,7 @@ defmodule Protean.Interpreter.Server do
     {:stop, reason, interpreter}
   end
 
-  def handle_info(event, interpreter) do
-    {:noreply, Interpreter.handle_event(interpreter, event),
-     {:continue, {@prefix, :check_running}}}
-  end
+  def handle_info(event, interpreter), do: handle_cast(event, interpreter)
 
   @impl true
   def handle_continue({@prefix, :check_running}, interpreter) do
