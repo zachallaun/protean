@@ -189,6 +189,26 @@ defmodule Protean do
   defdelegate ask(protean, event, timeout), to: Server
 
   @doc """
+  Makes a synchronous call to the machine and waits for it to execute any transitions that result
+  from the given event, returning an answer and the machine state.
+
+  Behaves like `ask/3`, but raises if an answer is not returned.
+  """
+  @spec ask!(server, event, timeout()) :: {term(), State.t()}
+  def ask!(protean, event), do: ask(protean, event) |> ensure_answer!(event)
+  def ask!(protean, event, timeout), do: ask(protean, event, timeout) |> ensure_answer!(event)
+
+  defp ensure_answer!(response, event) do
+    case response do
+      {{:ok, answer}, state} ->
+        {answer, state}
+
+      {nil, _state} ->
+        raise KeyError, message: "expected answer in response to event: #{inspect(event)}"
+    end
+  end
+
+  @doc """
   Makes a synchronous call to the machine and waits for it to execute any transitions
   that result from the given event, returning the new machine state.
 

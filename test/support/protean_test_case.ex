@@ -99,6 +99,10 @@ defmodule Protean.TestCase do
         {actual_answer, _} = Protean.ask(pid, event)
         assert actual_answer == expected_answer
 
+      {:ask!, {event, expected_answer}} ->
+        {actual_answer, _} = Protean.ask!(pid, event)
+        assert actual_answer == expected_answer
+
       # Actions
       {:call, event} ->
         Protean.call(pid, event)

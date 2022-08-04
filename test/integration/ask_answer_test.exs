@@ -35,11 +35,16 @@ defmodule ProteanIntegration.AskAnswerTest do
 
     test "yields an answer every other event", %{machine: machine} do
       assert_protean(machine,
-        ask: {:foo, {:ok, :foo}},
+        ask!: {:foo, :foo},
         ask: {:foo, nil},
-        ask: {:foo, {:ok, :foo}},
+        ask!: {:foo, :foo},
         ask: {:foo, nil}
       )
+    end
+
+    test "ask! raises if answer not found", %{machine: machine} do
+      Protean.send(machine, :foo)
+      assert_raise KeyError, fn -> Protean.ask!(machine, :foo) end
     end
   end
 end
