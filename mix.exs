@@ -59,10 +59,10 @@ defmodule Protean.MixProject do
       source_url: @source_url,
       # source_ref: "v#{@version}",
       extras: [
-        # "guides/introduction.livemd": [title: "Introduction"]
+        # "docs/guides/introduction.livemd": [title: "Introduction"]
       ],
       groups_for_extras: [
-        # Guides: Path.wildcard("guides/*")
+        # Guides: Path.wildcard("docs/guides/*")
       ]
     ]
   end
