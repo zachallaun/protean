@@ -21,6 +21,9 @@ defmodule Protean do
   @typedoc "Any message sent to a Protean machine."
   @type event :: term()
 
+  @typedoc "Option values for `start*` functions."
+  @type start_option :: interpreter_option | GenServer.option()
+
   @type interpreter_option ::
           {:machine, Protean.MachineConfig.t()}
           | {:module, module()}
@@ -28,11 +31,12 @@ defmodule Protean do
           | {:parent, server | pid()}
           | {:supervisor, Supervisor.name()}
 
-  @typedoc "Option values for `start*` functions."
-  @type start_option :: interpreter_option | GenServer.option()
-
   @typedoc "Option values for `subscribe/2`."
-  @type subscribe_option :: {:monitor, boolean()}
+  @type subscribe_option ::
+          {:monitor, boolean()}
+          | {:to, subscribe_to_option}
+
+  @type subscribe_to_option :: :all | :answer
 
   @typedoc "Option values for `use Protean`."
   @type using_option :: {:callback_module, module()}
@@ -312,24 +316,33 @@ defmodule Protean do
   Subscribes the caller to a running machine, returning a reference.
 
   Processes subscribed to a machine will receive messages whenever the machine transitions. (Note
-  that a machine can transition to the same state it was in previously.) By default, subscribed
-  processes also monitor the machine (see `Process.monitor/1`). This behavior can be changed by
-  passing `monitor: false`.
+  that a machine can transition to the same state it was in previously.)
 
   Messages on transition will be delivered in the shape of:
 
-      {:state, state, ref}
+      {:state, state, answer, ref}
 
   where:
 
     * `state` is the `Protean.State` resulting from the transition;
+    * `answer` is one of `nil` or `{:ok, term()}`
     * `ref` is a monitor reference.
 
   As with monitor, if the process is already dead when calling `Protean.subscribe/2`, a `:DOWN`
   message is delivered immediately.
+
+  ## Options
+
+    * `:to` - defaults to `:all` - can be one of:
+      * `:all` - receive all transitions;
+      * `:answer` - receive only transitions that include an `{:ok, term()}` answer.
+    * `:monitor` - defaults to `true` - whether to additionally monitor the machine so that a
+      `:DOWN` message can be received.
+
   """
   @spec subscribe(server, [subscribe_option]) :: reference()
-  defdelegate subscribe(protean, opts \\ [monitor: true]), to: Server
+  defdelegate subscribe(protean, opts), to: Server
+  defdelegate subscribe(protean), to: Server
 
   @doc "Unsubscribes the caller from the machine."
   @spec unsubscribe(server, reference()) :: :ok

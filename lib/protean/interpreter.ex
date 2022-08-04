@@ -29,7 +29,7 @@ defmodule Protean.Interpreter do
           running: boolean(),
           internal_queue: :queue.queue(),
           invoked: invoked,
-          subscribed: [{pid(), reference()}]
+          subscribed: [{pid(), reference(), :all | :answer}]
         }
 
   @type invoked :: %{invoked_id => invoked_service}
@@ -137,8 +137,8 @@ defmodule Protean.Interpreter do
     update_in(interpreter.subscribed, &[subscriber | &1])
   end
 
-  def unsubscribe(interpreter, subscriber) do
-    update_in(interpreter.subscribed, &Enum.reject(&1, fn s -> s == subscriber end))
+  def unsubscribe(interpreter, ref) do
+    update_in(interpreter.subscribed, &Enum.reject(&1, fn {_, ref2, _} -> ref === ref2 end))
   end
 
   @doc false
@@ -237,8 +237,19 @@ defmodule Protean.Interpreter do
   end
 
   defp notify_subscribers(interpreter) do
-    Enum.each(interpreter.subscribed, fn {pid, ref} ->
-      send(pid, {:state, state(interpreter), ref})
+    state = state(interpreter)
+    answer = State.get_answer(state)
+
+    interpreter.subscribed
+    |> Enum.filter(fn subscriber ->
+      case {subscriber, answer} do
+        {{_, _, :all}, _} -> true
+        {{_, _, :answer}, {:ok, _}} -> true
+        _ -> false
+      end
+    end)
+    |> Enum.each(fn {pid, ref, _} ->
+      send(pid, {:state, state, answer, ref})
     end)
 
     interpreter

@@ -77,14 +77,14 @@ defmodule ProteanTest do
     test "subscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
       assert Protean.call(machine, "event")
-      assert_receive {:state, %Protean.State{}, ^ref}
+      assert_receive {:state, %Protean.State{}, _, ^ref}
     end
 
     test "unsubscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
       assert :ok = Protean.unsubscribe(machine, ref)
       assert Protean.call(machine, "event")
-      refute_receive {:state, %Protean.State{}, ^ref}
+      refute_receive {:state, %Protean.State{}, _, ^ref}
     end
 
     test "matches?/2", %{machine: machine} do

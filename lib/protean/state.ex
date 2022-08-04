@@ -132,6 +132,10 @@ defmodule Protean.State do
     do: put_in(state.private.answer, {:ok, answer})
 
   @doc false
+  def get_answer(state),
+    do: state.private.answer
+
+  @doc false
   def pop_answer(state),
     do: {state.private.answer, put_in(state.private.answer, nil)}
 end

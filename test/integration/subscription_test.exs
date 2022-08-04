@@ -9,16 +9,21 @@ defmodule ProteanIntegration.SubscriptionTest do
       states: [
         a: [
           on: [
-            b: "b"
+            {"b", target: "b", actions: :answer}
           ]
         ],
         b: [
           on: [
-            a: "a"
+            {"a", target: "a"}
           ]
         ]
       ]
     )
+
+    @impl true
+    def action(:answer, state, _) do
+      Protean.Action.answer(state, :answer)
+    end
   end
 
   @tag machine: TestMachine
@@ -26,15 +31,26 @@ defmodule ProteanIntegration.SubscriptionTest do
     ref = Protean.subscribe(machine)
 
     Protean.call(machine, "b")
-    assert_receive {:state, _, ^ref}
+    assert_receive {:state, _, _, ^ref}
 
     Protean.call(machine, "b")
-    assert_receive {:state, _, ^ref}
+    assert_receive {:state, _, _, ^ref}
 
     Protean.unsubscribe(machine, ref)
 
     Protean.call(machine, "a")
-    refute_receive {:state, _}
+    refute_receive {:state, _, _, _}
+  end
+
+  @tag machine: TestMachine
+  test "processes can subscribe only to transitions with an answer", %{machine: machine} do
+    ref = Protean.subscribe(machine, to: :answer)
+
+    Protean.call(machine, "b")
+    assert_receive {:state, _, {:ok, :answer}, ^ref}
+
+    Protean.call(machine, "a")
+    refute_receive {:state, _, _, _}
   end
 
   @tag machine: TestMachine
