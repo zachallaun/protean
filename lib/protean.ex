@@ -7,7 +7,6 @@ defmodule Protean do
 
   import Kernel, except: [send: 2]
 
-  alias Protean.Action
   alias Protean.Interpreter
   alias Protean.Interpreter.Server
   alias Protean.State
@@ -56,7 +55,7 @@ defmodule Protean do
         {__MODULE__, :run_task, [data]}
       end
   """
-  @callback invoke(Action.name(), State.t(), event) :: term()
+  @callback invoke(action :: term(), State.t(), event) :: term()
 
   @doc """
   Used to execute actions in response to machine transitions.
@@ -90,7 +89,7 @@ defmodule Protean do
         |> Protean.Action.assign(:last_received_data, data)
       end
   """
-  @callback action(Action.name(), State.t(), event) :: State.t()
+  @callback action(action :: term(), State.t(), event) :: State.t()
 
   @doc """
   Used to determine whether a transition should take place.
@@ -123,7 +122,7 @@ defmodule Protean do
         User.changeset(%User{}, user).valid?
       end
   """
-  @callback guard(Action.name(), State.t(), event) :: boolean()
+  @callback guard(action :: term(), State.t(), event) :: boolean()
 
   defmacro __using__(opts) do
     unless __CALLER__.module do

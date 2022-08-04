@@ -19,9 +19,6 @@ defmodule Protean.Action do
   alias Protean.State
   alias Protean.Utils
 
-  @typedoc "The string name of an action used to pattern match in a handler."
-  @type name :: String.t()
-
   @typedoc """
   An action is a 2-element tuple, where `handler` implements the `Protean.Action` behaviour and
   `action_arg` is an argument that will be passed back to the handler during execution.
@@ -64,7 +61,7 @@ defmodule Protean.Action do
 
   @doc "TODO"
   @doc type: :action
-  def delegate(%State{} = state, action_name), do: delegate(action_name) |> put_action(state)
+  def delegate(%State{} = state, action), do: delegate(action) |> put_action(state)
 
   def delegate(action) do
     {__MODULE__, {:delegate, action}}

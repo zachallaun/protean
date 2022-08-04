@@ -10,14 +10,14 @@ defmodule ProteanIntegration.AutoforwardTest do
       states: [
         receiving: [
           on: [
-            {{"event", _}, actions: "log_data"}
+            {{"event", _}, actions: :log_data}
           ]
         ]
       ]
     )
 
     @impl true
-    def action("log_data", state, {_, value}) do
+    def action(:log_data, state, {_, value}) do
       Protean.Action.assign_in(state, [:data], &[value | &1])
     end
   end
