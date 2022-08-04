@@ -92,14 +92,10 @@ It can be started under a supervisor, but we'll start it directly.
 Protean.current(pid).context
 # %{count: 0, min: nil, max: nil}
 
-Protean.call(pid, "Inc")
-# %Protean.State{
-#   context: %{count: 1, max: nil, min: nil},
-#   event: "Inc",
-#   value: MapSet.new([["active", "#"]])
-# }
+Protean.send(pid, "Inc")
+# :ok
 
-Enum.each(1..4, fn _ -> Protean.call(pid, "Inc") end)
+Enum.each(1..4, fn _ -> Protean.send(pid, "Inc") end)
 
 Protean.current(pid).context
 # %{count: 5, min: nil, max: nil}
@@ -111,11 +107,74 @@ Protean.call(pid, {"Set", {:max, 10}})
 #   value: MapSet.new([["active", "#"]])
 # }
 
-Enum.each(1..20, fn _ -> Protean.call(pid, "Inc") end)
+Enum.each(1..20, fn _ -> Protean.send(pid, "Inc") end)
 
-Protean.call(pid, {"Log", :count})
+Protean.send(pid, {"Log", :count})
 # count: 10
 ```
+
+## Defining a statechart
+
+Protean machines are event-driven _statecharts_, which means that, unlike ordinary finite-state machines, they can have complex, nested, potentially parallel states.
+This is more easily visualized than read, and I highly recommend looking at XState's [introduction to state machines and statecharts](https://xstate.js.org/docs/guides/introduction-to-state-machines-and-statecharts/) for that reason.
+
+### TODO: States
+### TODO: Transitions
+### TODO: Guards and automatic transitions
+### TODO: Actions
+### TODO: Invoked processes
+
+## Starting supervised machines
+
+Just like `GenServer`, Protean machines will be most often started under a supervision tree.
+Invoking `use Protean` will automatically define a `child_spec/1` function that allows you to start the process directly under a supervisor.
+
+```elixir
+children = [
+  Counter
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+Protean machines also accept the same options as `Protean.start_link/3`.
+See those docs for more details.
+
+For instance, here's how you could start the `Counter` with a custom name:
+
+```elixir
+children = [
+  # Start the Counter machine
+  {Counter, name: MyCounter}
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+
+Protean.current(MyCounter)
+# %Protean.State{
+#   context: %{count: 0, max: nil, min: nil},
+#   event: "$protean.init",
+#   value: MapSet.new([["active", "#"]])
+# }
+```
+
+## Interacting with Protean machines
+
+Under the hood, a Protean machine is a `GenServer`, and `Protean` exposes a similar set of functions for interacting with one.
+You can see the individual docs for the functions in this module for details on their behavior, but here are some highlights.
+
+### Familiar functions
+
+* `call/3` - Send an event synchronously to a Protean machine and receive the machine state resulting from any transitions in response.
+* `send/2` - Send an event asynchronously to a Protean machine. Always returns `:ok`.
+* `send_after/3` - Send an event to a Protean machine after a given delay. Like `Process.send_after/4`, returns a timer reference so that the send can be canceled with `Process.cancel_timer/2`.
+
+### Additional functions specific to Protean machines
+
+* `current/1` - Get the current machine state of a running Protean machine.
+* `matches?/2` - Query the currently active state(s) of a machine.
+* `ask/3` - Like `call/3`, but potentially returns an "answer" value in addition to the machine state.
+* `subscribe/2` (and `unsubscribe/2`) - Subscribes the calling process to receive a message on every state transition.
 
 ## Protean Supervisor
 
@@ -150,43 +209,6 @@ Protean.start_link(Counter, supervisor: ProteanSupervisor1)
 ```
 
 In the above example, any processes that are spawned by the Protean interpreter running `Counter` will use `ProteanSupervisor1`.
-
-## Starting supervised machines
-
-Just like `GenServer`, Protean machines will be most often started under a supervision tree.
-Invoking `use Protean` will automatically define a `child_spec/1` function that allows you to start the process directly under a supervisor.
-
-```elixir
-children = [
-  Counter
-]
-
-Supervisor.start_link(children, strategy: :one_for_one)
-```
-
-Protean machines also accept the same options as `Protean.start_link/3`.
-See those docs for more details.
-
-For instance, here's how you could start the `Counter` with a custom supervisor and name:
-
-```elixir
-children = [
-  # Start the Protean Supervisor
-  {Protean.Supervisor, name: MyProteanSupervisor},
-
-  # Start the Counter machine
-  {Counter, name: MyCounter, supervisor: MyProteanSupervisor}
-]
-
-Supervisor.start_link(children, strategy: :one_for_one)
-
-Protean.current(MyCounter)
-# %Protean.State{
-#   context: %{count: 0, max: nil, min: nil},
-#   event: "$protean.init",
-#   value: MapSet.new([["active", "#"]])
-# }
-```
 
 <!-- MDOC !-->
 
