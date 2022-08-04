@@ -1,8 +1,13 @@
 defmodule Protean.Machine do
   @moduledoc """
-  `Protean.Machine` is the purely-functional core of Protean, responsible
-  for transitioning a machine from one state to the next as a result of an
-  event.
+  Purely-functional statechart core.
+
+  Provides the underlying state-transition logic for a statechart, primarily through
+  `transition/3`, a higher-level transition API for using `%Protean.Machine{}` apart from the
+  interpreter provided by Protean, and `take_transitions/3`, a lower-level API used by a
+  statechart interpreter.
+
+  It is uncommon to use this module independently of the `Protean` behaviour.
   """
 
   alias __MODULE__
