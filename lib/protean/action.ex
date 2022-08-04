@@ -72,10 +72,16 @@ defmodule Protean.Action do
   `Protean.Action` provides a number of helpers for specifying actions. See individual function
   documentation for more.
 
-  ## Low-level API: the action behaviour
+  ## Low-level API: the Action behaviour
 
-  Ultimately, all actions are resolving to `t:action()`, a two-element tuple of a module and an
-  argument. The module is expected to implement the `Protean.Action` behaviour (see "Callbacks").
+  Ultimately, all actions resolve to `t:Protean.Action.t()`, a simple struct containing a module
+  and an argument. The module is expected to implement the `Protean.Action` behaviour.
+
+  Action execution, then, follows a simple logic: if the action being executed is an `%Action{}`,
+  then call the `c:exec_action/2` callback on the module, passing it the associated argument and
+  the interpreter in its current state. If it is not an `%Action{}`, wrap it in one that
+  automatically delegates to the callback module associated with the machine. This is where
+  `c:Protean.action/3` is called.
 
   Many of Protean's more "dynamic" features boil down to syntax sugar over actions, including
   `:invoke` and delayed transitions using `:after`. Modules implementing the action behaviour
@@ -85,21 +91,24 @@ defmodule Protean.Action do
 
   import Kernel, except: [send: 2]
 
+  alias __MODULE__
   alias Protean.Events
   alias Protean.Guard
   alias Protean.Interpreter
   alias Protean.State
 
-  @typedoc """
-  An action is a 2-element tuple, where `action_module` implements the `Protean.Action`
-  behaviour and `action_arg` is an argument that will be passed back to the module during
-  execution.
-  """
-  @type action :: {action_module :: module(), action_arg :: term()}
+  @enforce_keys [:module, :arg]
+  defstruct [:module, :arg]
+
+  @typedoc "Data structure representing an executable action."
+  @type t :: %Action{
+          module: module(),
+          arg: term()
+        }
 
   @type exec_action_return ::
           {:cont, Interpreter.t()}
-          | {:cont, Interpreter.t(), [action]}
+          | {:cont, Interpreter.t(), [t]}
           | {:halt, Interpreter.t()}
 
   @doc """
@@ -113,9 +122,19 @@ defmodule Protean.Action do
   """
   @callback exec_action(action_arg :: term(), Interpreter.t()) :: exec_action_return
 
+  @doc """
+  Create a new Protean action.
+
+  `module` is expected to implement the `Protean.Action` behaviour.
+  """
+  @spec new(module(), term()) :: t
+  def new(module, arg), do: %Action{module: module, arg: arg}
+
+  defp new(arg), do: new(__MODULE__, arg)
+
   @doc "Executes an action given an interpreter. See `c:exec_action/2`."
-  @spec exec(action | term(), Interpreter.t()) :: exec_action_return
-  def exec({module, arg}, interpreter) do
+  @spec exec(t | term(), Interpreter.t()) :: exec_action_return
+  def exec(%Action{module: module, arg: arg}, interpreter) do
     case module.exec_action(arg, interpreter) do
       {:cont, interpreter, []} -> {:cont, interpreter}
       {:cont, interpreter, actions} when is_list(actions) -> {:cont, interpreter, actions}
@@ -133,15 +152,15 @@ defmodule Protean.Action do
 
   @doc "TODO"
   @doc type: :action
-  @spec put(State.t(), action) :: State.t()
-  def put(%State{} = state, {_mod, _arg} = action), do: put_action(action, state)
+  @spec put(State.t(), t) :: State.t()
+  def put(%State{} = state, %Action{} = action), do: put_action(action, state)
 
   @doc "TODO"
   @doc type: :action
   def delegate(%State{} = state, action), do: delegate(action) |> put_action(state)
 
   def delegate(action) do
-    {__MODULE__, {:delegate, action}}
+    new({:delegate, action})
   end
 
   @doc "TODO"
@@ -149,15 +168,15 @@ defmodule Protean.Action do
   def assign(%State{} = state, assigns), do: assign(assigns) |> put_action(state)
 
   def assign(key, value) do
-    {__MODULE__, {:assign, :merge, %{key => value}}}
+    new({:assign, :merge, %{key => value}})
   end
 
   def assign(fun) when is_function(fun) do
-    {__MODULE__, {:assign, :update, fun}}
+    new({:assign, :update, fun})
   end
 
   def assign(assigns) do
-    {__MODULE__, {:assign, :merge, Enum.into(assigns, %{})}}
+    new({:assign, :merge, Enum.into(assigns, %{})})
   end
 
   @doc "TODO"
@@ -175,7 +194,7 @@ defmodule Protean.Action do
   def answer(%State{} = state, value), do: answer(value) |> put_action(state)
 
   def answer(value) do
-    {__MODULE__, {:answer, value}}
+    new({:answer, value})
   end
 
   @doc "TODO"
@@ -185,9 +204,9 @@ defmodule Protean.Action do
 
   def send(event, opts \\ []) do
     if delay = opts[:delay] do
-      {__MODULE__, {:send_after, event, opts[:to], delay}}
+      new({:send_after, event, opts[:to], delay})
     else
-      {__MODULE__, {:send, event, opts[:to]}}
+      new({:send, event, opts[:to]})
     end
   end
 
@@ -195,18 +214,18 @@ defmodule Protean.Action do
   def choose(%State{} = state, actions), do: choose(actions) |> put_action(state)
 
   def choose(actions) when is_list(actions) do
-    {__MODULE__, {:choose, actions}}
+    new({:choose, actions})
   end
 
   @doc false
   def invoke(type, to_invoke, id, opts \\ [])
 
   def invoke(:proc, proc, id, opts) do
-    {__MODULE__, {:invoke, :proc, proc, id, opts}}
+    new({:invoke, :proc, proc, id, opts})
   end
 
   def invoke(:task, task, id, opts) do
-    {__MODULE__, {:invoke, :task, task, id, opts}}
+    new({:invoke, :task, task, id, opts})
   end
 
   def invoke(:delayed_send, id, delay, opts) do
@@ -215,15 +234,15 @@ defmodule Protean.Action do
       id
     end
 
-    {__MODULE__, {:invoke, :function, f, id, opts}}
+    new({:invoke, :function, f, id, opts})
   end
 
   def invoke(:stream, stream, id, opts) do
-    {__MODULE__, {:invoke, :stream, stream, id, opts}}
+    new({:invoke, :stream, stream, id, opts})
   end
 
   def invoke(:cancel, id) do
-    {__MODULE__, {:invoke, :cancel, id}}
+    new({:invoke, :cancel, id})
   end
 
   # Action callbacks

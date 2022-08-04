@@ -5,7 +5,7 @@ defmodule ProteanIntegration.CustomActionTest do
     @behaviour Protean.Action
 
     def custom do
-      {__MODULE__, :custom}
+      Protean.Action.new(__MODULE__, :custom)
     end
 
     def exec_action(:custom, interpreter) do
