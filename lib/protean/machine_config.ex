@@ -46,10 +46,6 @@ defmodule Protean.MachineConfig do
     }
   end
 
-  def set_callback_module(%MachineConfig{} = config, module) do
-    %{config | callback_module: module}
-  end
-
   @doc """
   Fetch a node by its id. Raises if the node cannot be found.
   """

@@ -148,11 +148,6 @@ defmodule Protean.Node do
   def parent_id([_]), do: nil
   def parent_id([_ | parent]), do: parent
 
-  @doc "Returns true if the given id is a root node."
-  @spec root?(id) :: id
-  def root?([_]), do: true
-  def root?(_), do: false
-
   @doc "Sort the given nodes in entry order."
   @spec entry_order(nodes) :: nodes
   def entry_order(nodes) do
@@ -171,7 +166,19 @@ defmodule Protean.Node do
   """
   @spec descendant?(id, id) :: boolean()
   def descendant?(descendant_id, ancestor_id) do
-    descendant_id != ancestor_id && common_ancestor_id(descendant_id, ancestor_id) == ancestor_id
+    descendant_id != ancestor_id &&
+      common_ancestor_id(descendant_id, ancestor_id) == ancestor_id
+  end
+
+  @spec common_ancestor_id(id, id) :: id
+  def common_ancestor_id([self | rest], [self | rest]),
+    do: List.wrap(rest)
+
+  def common_ancestor_id(id1, id2) do
+    [id1, id2]
+    |> Enum.map(&Enum.reverse/1)
+    |> then(fn [rev1, rev2] -> get_prefix(rev1, rev2) end)
+    |> Enum.reverse()
   end
 
   def common_ancestor_id(ids) do
@@ -181,6 +188,10 @@ defmodule Protean.Node do
     |> Enum.map(&Enum.reverse/1)
     |> Enum.map(&Enum.take(&1, shortest - 1))
     |> do_common_ancestor_id()
+  rescue
+    e ->
+      require IEx
+      IEx.pry()
   end
 
   defp do_common_ancestor_id(ids, acc \\ [])
@@ -197,17 +208,6 @@ defmodule Protean.Node do
     else
       acc
     end
-  end
-
-  @spec common_ancestor_id(id, id) :: id
-  def common_ancestor_id([self | rest], [self | rest]),
-    do: List.wrap(rest)
-
-  def common_ancestor_id(id1, id2) do
-    [id1, id2]
-    |> Enum.map(&Enum.reverse/1)
-    |> then(fn [rev1, rev2] -> get_prefix(rev1, rev2) end)
-    |> Enum.reverse()
   end
 
   defp get_prefix([], _), do: []

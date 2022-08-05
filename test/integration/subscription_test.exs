@@ -61,6 +61,13 @@ defmodule ProteanIntegration.SubscriptionTest do
   end
 
   @tag machine: TestMachine
+  test "subscribed processes with {:monitor, false} do not receive :DOWN", %{machine: machine} do
+    ref = Protean.subscribe(machine, monitor: false)
+    :ok = Protean.stop(machine)
+    refute_receive {:DOWN, ^ref, :process, _, _}
+  end
+
+  @tag machine: TestMachine
   test "subscribing to a dead process immediately sends :DOWN", %{machine: machine} do
     ref = Protean.subscribe(machine)
     :ok = Protean.stop(machine)

@@ -1,5 +1,6 @@
 defmodule ProteanTest do
   use Protean.TestCase
+  import ExUnit.CaptureLog
 
   defmodule SimpleMachine do
     use Protean
@@ -46,6 +47,16 @@ defmodule ProteanTest do
       start_supervised({Protean.Supervisor, name: MyProtean})
       {:ok, _} = TimerMachine.start_link(supervisor: MyProtean)
       assert 1 = length(Supervisor.which_children(MyProtean))
+    end
+
+    test "logs an error on :invoke if not started" do
+      error =
+        capture_log(fn ->
+          TimerMachine.start_link(supervisor: __MODULE__.NotStarted)
+        end)
+
+      assert error =~ "Protean.Supervisor"
+      assert_receive {:EXIT, _, _}
     end
   end
 

@@ -210,7 +210,7 @@ defmodule Protean.Interpreter do
   defp process_internal_queue(%Interpreter{internal_queue: queue} = interpreter) do
     case :queue.out(queue) do
       {:empty, _} ->
-        process_invokes(interpreter)
+        interpreter
 
       {{:value, event}, queue} ->
         %{interpreter | internal_queue: queue}
@@ -259,26 +259,6 @@ defmodule Protean.Interpreter do
     put_in(interpreter.state.event, event)
   end
 
-  defp process_invokes(interpreter) do
-    case select_invokes(interpreter) do
-      [] ->
-        interpreter
-
-      invokes ->
-        interpreter
-        |> invoke(invokes)
-        |> loop_if_internal_event()
-    end
-  end
-
-  defp loop_if_internal_event(%{internal_queue: queue} = interpreter) do
-    if :queue.is_empty(queue) do
-      interpreter
-    else
-      run_interpreter(interpreter)
-    end
-  end
-
   @spec select_automatic_transitions(t) :: [Transition.t()]
   defp select_automatic_transitions(%{config: machine, state: state}) do
     Machinery.select_automatic_transitions(machine, state)
@@ -304,18 +284,6 @@ defmodule Protean.Interpreter do
   @spec autoforward_to(invoked_service, Protean.event(), t) :: t
   defp autoforward_to(%{pid: pid}, event, interpreter) do
     Interpreter.Server.send(pid, event)
-    interpreter
-  end
-
-  @spec select_invokes(t) :: [term()]
-  defp select_invokes(_interpreter) do
-    # TODO
-    []
-  end
-
-  @spec invoke(t, [term()]) :: t
-  defp invoke(interpreter, _to_invoke) do
-    # TODO
     interpreter
   end
 

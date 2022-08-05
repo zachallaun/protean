@@ -286,9 +286,6 @@ defmodule Protean.Parser do
   defp parse_guard([_ | _] = guards),
     do: parse_guard([:and | guards])
 
-  defp parse_guard([]),
-    do: []
-
   defp resolve_targets(nil, id), do: [id]
 
   defp resolve_targets(targets, _id) when is_list(targets),
