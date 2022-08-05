@@ -8,15 +8,22 @@ defmodule Protean.MixProject do
   def project do
     [
       app: :protean,
+      name: @name,
       version: @version,
+      source_url: @source_url,
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
       docs: docs(),
-      source_url: @source_url,
-      name: @name
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -39,7 +46,8 @@ defmodule Protean.MixProject do
   defp deps do
     [
       {:credo, "~> 1.6", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.28.4", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.28.4", only: :dev, runtime: false},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 
