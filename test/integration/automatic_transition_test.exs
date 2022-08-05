@@ -5,7 +5,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       initial: :a,
       context: %{
         acc: [],
@@ -49,7 +49,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
           actions: [Action.assign(allow: true)]
         ]
       ]
-    )
+    ]
 
     @impl true
     def action(action_name, %{context: %{acc: acc}} = state, _event) do

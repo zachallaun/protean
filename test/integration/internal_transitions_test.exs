@@ -5,7 +5,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       context: [
         on_entry: [],
         on_exit: []
@@ -62,7 +62,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
           ]
         ]
       ]
-    )
+    ]
 
     def action("add_a_entry", state, _), do: add(state, :on_entry, "a")
     def action("add_a1_entry", state, _), do: add(state, :on_entry, "a1")

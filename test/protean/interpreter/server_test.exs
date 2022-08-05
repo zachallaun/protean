@@ -7,7 +7,7 @@ defmodule Protean.Interpreter.ServerTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine(
+    @machine [
       initial: :a,
       states: [
         a: [
@@ -17,7 +17,7 @@ defmodule Protean.Interpreter.ServerTest do
         ],
         b: []
       ]
-    )
+    ]
   end
 
   test "server can be started and stopped" do

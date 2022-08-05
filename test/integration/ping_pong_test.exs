@@ -9,7 +9,7 @@ defmodule ProteanIntegration.PingPongTest do
     A ping pong machine that waits for a {"ping", pid} or {"pong", pid} and replies with the
     opposite. It then waits for one more cycle
     """
-    defmachine(
+    @machine [
       initial: "waiting",
       context: [
         received: []
@@ -22,22 +22,22 @@ defmodule ProteanIntegration.PingPongTest do
         ],
         listening: [
           on: [
-            {{"ping", _}, target: "ponged", actions: "reply"},
-            {{"pong", _}, target: "pinged", actions: "reply"}
+            {match({"ping", _}), target: "ponged", actions: "reply"},
+            {match({"pong", _}), target: "pinged", actions: "reply"}
           ]
         ],
         pinged: [
           on: [
-            {{"pong", _}, target: "waiting", actions: "reply"}
+            {match({"pong", _}), target: "waiting", actions: "reply"}
           ]
         ],
         ponged: [
           on: [
-            {{"ping", _}, target: "waiting", actions: "reply"}
+            {match({"ping", _}), target: "waiting", actions: "reply"}
           ]
         ]
       ]
-    )
+    ]
 
     @impl true
     def action("reply", state, {ping_or_pong, from}) do

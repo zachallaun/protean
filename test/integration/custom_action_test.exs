@@ -16,7 +16,7 @@ defmodule ProteanIntegration.CustomActionTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       context: [data: nil],
       states: [
@@ -30,7 +30,7 @@ defmodule ProteanIntegration.CustomActionTest do
           ]
         ]
       ]
-    )
+    ]
   end
 
   @tag machine: TestMachine

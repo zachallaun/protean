@@ -9,11 +9,8 @@ defmodule Protean do
 
   alias Protean.Interpreter
   alias Protean.Interpreter.Server
+  alias Protean.MachineConfig
   alias Protean.State
-
-  @protean_self :"$protean.self"
-  @protean_options :"$protean.options"
-  @allowed_options [:callback_module]
 
   @typedoc "A running Protean machine process."
   @type server :: GenServer.server()
@@ -25,7 +22,7 @@ defmodule Protean do
   @type start_option :: interpreter_option | GenServer.option()
 
   @type interpreter_option ::
-          {:machine, Protean.MachineConfig.t()}
+          {:machine, MachineConfig.t()}
           | {:module, module()}
           | {:context, State.context()}
           | {:parent, server | pid()}
@@ -41,14 +38,18 @@ defmodule Protean do
   @typedoc "Option values for `use Protean`."
   @type using_option :: {:callback_module, module()}
 
+  @protean_options [:machine, :callback_module]
+  @protean_options_attr :"$protean.options"
+  @protean_machine_attr :"$protean.machine"
+
   @doc """
-  Callback for invoked processes specified during machine execution.
+  Optional callback for invoked processes specified during machine execution.
 
   Should return a value or child specification for the type of process being invoked.
 
   ## Example
 
-      defmachine(
+      @machine [
         # ...
         states: [
           # ...
@@ -62,9 +63,9 @@ defmodule Protean do
             # ...
           ]
         ]
-      )
+      ]
 
-      @impl Protean
+      @impl true
       def invoke("my_task", _state, event_data) do
         {__MODULE__, :run_my_task, [event_data]}
       end
@@ -73,7 +74,7 @@ defmodule Protean do
   @callback invoke(term(), State.t(), event) :: term()
 
   @doc """
-  Callback for actions specified in response to a transition.
+  Optional callback for actions specified in response to a transition.
 
   Receives the current machine state and event triggering the action as arguments and must return
   the machine state. It is possible to attach actions to the machine state to indicate that they
@@ -81,18 +82,18 @@ defmodule Protean do
 
   ## Example
 
-      defmachine(
+      @machine [
         # ...
         on: [
           {
-            {:data, _any},
+            match({:data, _any}),
             target: :data_received,
             actions: [:assign_data, :broadcast_data]
           }
         ]
-      )
+      ]
 
-      @impl Protean
+      @impl true
       def action(:assign_data, state, {:data, data}) do
         state
         |> Protean.Action.assign(:last_received, data)
@@ -111,11 +112,11 @@ defmodule Protean do
   @callback action(term(), State.t(), event) :: State.t()
 
   @doc """
-  Callback to determine whether a conditional transition should occur.
+  Optional callback to determine whether a conditional transition should occur.
 
   ## Example
 
-      defmachine(
+      @machine [
         # ...
         states: [
           editing_user: [
@@ -134,9 +135,9 @@ defmodule Protean do
             ]
           ]
         ]
-      )
+      ]
 
-      @impl Protean
+      @impl true
       def guard(:valid_user?, state, {_, user}) do
         User.changeset(%User{}, user).valid?
       end
@@ -145,11 +146,11 @@ defmodule Protean do
   @callback guard(term(), State.t(), event) :: boolean()
 
   @doc """
-  Callback for defining dynamic delays.
+  Optional callback for defining dynamic delays.
 
   ## Example
 
-      defmachine(
+      @machine [
         # ...
         states: [
           will_transition: [
@@ -162,15 +163,17 @@ defmodule Protean do
             # ...
           ]
         ]
-      )
+      ]
 
-      @impl Protean
+      @impl true
       def delay("my_delay", state, _) do
         state.context[:configured_delay] || 1000
       end
 
   """
   @callback delay(term(), State.t(), event) :: non_neg_integer()
+
+  @optional_callbacks action: 3, invoke: 3, guard: 3, delay: 3
 
   defmodule ConfigError do
     defexception [:message]
@@ -182,50 +185,70 @@ defmodule Protean do
       raise "`use Protean` outside of a module definition is not currently supported"
     end
 
-    opts = Keyword.take(opts, @allowed_options)
-    Module.put_attribute(__CALLER__.module, @protean_options, opts)
+    {opts, other} = Keyword.split(opts, @protean_options)
+
+    opts =
+      opts
+      |> Keyword.put_new(:machine, :machine)
+      |> Keyword.update(:callback_module, __CALLER__.module, fn
+        {:__aliases__, _, aliases} -> Module.concat(aliases)
+      end)
+
+    unless Enum.empty?(other) do
+      require Logger
+      Logger.warn("unknown options passed to `use Protean`: #{inspect(other)}")
+    end
+
+    Module.put_attribute(__CALLER__.module, @protean_options_attr, opts)
+    Module.register_attribute(__CALLER__.module, @protean_machine_attr, persist: true)
 
     quote do
-      import Protean, only: [defmachine: 1, defmachine: 2]
+      import Protean, only: [match: 1]
       @behaviour Protean
       @before_compile Protean
+
+      def __protean_machine__ do
+        __MODULE__.__info__(:attributes)
+        |> Keyword.get(unquote(@protean_machine_attr))
+        |> hd()
+      end
     end
   end
 
   @doc false
   defmacro __before_compile__(env) do
-    defined_machine? = Module.defines?(env.module, {:machine, 0}, :def)
+    opts = Module.get_attribute(env.module, @protean_options_attr)
+    user_config = Module.get_attribute(env.module, opts[:machine])
+
+    unless is_nil(user_config) do
+      machine_config = MachineConfig.new(user_config, callback_module: opts[:callback_module])
+      Module.put_attribute(env.module, @protean_machine_attr, machine_config)
+    end
 
     [
-      def_default_impls(),
-      defined_machine? && def_default_otp()
+      def_default_impls(env),
+      user_config && def_default_otp()
     ]
   end
 
   @doc """
-  Defines a Protean machine.
+  Helper macro to allow match expressions on events during machine definition.
 
-  TODO: Full config docs
+  ## Example
+
+      @machine [
+        # ...
+        on: [
+          # Match events that are instances of `MyStruct`
+          {match(%MyStruct{}), target: "..."},
+
+          # Match anything
+          {match(_), target: "..."}
+        ]
+      ]
   """
-  defmacro defmachine(name \\ @protean_self, config) do
-    opts = Module.get_attribute(__CALLER__.module, @protean_options)
-    callback_module = Keyword.get(opts, :callback_module, __CALLER__.module)
-
-    machine_function =
-      config
-      |> with_event_matchers()
-      |> make_machine_function(callback_module)
-
-    if name === @protean_self do
-      machine_function
-    else
-      quote do
-        defmodule unquote(name) do
-          use Protean
-          unquote(machine_function)
-        end
-      end
-    end
+  defmacro match(pattern) do
+    quote(do: fn expr -> match?(unquote(pattern), expr) end)
   end
 
   @doc """
@@ -241,8 +264,7 @@ defmodule Protean do
 
     * `:context` - context map that will be merged into the default context defined by the
       machine.
-    * `:machine` - defaults to `module.machine()` - `%Protean.MachineConfig{}` that will be
-      executed by the Protean interpreter.
+    * `:machine` - defaults to `module` - module used for machine definition.
     * `:module` - defaults to `module` - callback module used for actions, guards, invoke,
       etc. See "Callbacks".
     * `:parent` - defaults to `self()` - process id of the parent that will receive events from
@@ -256,7 +278,7 @@ defmodule Protean do
   @spec start_link(module(), [start_option]) :: GenServer.on_start()
   def start_link(module, opts \\ []) do
     defaults = [
-      machine: opts[:machine] || module.machine(),
+      machine: opts[:machine] || module.__protean_machine__(),
       module: module,
       parent: self(),
       supervisor: Protean.Supervisor
@@ -408,45 +430,29 @@ defmodule Protean do
 
   # Internal helpers
 
-  defp with_event_matchers(config) do
-    Macro.prewalk(config, fn
-      {:on, transitions} ->
-        {:on,
-         Enum.map(transitions, fn {pattern, transition} ->
-           {make_match_fun(pattern), transition}
-         end)}
-
-      other ->
-        other
-    end)
-  end
-
-  defp make_match_fun(pattern) do
-    quote(do: fn expr -> match?(unquote(pattern), expr) end)
-  end
-
-  defp make_machine_function(config, callback_module) do
-    quote do
-      def machine do
-        Protean.MachineConfig.new(unquote(config), callback_module: unquote(callback_module))
-      end
-    end
-  end
-
-  defp def_default_impls do
-    quote generated: true, location: :keep do
-      @impl Protean
-      def action(_, _, _), do: nil
-
-      @impl Protean
-      def invoke(_, _, _), do: nil
-
-      @impl Protean
-      def guard(_, _, _), do: false
-
-      @impl Protean
-      def delay(_, _, _), do: 0
-    end
+  defp def_default_impls(env) do
+    [
+      Module.defines?(env.module, {:action, 3}, :def) &&
+        quote do
+          @impl Protean
+          def action(_, _, _), do: nil
+        end,
+      Module.defines?(env.module, {:invoke, 3}, :def) &&
+        quote do
+          @impl Protean
+          def invoke(_, _, _), do: nil
+        end,
+      Module.defines?(env.module, {:delay, 3}, :def) &&
+        quote do
+          @impl Protean
+          def delay(_, _, _), do: nil
+        end,
+      Module.defines?(env.module, {:guard, 3}, :def) &&
+        quote do
+          @impl Protean
+          def guard(_, _, _), do: false
+        end
+    ]
   end
 
   defp def_default_otp do

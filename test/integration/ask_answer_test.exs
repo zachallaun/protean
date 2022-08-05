@@ -5,23 +5,23 @@ defmodule ProteanIntegration.AskAnswerTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       initial: "Yield",
       states: [
         {
           "Yield",
           on: [
-            {_, target: "Skip", actions: :answer}
+            {match(_), target: "Skip", actions: :answer}
           ]
         },
         {
           "Skip",
           on: [
-            {_, target: "Yield"}
+            {match(_), target: "Yield"}
           ]
         }
       ]
-    )
+    ]
 
     @impl true
     def action(:answer, state, event) do

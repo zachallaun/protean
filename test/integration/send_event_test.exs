@@ -5,16 +5,16 @@ defmodule ProteanIntegration.SendEventTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       initial: "waiting",
       states: [
         waiting: [
           on: [
-            {{:echo, _}, actions: "echo"}
+            {match({:echo, _}), actions: "echo"}
           ]
         ]
       ]
-    )
+    ]
 
     @impl Protean
     def action("echo", state, {:echo, echo}) do

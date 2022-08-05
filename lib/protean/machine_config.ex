@@ -26,6 +26,9 @@ defmodule Protean.MachineConfig do
           callback_module: module()
         }
 
+  @typedoc "User-defined machine configuration."
+  @type config :: keyword()
+
   def new(config, opts \\ []) do
     {root, context} = Parser.parse!(config)
 
@@ -41,6 +44,10 @@ defmodule Protean.MachineConfig do
       idmap: idmap,
       callback_module: opts[:callback_module]
     }
+  end
+
+  def set_callback_module(%MachineConfig{} = config, module) do
+    %{config | callback_module: module}
   end
 
   @doc """

@@ -4,17 +4,17 @@ defmodule ProteanIntegration.AutoforwardTest do
   defmodule Child do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "receiving",
       context: [data: []],
       states: [
         receiving: [
           on: [
-            {{"event", _}, actions: :log_data}
+            {match({"event", _}), actions: :log_data}
           ]
         ]
       ]
-    )
+    ]
 
     @impl true
     def action(:log_data, state, {_, value}) do
@@ -25,7 +25,7 @@ defmodule ProteanIntegration.AutoforwardTest do
   defmodule Parent do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "forwarding",
       states: [
         forwarding: [
@@ -36,7 +36,7 @@ defmodule ProteanIntegration.AutoforwardTest do
           ]
         ]
       ]
-    )
+    ]
   end
 
   @tag machine: Parent

@@ -5,13 +5,13 @@ defmodule ProteanIntegration.ChooseTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       context: [switch: "on", data: []],
       initial: "a",
       states: [
         a: [
           on: [
-            {{"set_switch", _}, actions: "set_switch"},
+            {match({"set_switch", _}), actions: "set_switch"},
             {
               "make_a_choice",
               actions: [
@@ -30,7 +30,7 @@ defmodule ProteanIntegration.ChooseTest do
           ]
         ]
       ]
-    )
+    ]
 
     @impl Protean
     def action("set_switch", state, {_, value}) do

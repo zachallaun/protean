@@ -4,7 +4,7 @@ defmodule ProteanIntegration.SubscriptionTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "a",
       states: [
         a: [
@@ -18,7 +18,7 @@ defmodule ProteanIntegration.SubscriptionTest do
           ]
         ]
       ]
-    )
+    ]
 
     @impl true
     def action(:answer, state, _) do

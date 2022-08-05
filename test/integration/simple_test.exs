@@ -4,7 +4,7 @@ defmodule ProteanIntegration.SimpleTest do
   defmodule SimpleMachine do
     use Protean
 
-    defmachine(
+    @machine [
       context: [
         data: nil
       ],
@@ -18,9 +18,9 @@ defmodule ProteanIntegration.SimpleTest do
         ]
       ],
       on: [
-        {{:set_data, _}, actions: "do_set"}
+        {match({:set_data, _}), actions: "do_set"}
       ]
-    )
+    ]
 
     @impl true
     def action("do_set", state, {_, data}) do

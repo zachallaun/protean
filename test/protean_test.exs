@@ -4,16 +4,16 @@ defmodule ProteanTest do
   defmodule SimpleMachine do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [init: []]
-    )
+    ]
   end
 
   defmodule TimerMachine do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
@@ -22,7 +22,7 @@ defmodule ProteanTest do
           ]
         ]
       ]
-    )
+    ]
   end
 
   describe "Protean supervisor" do
@@ -96,20 +96,17 @@ defmodule ProteanTest do
   defmodule MachineWithoutCallbacks do
     use Protean, callback_module: ProteanTest.CallbackModule
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
           entry: :my_action
         ]
       ]
-    )
+    ]
   end
 
   defmodule CallbackModule do
-    use Protean
-
-    @impl true
     def action(:my_action, state, _) do
       state
       |> Protean.Action.assign(:data, :foo)
@@ -123,54 +120,14 @@ defmodule ProteanTest do
     )
   end
 
-  defmodule Outer do
-    use Protean
-
-    defmachine(Inner1,
-      initial: "init",
-      states: [
-        init: [
-          entry: :first_action
-        ]
-      ]
-    )
-
-    defmachine(Inner2,
-      initial: "init",
-      states: [
-        init: [
-          entry: :second_action
-        ]
-      ]
-    )
-
-    @impl true
-    def action(action, state, _) do
-      state
-      |> Protean.Action.assign(:data, action)
-    end
-  end
-
-  @tag machines: [Outer.Inner1, Outer.Inner2]
-  test "defmachine/2 defines nested modules with a shared callback module", context do
-    [%{machine: inner1}, %{machine: inner2}] = context[:machines]
-
-    assert_protean(inner1, context: [data: :first_action])
-    assert_protean(inner2, context: [data: :second_action])
-  end
-
-  test "otp callbacks only defined if defmachine/1 is used" do
-    refute Kernel.function_exported?(Outer, :start_link, 1)
-  end
-
   defmodule DefaultContext do
     use Protean
 
-    defmachine(
+    @machine [
       context: %{data: :foo},
       initial: "init",
       states: [init: []]
-    )
+    ]
   end
 
   describe "machines with context:" do

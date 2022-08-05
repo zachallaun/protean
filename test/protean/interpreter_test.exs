@@ -42,47 +42,4 @@ defmodule Protean.InterpreterTest do
       end
     end
   end
-
-  @tag machine: :higher_order_guard_machine_1
-  test "higher order guards", %{interpreter: interpreter} do
-    higher_order_guard_test(interpreter)
-  end
-
-  @tag machine: :higher_order_guard_machine_2
-  test "higher order guards with syntax sugar", %{interpreter: interpreter} do
-    higher_order_guard_test(interpreter)
-  end
-
-  def higher_order_guard_test(interpreter) do
-    with interpreter <- Interpreter.start(interpreter) do
-      assert Protean.matches?(interpreter, "a")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_c)
-      assert Protean.matches?(interpreter, "a")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_b)
-      assert Protean.matches?(interpreter, "b")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, {:goto_d, nil})
-      assert Protean.matches?(interpreter, "b")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_c)
-      assert Protean.matches?(interpreter, "c")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, {:goto_d, nil})
-      assert Protean.matches?(interpreter, "c")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, {:goto_d, :please})
-      assert Protean.matches?(interpreter, "d")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_a)
-      assert Protean.matches?(interpreter, "d")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_c)
-      assert Protean.matches?(interpreter, "c")
-
-      {_, interpreter} = Interpreter.handle_event(interpreter, :goto_a)
-      assert Protean.matches?(interpreter, "a")
-    end
-  end
 end

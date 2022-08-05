@@ -4,7 +4,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine(
+    @machine [
       context: %{
         path: []
       },
@@ -38,7 +38,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
         goto_c: ".c",
         goto_d: ".d"
       ]
-    )
+    ]
 
     @impl Protean
     def action(:save_path, %{context: %{path: path}} = state, _event) do
@@ -89,7 +89,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   defmodule DynamicDelay do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "will_transition",
       states: [
         will_transition: [
@@ -100,7 +100,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
         ],
         new_state: []
       ]
-    )
+    ]
 
     @impl Protean
     def delay("some_delay", _, _), do: 50

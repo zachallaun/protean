@@ -7,7 +7,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       initial: "parenting",
       states: [
         parenting: [
@@ -17,19 +17,19 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ],
           on: [
             {:grow_it, actions: [Action.send(:grow, to: "child")]},
-            {{:child_grown, _}, "relax"}
+            {match({:child_grown, _}), "relax"}
           ]
         ],
         relax: []
       ]
-    )
+    ]
   end
 
   defmodule Child do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       initial: "growing",
       states: [
         growing: [
@@ -44,7 +44,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
         ],
         grown: []
       ]
-    )
+    ]
   end
 
   describe "the parent/child relationship" do
@@ -62,7 +62,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule Crashes do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "can_crash",
       states: [
         can_crash: [
@@ -73,7 +73,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ]
         ]
       ]
-    )
+    ]
 
     @impl Protean
     def action("crash", _, _) do
@@ -84,7 +84,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule InvokeCrashes do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
@@ -104,7 +104,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
         ],
         invoke_crashed: []
       ]
-    )
+    ]
 
     @impl Protean
     def action("save_event", state, event) do
@@ -132,7 +132,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule ImmediatelyCrashes do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "crash_now",
       states: [
         crash_now: [
@@ -141,7 +141,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ]
         ]
       ]
-    )
+    ]
 
     @impl Protean
     def action("crash", _, _) do
@@ -152,7 +152,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
   defmodule InvokeImmediatelyCrashes do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
@@ -166,7 +166,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
         ],
         invoke_crashed: []
       ]
-    )
+    ]
   end
 
   describe "invoked machine immediately crashes" do

@@ -5,7 +5,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       context: [
         result: nil
       ],
@@ -36,7 +36,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
         ],
         d: []
       ]
-    )
+    ]
 
     @impl true
     def action("save_result", state, {_, result}) do
@@ -70,7 +70,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       context: [result: nil],
       initial: "a",
       states: [
@@ -85,7 +85,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
         ],
         b: []
       ]
-    )
+    ]
 
     def my_task(value) do
       {:task_return, value}
@@ -112,7 +112,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
   defmodule ErrorRaisingTasks do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
@@ -125,7 +125,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
         success: [],
         failure: []
       ]
-    )
+    ]
 
     def raise_error do
       raise "any error"
@@ -150,7 +150,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
   defmodule ResolvedTaskInvoke do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
@@ -161,7 +161,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
         ],
         success: []
       ]
-    )
+    ]
 
     @impl true
     def invoke("my_task", _state, _event) do
@@ -183,7 +183,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
   defmodule CanceledTask do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
@@ -203,7 +203,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
         # shouldn't get here
         send: []
       ]
-    )
+    ]
 
     @impl true
     def invoke("send_message_to_self", _state, _event) do

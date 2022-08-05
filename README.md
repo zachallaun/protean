@@ -38,26 +38,29 @@ defmodule Counter do
   use Protean
   alias Protean.Action
 
-  defmachine(
-    initial: "active",
-    context: [
-      count: 0,
-      min: nil,
-      max: nil
-    ],
-    states: [
-      active: [
-        on: [
-          {"Inc", actions: :increment, guard: [not: :at_max]},
-          {"Dec", actions: :decrement, guard: [not: :at_min]},
-          {{"Set", _}, actions: :set_min_or_max},
-          {{"Log", _}, actions: :log}
+  @impl true
+  def machine do
+    [
+      initial: "active",
+      context: [
+        count: 0,
+        min: nil,
+        max: nil
+      ],
+      states: [
+        active: [
+          on: [
+            {"Inc", actions: :increment, guard: [not: :at_max]},
+            {"Dec", actions: :decrement, guard: [not: :at_min]},
+            {{"Set", _}, actions: :set_min_or_max},
+            {{"Log", _}, actions: :log}
+          ]
         ]
       ]
     ]
-  )
+  end
 
-  @impl Protean
+  @impl true
   def action(:increment, state, _event), do: Action.assign_in(state, [:count], & &1 + 1)
   def action(:decrement, state, _event), do: Action.assign_in(state, [:count], & &1 - 1)
 
@@ -73,7 +76,7 @@ defmodule Counter do
     state
   end
 
-  @impl Protean
+  @impl true
   def guard(:at_max, %{context: %{max: max, count: count}}, _event) do
     max && count >= max
   end

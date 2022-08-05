@@ -4,16 +4,16 @@ defmodule ProteanIntegration.DependentProcessesTest do
   defmodule Child do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [init: []]
-    )
+    ]
   end
 
   defmodule Parent do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [
@@ -23,7 +23,7 @@ defmodule ProteanIntegration.DependentProcessesTest do
           ]
         ]
       ]
-    )
+    ]
   end
 
   @tag machine: Parent

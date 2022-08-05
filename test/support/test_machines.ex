@@ -23,7 +23,7 @@ defmodule TestMachines do
         %{machine: config, initial: MachineConfig.initial_state(config)}
 
       module when is_atom(module) ->
-        config = module.machine()
+        config = module.__protean_machine__()
 
         %{
           machine: config,
@@ -180,7 +180,7 @@ defmodule TestMachines do
   defmodule SillyDirectionMachine do
     use Protean
 
-    defmachine(
+    @machine [
       context: %{
         direction: :straight
       },
@@ -209,7 +209,7 @@ defmodule TestMachines do
           actions: [Action.assign(direction: :right)]
         ]
       ]
-    )
+    ]
 
     @impl true
     def guard("direction_straight?", %{context: %{direction: :straight}}, _event), do: true
@@ -229,7 +229,7 @@ defmodule TestMachines do
   defmodule PureMachine1 do
     use Protean
 
-    defmachine(
+    @machine [
       initial: :a,
       context: %{
         acc: []
@@ -258,7 +258,7 @@ defmodule TestMachines do
         ],
         b: []
       ]
-    )
+    ]
 
     @impl true
     def action("entering_a", %{context: %{acc: acc}} = state, _event) do
@@ -274,64 +274,10 @@ defmodule TestMachines do
     PureMachine1
   end
 
-  defmodule HigherOrderGuardMachine1 do
-    use Protean
-
-    defmachine(
-      initial: :a,
-      states: [
-        a: [],
-        b: [],
-        c: [],
-        d: []
-      ],
-      on: [
-        {:goto_a, target: ".a", guard: {:not, {:in, "#d"}}},
-        {:goto_b, target: ".b", guard: {:in, "#a"}},
-        {:goto_c, target: ".c", guard: {:or, [{:in, "#d"}, {:in, "#b"}]}},
-        {{:goto_d, _}, target: ".d", guard: {:and, [{:in, "#c"}, "asked_nicely"]}}
-      ]
-    )
-
-    @impl true
-    def guard("asked_nicely", _state, {_, :please}), do: true
-  end
-
-  def higher_order_guard_machine_1 do
-    HigherOrderGuardMachine1
-  end
-
-  defmodule HigherOrderGuardMachine2 do
-    use Protean
-
-    defmachine(
-      initial: :a,
-      states: [
-        a: [],
-        b: [],
-        c: [],
-        d: []
-      ],
-      on: [
-        {:goto_a, target: ".a", guard: [:not, in: "d"]},
-        {:goto_b, target: ".b", guard: [in: "a"]},
-        {:goto_c, target: ".c", guard: [:or, in: "d", in: "b"]},
-        {{:goto_d, _}, target: ".d", guard: ["asked_nicely", in: "c"]}
-      ]
-    )
-
-    @impl true
-    def guard("asked_nicely", _state, {_, :please}), do: true
-  end
-
-  def higher_order_guard_machine_2 do
-    HigherOrderGuardMachine2
-  end
-
   defmodule AutoTransitionMachine1 do
     use Protean
 
-    defmachine(
+    @machine [
       initial: :a,
       states: [
         a: [
@@ -339,7 +285,7 @@ defmodule TestMachines do
         ],
         b: []
       ]
-    )
+    ]
   end
 
   def auto_transition_machine_1 do
@@ -349,7 +295,7 @@ defmodule TestMachines do
   defmodule AutoTransitionMachine2 do
     use Protean
 
-    defmachine(
+    @machine [
       initial: :a,
       context: %{
         acc: []
@@ -374,7 +320,7 @@ defmodule TestMachines do
         ],
         d: []
       ]
-    )
+    ]
 
     @impl true
     def action(action_name, state, _event) do

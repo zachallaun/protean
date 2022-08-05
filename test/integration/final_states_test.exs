@@ -4,7 +4,7 @@ defmodule ProteanIntegration.FinalStatesTest do
   defmodule TestMachine do
     use Protean
 
-    defmachine(
+    @machine [
       initial: "init",
       states: [
         init: [],
@@ -55,7 +55,7 @@ defmodule ProteanIntegration.FinalStatesTest do
         simple_compound: "#simple_compound",
         simple_parallel: "#simple_parallel"
       ]
-    )
+    ]
   end
 
   describe "final state" do

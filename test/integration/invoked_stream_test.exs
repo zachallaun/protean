@@ -5,7 +5,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       initial: "main",
       context: [data: []],
       states: [
@@ -18,12 +18,12 @@ defmodule ProteanIntegration.InvokedStreamTest do
             done: "stream_consumed"
           ],
           on: [
-            {{:stream_data, _}, actions: "write_data"}
+            {match({:stream_data, _}), actions: "write_data"}
           ]
         ],
         stream_consumed: []
       ]
-    )
+    ]
 
     @impl true
     def action("write_data", state, {_, value}) do
@@ -46,13 +46,13 @@ defmodule ProteanIntegration.InvokedStreamTest do
     use Protean
     alias Protean.Action
 
-    defmachine(
+    @machine [
       initial: "waiting",
       context: [data: []],
       states: [
         waiting: [
           on: [
-            {{:stream, _}, "consuming"}
+            {match({:stream, _}), "consuming"}
           ]
         ],
         consuming: [
@@ -61,11 +61,11 @@ defmodule ProteanIntegration.InvokedStreamTest do
             done: "waiting"
           ],
           on: [
-            {{:stream_data, _}, actions: "write_data"}
+            {match({:stream_data, _}), actions: "write_data"}
           ]
         ]
       ]
-    )
+    ]
 
     @impl true
     def invoke("stream_from_event", _state, {_, stream}) do
