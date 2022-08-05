@@ -367,7 +367,7 @@ defmodule Protean do
 
   """
   @spec subscribe(server, subscribe_to :: term(), [subscribe_option]) :: reference()
-  def subscribe(protean, subscribe_to \\ :all, opts \\ []) do
+  def subscribe(protean, subscribe_to \\ :all, opts \\ []) when is_atom(subscribe_to) do
     opts = Keyword.put_new(opts, :monitor, true)
     Server.subscribe(protean, subscribe_to, opts)
   end

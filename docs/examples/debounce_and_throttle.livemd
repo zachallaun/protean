@@ -1,0 +1,592 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Example: Debounce & Throttle
+
+```elixir
+# Mix.install([
+#   {:protean, git: "https://github.com/zachallaun/protean.git", branch: "dev"}
+# ])
+
+Supervisor.start_link([Protean.Supervisor], strategy: :one_for_one)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:ok, #PID<0.253.0>}
+```
+
+## Introduction
+
+Debounce and throttle are techniques used to control streams of events, often in the context of user interfaces. Both are used to limit the flow of events.
+
+* **Debounce** limits events by buffering incoming events and only emitting the latest one after a certain amount of time has passed with no new events. Consider a real-time search field, for instance: the user starts typing, and each character emits a `change`. Instead of starting the search, canceling, and starting over on every keypress, you could _debounce_ the events, only emitting a change (and triggering the search) after the user has stopped typing for a certain amount of time.
+* **Throttle**, on the other hand, immediately emits an event, but it then drops later events until a certain amount of time has passed. This is often necessary when you want to run some expensive function during a continuous stream of events.
+
+## Debounce
+
+```elixir
+defmodule Examples.Debounce do
+  use Protean
+
+  @type context :: %{
+          timeout: non_neg_integer()
+        }
+
+  @machine [
+    initial: "waiting",
+    context: [
+      timeout: 1_000
+    ],
+    states: [
+      waiting: [
+        on: [
+          {match(_), target: "debouncing"}
+        ]
+      ],
+      debouncing: [
+        after: [
+          delay: :timeout,
+          actions: [:reply_with_latest_event],
+          target: "waiting"
+        ],
+        on: [
+          {match(_), target: "debouncing", internal: false}
+        ]
+      ]
+    ]
+  ]
+
+  @impl Protean
+  def delay(:timeout, %{context: %{timeout: t}}, _), do: t
+
+  @impl true
+  def handle_action(:reply_with_latest_event, state, event) do
+    {:reply, event, state}
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Examples.Debounce, <<70, 79, 82, 49, 0, 0, 38, ...>>, {:handle_action, 3}}
+```
+
+Our debounce machine relies on delayed- and self-transitions.
+
+We start in a `waiting` state, awaiting any event. When the first event comes in, we switch to a `debouncing` state. `debouncing` will define a delayed transition based on whatever timeout value is set in the machine context. If the delay goes by, we emit the latest event with a `:reply` tuple.
+
+However, if any events come in while we're `debouncing`, we do an external self-transition, resetting the timeout:
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+debouncing: [
+  # After the delay specified by the `delay(:timeout, state, event)`
+  # callback, reply with the last event and transition back to waiting.
+  after: [
+    delay: :timeout,
+    actions: :reply_last,
+    target: "waiting"
+  ],
+  on: [
+    # Transitioning to yourself is an internal transition by default,
+    # which means that entry and exit actions aren't re-executed. Setting
+    # internal: false makes it an external transition, so it's as if we
+    # are leaving the debouncing state, which cancels the timer, and then
+    # re-entering it, starting it again.
+    {match(_), target: "debouncing", actions: :set_last, internal: false}
+  ]
+]
+```
+
+Let's spin one up and give it a whirl.
+
+```elixir
+{:ok, debounce} = Examples.Debounce.start_link()
+Protean.subscribe(debounce, :replies)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Reference<0.1443916993.361758744.206851>
+```
+
+Our debouncer is emitting debounced events as answers, so we've subscribed only to them (as opposed to every state transition). This will put messages in our mainbox.
+
+Now, let's send some events. We expect our debounce machine to send us one on our subscription 1000ms after the last one we send.
+
+```elixir
+Enum.each(1..5, fn _ ->
+  Protean.send(debounce, DateTime.utc_now())
+  :timer.sleep(250)
+end)
+
+receive do
+  {:state, _, {_, [event]}} ->
+    [event: event, now: DateTime.utc_now()]
+after
+  5_000 -> IO.inspect(:nothing)
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[event: ~U[2022-08-07 21:44:00.806995Z], now: ~U[2022-08-07 21:44:01.808075Z]]
+```
+
+By default, our debouncer is waiting for 1,000ms since the last event before emitting it, but we can control that behavior by providing a different `:timeout` in the machine's context.
+
+```elixir
+{:ok, debounce_500ms} = Examples.Debounce.start_link(context: %{timeout: 500})
+Protean.subscribe(debounce_500ms, :replies)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Reference<0.1443916993.361758744.206900>
+```
+
+```elixir
+# Same block as before, except using pid_500ms and events every 250ms
+Enum.each(1..5, fn _ ->
+  Protean.send(debounce_500ms, DateTime.utc_now())
+  :timer.sleep(250)
+end)
+
+receive do
+  {:state, _, {_, [event]}} ->
+    [event: event, now: DateTime.utc_now()]
+after
+  5_000 -> IO.inspect(:nothing)
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[event: ~U[2022-08-07 21:44:02.823931Z], now: ~U[2022-08-07 21:44:03.325084Z]]
+```
+
+## Throttle
+
+Throttle works a bit differently, emitting a constant stream of events, but no more frequently than specified by `:timeout`. This means we should receive an event immediately, and then the latest event every `:timeout` milliseconds.
+
+```elixir
+defmodule Examples.Throttle do
+  use Protean
+  alias Protean.Action
+
+  @type context :: %{
+          timeout: non_neg_integer(),
+          last_event: term()
+        }
+
+  @machine [
+    initial: "waiting",
+    context: [
+      timeout: 1_000,
+      last_event: nil
+    ],
+    on: [
+      {match(_), actions: [:set_last]}
+    ],
+    states: [
+      waiting: [
+        always: [
+          target: "throttling",
+          guard: :has_event?
+        ],
+        entry: [{:log, :waiting}]
+      ],
+      throttling: [
+        entry: [:reply_and_clear_last, {:log, :throttling}],
+        after: [
+          [
+            delay: :timeout,
+            guard: :has_event?,
+            target: "throttling",
+            internal: false
+          ],
+          [
+            delay: :timeout,
+            guard: [not: :has_event?],
+            target: "throttling",
+            internal: true
+          ]
+        ]
+      ]
+    ]
+  ]
+
+  @impl Protean
+  def delay(:timeout, %{context: %{timeout: t}}, _), do: t
+
+  @impl Protean
+  def guard(:has_event?, %{context: %{last_event: nil}}, _), do: false
+  def guard(:has_event?, _, _), do: true
+
+  @impl Protean
+  def handle_action({:log, anything}, state, _) do
+    IO.inspect(anything)
+    state
+  end
+
+  def handle_action(:set_last, state, event) do
+    Action.assign(state, :last_event, event)
+  end
+
+  def handle_action(:reply_last, state, _) do
+    {:reply, state.context.last_event, state}
+  end
+
+  def handle_action(:reply_and_clear_last, state, _) do
+    {:reply, state.context.last_event, Action.assign(state, :last_event, nil)}
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Examples.Throttle, <<70, 79, 82, 49, 0, 0, 49, ...>>, {:handle_action, 3}}
+```
+
+```elixir
+{:ok, pid} = Examples.Throttle.start_link()
+ref = Protean.subscribe(pid, :replies)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:waiting
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Reference<0.1443916993.361758744.206989>
+```
+
+```elixir
+Task.async(fn ->
+  Enum.each(1..5, fn _ ->
+    Protean.send(pid, DateTime.utc_now())
+    :timer.sleep(500)
+  end)
+end)
+
+Enum.each(1..10, fn _ ->
+  receive do
+    {:state, _, {_state, message}} ->
+      time = DateTime.utc_now()
+      IO.inspect({message, at: time}, label: "received")
+  after
+    1_500 -> :nothing
+  end
+end)
+
+:sys.get_state(pid)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:throttling
+received: {[~U[2022-08-07 21:44:03.354834Z]], [at: ~U[2022-08-07 21:44:03.354953Z]]}
+:throttling
+received: {[~U[2022-08-07 21:44:03.855926Z]], [at: ~U[2022-08-07 21:44:04.356177Z]]}
+:throttling
+received: {[~U[2022-08-07 21:44:04.857968Z]], [at: ~U[2022-08-07 21:44:05.357164Z]]}
+:throttling
+received: {[~U[2022-08-07 21:44:05.358897Z]], [at: ~U[2022-08-07 21:44:06.358161Z]]}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Protean.Interpreter{
+  config: %Protean.MachineConfig{
+    callback_module: Examples.Throttle,
+    default_context: [timeout: 1000, last_event: nil],
+    id: "1fa0c110-b0b1-48c3-8fc6-eed9e9cb2114",
+    idmap: %{
+      ["#"] => %Protean.Node{
+        automatic_transitions: [],
+        entry: [],
+        exit: [],
+        id: ["#"],
+        initial: ["waiting", "#"],
+        order: 0,
+        states: [
+          %Protean.Node{
+            automatic_transitions: [
+              %Protean.Transition{
+                actions: [],
+                guard: :has_event?,
+                internal: false,
+                match?: nil,
+                source_id: ["waiting", "#"],
+                target_ids: [["throttling", "#"]]
+              }
+            ],
+            entry: [log: :waiting],
+            exit: [],
+            id: ["waiting", "#"],
+            initial: nil,
+            order: 1,
+            states: nil,
+            transitions: [],
+            type: :atomic
+          },
+          %Protean.Node{
+            automatic_transitions: [],
+            entry: [
+              %Protean.Action{
+                arg: {:invoke, :delayed_send, :timeout,
+                 %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}, []},
+                module: Protean.Action
+              },
+              %Protean.Action{
+                arg: {:invoke, :delayed_send, :timeout,
+                 %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}, []},
+                module: Protean.Action
+              },
+              :reply_and_clear_last,
+              {:log, :throttling}
+            ],
+            exit: [
+              %Protean.Action{
+                arg: {:invoke, :cancel,
+                 %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}},
+                module: Protean.Action
+              },
+              %Protean.Action{
+                arg: {:invoke, :cancel,
+                 %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}},
+                module: Protean.Action
+              }
+            ],
+            id: ["throttling", "#"],
+            initial: nil,
+            order: 2,
+            states: nil,
+            transitions: [
+              %Protean.Transition{
+                actions: [],
+                guard: :has_event?,
+                internal: false,
+                match?: %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after},
+                source_id: ["throttling", "#"],
+                target_ids: [["throttling", "#"]]
+              },
+              %Protean.Transition{
+                actions: [],
+                guard: {:not, :has_event?},
+                internal: true,
+                match?: %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after},
+                source_id: ["throttling", "#"],
+                target_ids: [["throttling", "#"]]
+              }
+            ],
+            type: :atomic
+          }
+        ],
+        transitions: [
+          %Protean.Transition{
+            actions: [:set_last],
+            guard: nil,
+            internal: true,
+            match?: #Function<0.2609833/1 in :elixir_compiler_2.__MODULE__/1>,
+            source_id: ["#"],
+            target_ids: [["#"]]
+          }
+        ],
+        type: :compound
+      },
+      ["throttling", "#"] => %Protean.Node{
+        automatic_transitions: [],
+        entry: [
+          %Protean.Action{
+            arg: {:invoke, :delayed_send, :timeout,
+             %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}, []},
+            module: Protean.Action
+          },
+          %Protean.Action{
+            arg: {:invoke, :delayed_send, :timeout,
+             %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}, []},
+            module: Protean.Action
+          },
+          :reply_and_clear_last,
+          {:log, :throttling}
+        ],
+        exit: [
+          %Protean.Action{
+            arg: {:invoke, :cancel,
+             %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}},
+            module: Protean.Action
+          },
+          %Protean.Action{
+            arg: {:invoke, :cancel,
+             %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}},
+            module: Protean.Action
+          }
+        ],
+        id: ["throttling", "#"],
+        initial: nil,
+        order: 2,
+        states: nil,
+        transitions: [
+          %Protean.Transition{
+            actions: [],
+            guard: :has_event?,
+            internal: false,
+            match?: %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after},
+            source_id: ["throttling", "#"],
+            target_ids: [["throttling", "#"]]
+          },
+          %Protean.Transition{
+            actions: [],
+            guard: {:not, :has_event?},
+            internal: true,
+            match?: %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after},
+            source_id: ["throttling", "#"],
+            target_ids: [["throttling", "#"]]
+          }
+        ],
+        type: :atomic
+      },
+      ["waiting", "#"] => %Protean.Node{
+        automatic_transitions: [
+          %Protean.Transition{
+            actions: [],
+            guard: :has_event?,
+            internal: false,
+            match?: nil,
+            source_id: ["waiting", "#"],
+            target_ids: [["throttling", "#"]]
+          }
+        ],
+        entry: [log: :waiting],
+        exit: [],
+        id: ["waiting", "#"],
+        initial: nil,
+        order: 1,
+        states: nil,
+        transitions: [],
+        type: :atomic
+      }
+    },
+    root: %Protean.Node{
+      automatic_transitions: [],
+      entry: [],
+      exit: [],
+      id: ["#"],
+      initial: ["waiting", "#"],
+      order: 0,
+      states: [
+        %Protean.Node{
+          automatic_transitions: [
+            %Protean.Transition{
+              actions: [],
+              guard: :has_event?,
+              internal: false,
+              match?: nil,
+              source_id: ["waiting", "#"],
+              target_ids: [["throttling", "#"]]
+            }
+          ],
+          entry: [log: :waiting],
+          exit: [],
+          id: ["waiting", "#"],
+          initial: nil,
+          order: 1,
+          states: nil,
+          transitions: [],
+          type: :atomic
+        },
+        %Protean.Node{
+          automatic_transitions: [],
+          entry: [
+            %Protean.Action{
+              arg: {:invoke, :delayed_send, :timeout,
+               %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}, []},
+              module: Protean.Action
+            },
+            %Protean.Action{
+              arg: {:invoke, :delayed_send, :timeout,
+               %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}, []},
+              module: Protean.Action
+            },
+            :reply_and_clear_last,
+            {:log, :throttling}
+          ],
+          exit: [
+            %Protean.Action{
+              arg: {:invoke, :cancel,
+               %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}},
+              module: Protean.Action
+            },
+            %Protean.Action{
+              arg: {:invoke, :cancel,
+               %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after}},
+              module: Protean.Action
+            }
+          ],
+          id: ["throttling", "#"],
+          initial: nil,
+          order: 2,
+          states: nil,
+          transitions: [
+            %Protean.Transition{
+              actions: [],
+              guard: :has_event?,
+              internal: false,
+              match?: %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after},
+              source_id: ["throttling", "#"],
+              target_ids: [["throttling", "#"]]
+            },
+            %Protean.Transition{
+              actions: [],
+              guard: {:not, :has_event?},
+              internal: true,
+              match?: %Protean.Events.Platform{id: {["throttling", "#"], :timeout}, type: :after},
+              source_id: ["throttling", "#"],
+              target_ids: [["throttling", "#"]]
+            }
+          ],
+          type: :atomic
+        }
+      ],
+      transitions: [
+        %Protean.Transition{
+          actions: [:set_last],
+          guard: nil,
+          internal: true,
+          match?: #Function<0.2609833/1 in :elixir_compiler_2.__MODULE__/1>,
+          source_id: ["#"],
+          target_ids: [["#"]]
+        }
+      ],
+      type: :compound
+    }
+  },
+  internal_queue: {[], []},
+  invoked: %{},
+  parent: #PID<0.250.0>,
+  running: true,
+  state: #Protean.State<
+    context: %{last_event: nil, timeout: 1000},
+    event: ~U[2022-08-07 21:44:05.358897Z],
+    value: #MapSet<[["throttling", "#"]]>,
+    ...
+  >,
+  subscribers: %{#Reference<0.1443916993.361758744.206989> => %{pid: #PID<0.250.0>, to: :replies}},
+  supervisor: Protean.Supervisor
+}
+```

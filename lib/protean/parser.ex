@@ -197,13 +197,13 @@ defmodule Protean.Parser do
     end
   end
 
-  defp parse_delayed_transition(config, id) do
+  defp parse_delayed_transition(config, node_id) do
     {delay, config} = Keyword.pop!(config, :delay)
-    event = Events.platform(:after, {id, delay})
+    event = Events.platform(:after, {node_id, delay})
 
     [entry_action] = parse_actions(Action.invoke(:delayed_send, delay, event))
     [exit_action] = parse_actions(Action.invoke(:cancel, event))
-    transition = parse_transition({event, config}, id)
+    transition = parse_transition({event, config}, node_id)
 
     {entry_action, exit_action, transition}
   end
@@ -268,8 +268,7 @@ defmodule Protean.Parser do
 
   defp parse_guard(nil), do: nil
 
-  defp parse_guard(guard) when is_binary(guard) or is_tuple(guard),
-    do: guard
+  defp parse_guard(guard) when not is_list(guard), do: guard
 
   defp parse_guard([:not | guards]),
     do: {:not, parse_guard(guards)}

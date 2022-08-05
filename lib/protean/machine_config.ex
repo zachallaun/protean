@@ -80,11 +80,14 @@ defmodule Protean.MachineConfig do
   end
 
   @doc """
-  Compute the full set of active nodes for the given atomic states.
+  Compute the full set of active nodes for the given states.
   """
   @spec active(t, State.value()) :: State.value()
   def active(%MachineConfig{} = config, ids) do
     ids
+    |> Enum.map(&fetch!(config, &1))
+    |> Enum.flat_map(&Node.resolve_to_leaves/1)
+    |> Enum.map(& &1.id)
     |> Enum.flat_map(&lineage(config, &1))
     |> MapSet.new()
   end

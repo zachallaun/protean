@@ -320,7 +320,8 @@ defmodule Protean.Action do
     {:cont, interpreter}
   end
 
-  def exec_action({:invoke, :delayed_send, name, id, opts}, interpreter) when is_binary(name) do
+  def exec_action({:invoke, :delayed_send, name, id, opts}, interpreter)
+      when not is_integer(name) do
     delay = run_callback(:delay, name, interpreter)
     exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter)
   end
@@ -330,7 +331,8 @@ defmodule Protean.Action do
     exec_action({:invoke, invoke_type, to_invoke, id, opts}, interpreter)
   end
 
-  def exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter) do
+  def exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter)
+      when is_integer(delay) do
     f = fn ->
       :timer.sleep(delay)
       id

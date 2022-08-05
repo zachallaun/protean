@@ -5,6 +5,7 @@ defprotocol Protean.Guard do
   Default implementations are provided for:
 
     * `BitString` - Call callback module with string, state, and event
+    * `Atom` - Call callback module with atom, state, and event
     * `Function` - Call function with state and event
     * `Tuple` - Higher-order guard utilities:
       * `{:and, [guard1, ...]}`
@@ -22,6 +23,12 @@ defprotocol Protean.Guard do
 end
 
 defimpl Protean.Guard, for: BitString do
+  def allows?(name, state, event, module) do
+    module.guard(name, state, event)
+  end
+end
+
+defimpl Protean.Guard, for: Atom do
   def allows?(name, state, event, module) do
     module.guard(name, state, event)
   end

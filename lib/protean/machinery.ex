@@ -14,7 +14,6 @@ defmodule Protean.Machinery do
   alias Protean.Node
   alias Protean.State
   alias Protean.Transition
-  alias Protean.Utils
 
   @doc """
   Return the ids of any ancestors of the given nodes that are in a final state.
@@ -65,10 +64,10 @@ defmodule Protean.Machinery do
   def take_transitions(_config, state, []), do: state
 
   def take_transitions(config, state, transitions) do
-    [target_ids, to_exit, to_enter] =
+    [to_exit, to_enter] =
       transitions
       |> Enum.map(&transition_result(config, state, &1))
-      |> Utils.unzip3()
+      |> Enum.unzip()
       |> Tuple.to_list()
       |> Enum.map(fn items -> items |> Enum.concat() |> Enum.uniq() end)
 
@@ -76,10 +75,9 @@ defmodule Protean.Machinery do
     to_enter = Node.entry_order(to_enter)
 
     value =
-      MapSet.to_list(state.value)
-      |> then(&(&1 -- Enum.map(to_exit, fn node -> node.id end)))
-      |> Enum.concat(target_ids)
-      |> Enum.uniq()
+      state.value
+      |> MapSet.difference(leaf_ids(to_exit))
+      |> MapSet.union(leaf_ids(to_enter))
 
     actions =
       Enum.flat_map(to_exit, & &1.exit) ++
@@ -95,87 +93,84 @@ defmodule Protean.Machinery do
           {target_ids :: [Node.id()], to_exit :: [Node.t()], to_enter :: [Node.t()]}
   defp transition_result(config, state, transition) do
     current_active = MachineConfig.active(config, state.value)
-    target_ids = effective_target_ids(transition.target_ids, config)
-    domain = transition_domain(transition, target_ids)
-    to_exit = exit_set(domain, current_active)
-    to_enter = entry_set(domain, target_ids, config)
+    domain = transition_domain(transition)
 
-    value = (MapSet.to_list(state.value) -- ids(to_exit)) ++ target_ids
-
-    new_active = MachineConfig.active(config, value)
-
-    # if internal, we don't exit states we normally would have exited if they're a part of the
-    # new active set
     to_exit =
-      if transition.internal do
-        MapSet.difference(to_exit, new_active)
-      else
-        to_exit
+      cond do
+        is_nil(domain) -> MapSet.new()
+        transition.internal -> internal_exit_set(domain, current_active, transition.target_ids)
+        true -> external_exit_set(domain, current_active)
       end
 
-    # if internal, we don't enter states we normally would if they were already active
+    remaining_active = MapSet.difference(current_active, to_exit)
+
     to_enter =
-      if transition.internal do
-        MapSet.difference(to_enter, current_active)
-      else
-        to_enter
-      end
-
-    {target_ids, to_exit, to_enter}
-  end
-
-  defp entry_set(domain_id, target_ids, config)
-
-  defp entry_set([], target_ids, config),
-    do: entry_set(["#"], target_ids, config)
-
-  defp entry_set(_, [], _), do: MapSet.new()
-
-  defp entry_set(domain_id, target_ids, config) do
-    case MachineConfig.fetch!(config, domain_id) do
-      %{type: :atomic} ->
-        MapSet.new()
-
-      %{type: :final} ->
-        MapSet.new()
-
-      %{type: :compound} = compound ->
-        if child = active_child(compound, target_ids) do
-          entry_set(child.id, target_ids, config)
-          |> MapSet.put(child)
+      MachineConfig.active(config, transition.target_ids)
+      |> Enum.filter(fn node ->
+        if transition.internal do
+          Node.descendant?(node.id, domain) &&
+            !Enum.any?(transition.target_ids, &Node.descendant?(node.id, &1))
         else
-          MapSet.new()
+          Node.descendant?(node.id, domain)
         end
+      end)
+      |> MapSet.new()
+      |> MapSet.difference(remaining_active)
 
-      %{type: :parallel} = parallel ->
-        children = MapSet.new(parallel.states)
+    case {Enum.empty?(to_exit), Enum.empty?(to_enter)} do
+      {true, true} ->
+        :ok
 
-        Enum.reduce(children, children, fn child, acc ->
-          child.id
-          |> entry_set(target_ids, config)
-          |> MapSet.union(acc)
-        end)
+      {false, false} ->
+        :ok
+
+      _ ->
+        values = [
+          internal: transition.internal,
+          current: state.value,
+          source_id: transition.source_id,
+          target_ids: transition.target_ids,
+          domain: domain,
+          to_exit: Enum.map(to_exit, & &1.id),
+          to_enter: Enum.map(to_enter, & &1.id),
+          remaining: Enum.map(remaining_active, & &1.id)
+        ]
+
+        raise "One of exit or entry sets is empty but the other isn't. This means Protean made a boo-boo:\n#{inspect(values)}"
     end
+
+    {to_exit, to_enter}
   end
 
-  defp exit_set(domain, active_nodes) do
-    active_nodes
-    |> Enum.filter(&Node.descendant?(&1.id, domain))
+  # On internal, exit any descendants of the domain that aren't a target or parent of a target
+  defp internal_exit_set(domain, active, target_ids) do
+    Enum.filter(active, fn node ->
+      Node.descendant?(node.id, domain) &&
+        !Enum.any?(target_ids, fn tid -> tid == node.id || Node.descendant?(node.id, tid) end)
+    end)
     |> MapSet.new()
   end
 
-  defp effective_target_ids(target_ids, config) do
-    target_ids
-    |> Enum.map(&MachineConfig.fetch!(config, &1))
-    |> Enum.flat_map(&Node.resolve_to_leaves/1)
-    |> ids()
+  # On external transitions, exit any nodes that are descendants of the transition domain.
+  defp external_exit_set(domain_id, active) do
+    Enum.filter(active, fn node ->
+      Node.descendant?(node.id, domain_id)
+    end)
+    |> MapSet.new()
   end
 
-  @spec transition_domain(Transition.t(), [Node.id()]) :: Node.id()
-  defp transition_domain(transition, target_ids) do
-    %{source_id: source_id} = transition
+  defp leaf_ids(nodes) do
+    nodes
+    |> Enum.filter(&Node.leaf?/1)
+    |> Enum.map(& &1.id)
+    |> MapSet.new()
+  end
 
-    if transition.internal && all_descendants_of?(source_id, target_ids) do
+  @spec transition_domain(Transition.t()) :: Node.id()
+  defp transition_domain(%Transition{target_ids: []}), do: nil
+
+  defp transition_domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
+    if t.internal && all_descendants_of?(source_id, target_ids) do
       source_id
     else
       Node.common_ancestor_id([source_id | target_ids])
@@ -234,6 +229,4 @@ defmodule Protean.Machinery do
       Transition.enabled?(transition, event, state, config.callback_module)
     end)
   end
-
-  defp ids(nodes), do: Enum.map(nodes, & &1.id)
 end

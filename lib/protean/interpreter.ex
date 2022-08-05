@@ -106,7 +106,6 @@ defmodule Protean.Interpreter do
   current machine state.
 
   Returns a tuple of the interpreter and any replies resulting from actions that were run.
-
   """
   @spec handle_event(t, Protean.event()) :: {t, [term()]}
   def handle_event(%Interpreter{running: true} = interpreter, %Events.Platform{} = event) do
@@ -166,7 +165,7 @@ defmodule Protean.Interpreter do
   defp get_invoked_by_ref(%{invoked: invoked}, ref) do
     invoked
     |> Map.values()
-    |> Enum.find(fn %{ref: ^ref} = i -> i end)
+    |> Enum.find(fn proc -> proc[:ref] === ref end)
   end
 
   @doc """
@@ -185,8 +184,10 @@ defmodule Protean.Interpreter do
 
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
   # internal events are processed before awaiting an external event.
-  defp run_interpreter(%Interpreter{running: true} = interpreter),
-    do: run_automatic_transitions(interpreter)
+  defp run_interpreter(%Interpreter{running: true} = interpreter) do
+    interpreter
+    |> run_automatic_transitions()
+  end
 
   defp run_interpreter(%Interpreter{running: false} = interpreter),
     do: interpreter
@@ -199,7 +200,7 @@ defmodule Protean.Interpreter do
       transitions ->
         transitions
         |> microstep(interpreter)
-        |> run_interpreter()
+        |> run_automatic_transitions()
     end
   end
 
@@ -218,18 +219,10 @@ defmodule Protean.Interpreter do
     interpreter_with_event = set_event(interpreter, event)
     transitions = select_transitions(interpreter_with_event, event)
 
-    case external? do
-      true ->
-        transitions
-        |> microstep(interpreter_with_event)
-        |> run_interpreter()
-        |> notify_subscribers()
-
-      false ->
-        transitions
-        |> microstep(interpreter)
-        |> run_interpreter()
-    end
+    transitions
+    |> microstep(if external?, do: interpreter_with_event, else: interpreter)
+    |> run_interpreter()
+    |> notify_subscribers()
   end
 
   defp notify_subscribers(interpreter) do

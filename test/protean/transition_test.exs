@@ -15,9 +15,9 @@ defmodule Protean.TransitionTest do
 
     @tag machine: :auto_transition_machine_1
     test "occur when starting an interpreter", %{interpreter: interpreter} do
-      assert Protean.matches?(interpreter, "a")
+      assert Protean.matches?(interpreter.state, "a")
       interpreter = Interpreter.start(interpreter)
-      assert Protean.matches?(interpreter, "b")
+      assert Protean.matches?(interpreter.state, "b")
     end
 
     @tag machine: :auto_transition_machine_2
@@ -27,7 +27,7 @@ defmodule Protean.TransitionTest do
         |> Interpreter.start()
         |> Interpreter.handle_event(:goto_b)
 
-      assert Protean.matches?(interpreter, :d)
+      assert Protean.matches?(interpreter.state, :d)
       assert interpreter.state.context[:acc] == ["auto_to_d", "auto_to_c"]
     end
   end

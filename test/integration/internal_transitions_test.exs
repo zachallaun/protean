@@ -1,7 +1,7 @@
 defmodule ProteanIntegration.InternalTransitionsTest do
   use Protean.TestCase
 
-  defmodule TestMachine do
+  defmodule Siblings do
     use Protean
     alias Protean.Action
 
@@ -78,47 +78,102 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     end
   end
 
-  @moduletag machine: TestMachine
+  describe "sibling states" do
+    @describetag machine: Siblings
 
-  test "internal self-transitions do not trigger entry/exit actions", %{machine: machine} do
-    assert_protean(machine,
-      call: :a1_self_internal,
-      context: [on_entry: ["a1", "a"], on_exit: []]
-    )
+    test "internal self-transitions do not trigger entry/exit actions", %{machine: machine} do
+      assert_protean(machine,
+        call: :a1_self_internal,
+        context: [on_entry: ["a1", "a"], on_exit: []]
+      )
+    end
+
+    test "external self-transitions trigger entry/exit actions", %{machine: machine} do
+      assert_protean(machine,
+        context: [on_entry: ["a1", "a"], on_exit: []],
+        call: :a1_self_external,
+        context: [on_entry: ["a1", "a1", "a"], on_exit: ["a1"]]
+      )
+    end
+
+    @tag here: true
+    test "internal relative transitions do not trigger entry/exit actions", %{machine: machine} do
+      assert_protean(machine,
+        call: :a2_internal,
+        matches: "a.a2",
+        context: [on_entry: ["a2", "a1", "a"], on_exit: ["a1"]]
+      )
+    end
+
+    test "external relative transitions trigger entry/exit actions", %{machine: machine} do
+      assert_protean(machine,
+        call: :a2_external,
+        matches: "a.a2",
+        context: [on_entry: ["a2", "a", "a1", "a"], on_exit: ["a", "a1"]]
+      )
+    end
+
+    test "transition to sibling and back", %{machine: machine} do
+      assert_protean(machine,
+        call: :b,
+        matches: "b",
+        context: [on_entry: ["a1", "a"], on_exit: ["a", "a1"]],
+        call: :back_to_a,
+        matches: "a.a1",
+        context: [on_entry: ["a1", "a", "a1", "a"], on_exit: ["a", "a1"]]
+      )
+    end
   end
 
-  test "external self-transitions trigger entry/exit actions", %{machine: machine} do
-    assert_protean(machine,
-      context: [on_entry: ["a1", "a"], on_exit: []],
-      call: :a1_self_external,
-      context: [on_entry: ["a1", "a1", "a"], on_exit: ["a1"]]
-    )
+  defmodule Parents do
+    use Protean
+
+    @machine [
+      initial: "parent",
+      states: [
+        parent: [
+          initial: "a",
+          on: [
+            {:parent_internal, actions: [:noop]},
+            {:parent_external, actions: [:noop], internal: false}
+          ],
+          states: [
+            a: [
+              on: [
+                {:goto_b, target: "b"}
+              ]
+            ],
+            b: []
+          ]
+        ]
+      ]
+    ]
+
+    @impl Protean
+    def handle_action(:noop, state, _), do: state
   end
 
-  test "internal relative transitions do not trigger entry/exit actions", %{machine: machine} do
-    assert_protean(machine,
-      call: :a2_internal,
-      matches: "a.a2",
-      context: [on_entry: ["a2", "a1", "a"], on_exit: ["a1"]]
-    )
-  end
+  describe "parent transitions" do
+    @describetag machine: Parents
 
-  test "external relative transitions trigger entry/exit actions", %{machine: machine} do
-    assert_protean(machine,
-      call: :a2_external,
-      matches: "a.a2",
-      context: [on_entry: ["a2", "a", "a1", "a"], on_exit: ["a", "a1"]]
-    )
-  end
+    test "internal parent transition does not change active children", %{machine: machine} do
+      assert_protean(machine,
+        matches: "parent.a",
+        call: :goto_b,
+        matches: "parent.b",
+        call: :parent_internal,
+        matches: "parent.b"
+      )
+    end
 
-  test "transition to sibling and back", %{machine: machine} do
-    assert_protean(machine,
-      call: :b,
-      matches: "b",
-      context: [on_entry: ["a1", "a"], on_exit: ["a", "a1"]],
-      call: :back_to_a,
-      matches: "a.a1",
-      context: [on_entry: ["a1", "a", "a1", "a"], on_exit: ["a", "a1"]]
-    )
+    test "external parent transitions re-enter children", %{machine: machine} do
+      assert_protean(machine,
+        matches: "parent.a",
+        call: :goto_b,
+        matches: "parent.b",
+        call: :parent_external,
+        matches: "parent.a"
+      )
+    end
   end
 end

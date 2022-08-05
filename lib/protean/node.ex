@@ -138,6 +138,12 @@ defmodule Protean.Node do
     end
   end
 
+  def leaf?(%Node{type: :atomic}), do: true
+  def leaf?(%Node{type: :final}), do: true
+  def leaf?(_), do: false
+
+  def complex?(node), do: !leaf?(node)
+
   @doc "Given a Node id, return a list containing that id and all of its ancestors."
   @spec ancestor_ids(id) :: [id]
   def ancestor_ids([]), do: []
