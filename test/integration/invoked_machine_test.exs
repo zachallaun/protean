@@ -76,7 +76,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     ]
 
     @impl Protean
-    def action("crash", _, _) do
+    def handle_action("crash", _, _) do
       raise "boom"
     end
   end
@@ -107,7 +107,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     ]
 
     @impl Protean
-    def action("save_event", state, event) do
+    def handle_action("save_event", state, event) do
       Protean.Action.assign(state, :crash_event, event)
     end
   end
@@ -144,7 +144,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     ]
 
     @impl Protean
-    def action("crash", _, _) do
+    def handle_action("crash", _, _) do
       raise "boom"
     end
   end

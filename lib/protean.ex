@@ -97,12 +97,12 @@ defmodule Protean do
       ]
 
       @impl true
-      def action(:assign_data, state, {:data, data}) do
+      def handle_action(:assign_data, state, {:data, data}) do
         state
         |> Protean.Action.assign(:last_received, data)
       end
 
-      def action(:broadcast_data, state, _) do
+      def handle_action(:broadcast_data, state, _) do
         %{notify: pid, last_received: data} = state.context
 
         PubSub.broadcast!(@pubsub, @topic, data)
@@ -115,7 +115,7 @@ defmodule Protean do
       end
 
   """
-  @callback action(term(), State.t(), event) :: State.t()
+  @callback handle_action(term(), State.t(), event) :: State.t()
 
   @doc """
   Optional callback to determine whether a conditional transition should occur.
@@ -179,7 +179,7 @@ defmodule Protean do
   """
   @callback delay(term(), State.t(), event) :: non_neg_integer()
 
-  @optional_callbacks action: 3, invoke: 3, guard: 3, delay: 3
+  @optional_callbacks handle_action: 3, invoke: 3, guard: 3, delay: 3
 
   defmodule ConfigError do
     defexception [:message]
@@ -413,7 +413,7 @@ defmodule Protean do
       Module.defines?(env.module, {:action, 3}, :def) &&
         quote do
           @impl Protean
-          def action(state, _, _), do: {:noreply, state}
+          def handle_action(state, _, _), do: {:noreply, state}
         end,
       Module.defines?(env.module, {:guard, 3}, :def) &&
         quote do

@@ -107,7 +107,7 @@ defmodule ProteanTest do
   end
 
   defmodule CallbackModule do
-    def action(:my_action, state, _) do
+    def handle_action(:my_action, state, _) do
       state
       |> Protean.Action.assign(:data, :foo)
     end

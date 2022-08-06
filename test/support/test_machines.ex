@@ -261,11 +261,11 @@ defmodule TestMachines do
     ]
 
     @impl true
-    def action("entering_a", %{context: %{acc: acc}} = state, _event) do
+    def handle_action("entering_a", %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["entering_a" | acc])
     end
 
-    def action("exiting_a", %{context: %{acc: acc}} = state, _event) do
+    def handle_action("exiting_a", %{context: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["exiting_a" | acc])
     end
   end
@@ -323,7 +323,7 @@ defmodule TestMachines do
     ]
 
     @impl true
-    def action(action_name, state, _event) do
+    def handle_action(action_name, state, _event) do
       %{acc: acc} = state.context
       Action.assign(state, :acc, [action_name | acc])
     end

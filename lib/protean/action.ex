@@ -238,7 +238,7 @@ defmodule Protean.Action do
   def exec_action({:delegate, action}, interpreter) do
     %{state: state, config: config} = interpreter
 
-    case config.callback_module.action(action, state, state.event) do
+    case config.callback_module.handle_action(action, state, state.event) do
       {:noreply, state} ->
         {:cont, interpreter, State.actions(state)}
 

@@ -61,15 +61,15 @@ defmodule Counter do
   end
 
   @impl true
-  def action(:increment, state, _event), do: Action.assign_in(state, [:count], & &1 + 1)
-  def action(:decrement, state, _event), do: Action.assign_in(state, [:count], & &1 - 1)
+  def handle_action(:increment, state, _event), do: Action.assign_in(state, [:count], & &1 + 1)
+  def handle_action(:decrement, state, _event), do: Action.assign_in(state, [:count], & &1 - 1)
 
-  def action(:set_min_or_max, state, {"Set", {key, val}}) do
+  def handle_action(:set_min_or_max, state, {"Set", {key, val}}) do
     state
     |> Action.assign(key, val)
   end
 
-  def action(:log, state, {"Log", attribute}) do
+  def handle_action(:log, state, {"Log", attribute}) do
     %{context: context} = state
     IO.puts("#{attribute}: #{context[attribute]}")
 

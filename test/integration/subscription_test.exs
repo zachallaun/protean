@@ -21,7 +21,7 @@ defmodule ProteanIntegration.SubscriptionTest do
     ]
 
     @impl true
-    def action(:answer, state, _) do
+    def handle_action(:answer, state, _) do
       {:reply, :answer, state}
     end
   end
