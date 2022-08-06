@@ -26,44 +26,44 @@ defmodule ProteanIntegration.SubscriptionTest do
     end
   end
 
-  @tag machine: TestMachine
-  test "subscribed processes receive updates on transition", %{machine: machine} do
-    ref = Protean.subscribe(machine)
+  describe "subscribed processes" do
+    @describetag machine: TestMachine
 
-    Protean.call(machine, "b")
-    assert_receive {:state, ^ref, {%Protean.State{}, _}}
+    test "receive updates on transition", %{machine: machine} do
+      ref = Protean.subscribe(machine)
 
-    Protean.call(machine, "b")
-    assert_receive {:state, ^ref, {%Protean.State{}, _}}
+      Protean.call(machine, "b")
+      assert_receive {:state, ^ref, {%Protean.State{}, _}}
 
-    Protean.unsubscribe(machine, ref)
+      Protean.call(machine, "b")
+      assert_receive {:state, ^ref, {%Protean.State{}, _}}
 
-    Protean.call(machine, "a")
-    refute_receive {:state, ^ref, _}
-  end
+      Protean.unsubscribe(machine, ref)
 
-  @tag machine: TestMachine
-  test "processes can subscribe only to transitions with replies", %{machine: machine} do
-    ref = Protean.subscribe(machine, :replies)
+      Protean.call(machine, "a")
+      refute_receive {:state, ^ref, _}
+    end
 
-    Protean.call(machine, "b")
-    assert_receive {:state, ^ref, {_, [:answer]}}
+    test "can subscribe only to transitions with replies", %{machine: machine} do
+      ref = Protean.subscribe(machine, :replies)
 
-    Protean.call(machine, "a")
-    refute_receive {:state, ^ref, _}
-  end
+      Protean.call(machine, "b")
+      assert_receive {:state, ^ref, {_, [:answer]}}
 
-  @tag machine: TestMachine
-  test "subscribed processes receive :DOWN when machine terminates", %{machine: machine} do
-    ref = Protean.subscribe(machine)
-    :ok = Protean.stop(machine)
-    assert_receive {:DOWN, ^ref, :process, _, _}
-  end
+      Protean.call(machine, "a")
+      refute_receive {:state, ^ref, _}
+    end
 
-  @tag machine: TestMachine
-  test "subscribing to a dead process immediately sends :DOWN", %{machine: machine} do
-    ref = Protean.subscribe(machine)
-    :ok = Protean.stop(machine)
-    assert_receive {:DOWN, ^ref, :process, _, _}
+    test "receive :DOWN when machine terminates", %{machine: machine} do
+      ref = Protean.subscribe(machine)
+      :ok = Protean.stop(machine)
+      assert_receive {:DOWN, ^ref, :process, _, _}
+    end
+
+    test "receive :DOWN immediately when subscribing to a dead process", %{machine: machine} do
+      ref = Protean.subscribe(machine)
+      :ok = Protean.stop(machine)
+      assert_receive {:DOWN, ^ref, :process, _, _}
+    end
   end
 end
