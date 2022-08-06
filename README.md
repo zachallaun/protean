@@ -1,4 +1,4 @@
-![Warning](https://img.shields.io/badge/Warning-Experimental-critical?labelColor=870800&color=d11a0f) [![GitHub](https://img.shields.io/badge/GitHub-zachallaun%2Fprotean-orange?logo=github)](https://github.com/zachallaun/protean) [![Docs](https://img.shields.io/badge/-Docs-informational)](https://hexdocs.pm/protean/)
+[![GitHub](https://img.shields.io/badge/GitHub-zachallaun%2Fprotean-orange?logo=github)](https://github.com/zachallaun/protean) [![Docs](https://img.shields.io/badge/-Docs-informational)](https://hexdocs.pm/protean/) [![CI](https://github.com/zachallaun/protean/actions/workflows/ci.yml/badge.svg)](https://github.com/zachallaun/protean/actions/workflows/ci.yml)
 
 <!-- MDOC !-->
 
