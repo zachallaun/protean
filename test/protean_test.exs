@@ -64,7 +64,7 @@ defmodule ProteanTest do
     @describetag machine: SimpleMachine
 
     test "call/2", %{machine: machine} do
-      assert %Protean.State{} = Protean.call(machine, "event")
+      assert {%Protean.State{}, []} = Protean.call(machine, "event")
     end
 
     test "send/2", %{machine: machine} do
@@ -88,14 +88,14 @@ defmodule ProteanTest do
     test "subscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
       assert Protean.call(machine, "event")
-      assert_receive {:state, %Protean.State{}, _, ^ref}
+      assert_receive {:state, ^ref, {%Protean.State{}, []}}
     end
 
     test "unsubscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
       assert :ok = Protean.unsubscribe(machine, ref)
       assert Protean.call(machine, "event")
-      refute_receive {:state, %Protean.State{}, _, ^ref}
+      refute_receive {:state, ^ref, {%Protean.State{}, _}}
     end
 
     test "matches?/2", %{machine: machine} do
@@ -118,7 +118,7 @@ defmodule ProteanTest do
   end
 
   defmodule CallbackModule do
-    def action(:my_action, state, _) do
+    def handle_action(:my_action, state, _) do
       state
       |> Protean.Action.assign(:data, :foo)
     end

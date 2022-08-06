@@ -22,12 +22,8 @@ defmodule Protean.Interpreter.Server do
     GenServer.start_link(__MODULE__, interpreter_opts, gen_server_opts)
   end
 
-  def call(server, event, timeout \\ 5000) do
+  def call(server, event, timeout) do
     GenServer.call(server, event, timeout)
-  end
-
-  def ask(server, event, timeout \\ 5000) do
-    GenServer.call(server, {@prefix, :ask, event}, timeout)
   end
 
   def send(server, event) do
@@ -54,14 +50,9 @@ defmodule Protean.Interpreter.Server do
     |> State.matches?(pattern)
   end
 
-  def stop(pid, reason \\ :default)
-  def stop(pid, :default), do: GenServer.stop(pid, {:shutdown, current(pid)})
-  def stop(pid, reason), do: GenServer.stop(pid, reason)
+  def stop(pid, reason, timeout), do: GenServer.stop(pid, reason, timeout)
 
-  def subscribe(server, opts \\ []) do
-    monitor = Keyword.get(opts, :monitor, true)
-    subscribe_to = Keyword.get(opts, :to, :all)
-
+  def subscribe(server, subscribe_to, monitor: monitor) do
     ref =
       if monitor do
         server
@@ -108,37 +99,31 @@ defmodule Protean.Interpreter.Server do
     {:reply, :ok, interpreter}
   end
 
-  def handle_call({@prefix, :ask, event}, _from, interpreter) do
-    {answer, interpreter} = Interpreter.handle_event(interpreter, event)
-
-    {:reply, {answer, Interpreter.state(interpreter)}, interpreter,
-     {:continue, {@prefix, :check_running}}}
-  end
-
   def handle_call(event, _from, interpreter) do
-    {_answer, interpreter} = Interpreter.handle_event(interpreter, event)
-    {:reply, Interpreter.state(interpreter), interpreter, {:continue, {@prefix, :check_running}}}
+    {interpreter, response} = run_event(interpreter, event)
+    {:reply, response, interpreter, {:continue, {@prefix, :check_running}}}
   end
 
   @impl true
   def handle_cast({@prefix, :subscribe, pid, ref, to}, interpreter) do
-    {:noreply, Interpreter.subscribe(interpreter, {pid, ref, to}),
-     {:continue, {@prefix, :check_running}}}
+    interpreter = Interpreter.subscribe(interpreter, %{pid: pid, ref: ref, to: to})
+    {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
   end
 
   def handle_cast({@prefix, :unsubscribe, ref}, interpreter) do
-    {:noreply, Interpreter.unsubscribe(interpreter, ref), {:continue, {@prefix, :check_running}}}
+    interpreter = Interpreter.unsubscribe(interpreter, ref)
+    {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
   end
 
   def handle_cast(event, interpreter) do
-    {_answer, interpreter} = Interpreter.handle_event(interpreter, event)
+    {interpreter, _response} = run_event(interpreter, event)
     {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
   end
 
   @impl true
   def handle_info({:DOWN, ref, :process, _pid, reason}, interpreter) do
-    {:noreply, Interpreter.notify_process_down(interpreter, reason, ref: ref),
-     {:continue, {@prefix, :check_running}}}
+    interpreter = Interpreter.notify_process_down(interpreter, reason, ref: ref)
+    {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
   end
 
   def handle_info({:EXIT, _pid, reason}, interpreter) do
@@ -159,5 +144,10 @@ defmodule Protean.Interpreter.Server do
   @impl true
   def terminate(_reason, interpreter) do
     Interpreter.stop(interpreter)
+  end
+
+  defp run_event(interpreter, event) do
+    {interpreter, replies} = Interpreter.handle_event(interpreter, event)
+    {interpreter, {Interpreter.state(interpreter), replies}}
   end
 end

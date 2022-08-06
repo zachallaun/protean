@@ -76,9 +76,12 @@ defmodule Protean do
   @doc """
   Optional callback for actions specified in response to a transition.
 
-  Receives the current machine state and event triggering the action as arguments and must return
-  the machine state. It is possible to attach actions to the machine state to indicate that they
-  should be performed immediately following this action. See `Protean.Action`.
+  Receives the current machine state and event triggering the action as arguments. Returns one
+  of:
+
+    * `state` - same as `{:noreply, state}`
+    * `{:noreply, state}` - the machine state with any new actions
+    * `{:reply, reply, state}` - a reply and the machine state with any new actions
 
   ## Example
 
@@ -94,22 +97,25 @@ defmodule Protean do
       ]
 
       @impl true
-      def action(:assign_data, state, {:data, data}) do
+      def handle_action(:assign_data, state, {:data, data}) do
         state
         |> Protean.Action.assign(:last_received, data)
       end
 
-      def action(:broadcas_data, state, _) do
+      def handle_action(:broadcast_data, state, _) do
         %{notify: pid, last_received: data} = state.context
 
         PubSub.broadcast!(@pubsub, @topic, data)
 
-        state
-        |> Protean.Action.send({:data, data}, to: pid)
+        state =
+          state
+          |> Protean.Action.send({:data, data}, to: pid)
+
+        {:reply, data, state}
       end
 
   """
-  @callback action(term(), State.t(), event) :: State.t()
+  @callback handle_action(term(), State.t(), event) :: State.t()
 
   @doc """
   Optional callback to determine whether a conditional transition should occur.
@@ -173,7 +179,7 @@ defmodule Protean do
   """
   @callback delay(term(), State.t(), event) :: non_neg_integer()
 
-  @optional_callbacks action: 3, invoke: 3, guard: 3, delay: 3
+  @optional_callbacks handle_action: 3, invoke: 3, guard: 3, delay: 3
 
   defmodule ConfigError do
     defexception [:message]
@@ -288,51 +294,14 @@ defmodule Protean do
   end
 
   @doc """
-  Makes a synchronous call to the machine and waits for it to execute any transitions that
-  result from the given event, returning a possible answer and the new machine state.
+  Makes a synchronous call to the machine, awaiting any transitions that result.
 
-  Returns one of:
-
-    * `{{:ok, answer}, state}` - Returned if any actions executed as a result of the event set an
-      answer through the use of `Action.answer/2`.
-    * `{nil, state}` - Returned if no actions execute or if no executed actions set an answer.
-
-  Answers are only returned to the caller if they result from the given event. If an asynchronous
-  call, through `send/2` for example, would have resulted in an answer, it will be "lost".
+  Returns a tuple of `{state, replies}`, where `state` is the next state of the machine, and
+  `replies` is a (possibly empty) list of replies returned by action callbacks resulting from the
+  event.
   """
-  @spec ask(server, event, timeout()) :: {{:ok, term()}, State.t()} | {nil, State.t()}
-  defdelegate ask(protean, event), to: Server
-  defdelegate ask(protean, event, timeout), to: Server
-
-  @doc """
-  Makes a synchronous call to the machine and waits for it to execute any transitions that result
-  from the given event, returning an answer and the machine state.
-
-  Behaves like `ask/3`, but raises if an answer is not returned.
-  """
-  @spec ask!(server, event, timeout()) :: {term(), State.t()}
-  def ask!(protean, event), do: ask(protean, event) |> ensure_answer!(event)
-  def ask!(protean, event, timeout), do: ask(protean, event, timeout) |> ensure_answer!(event)
-
-  defp ensure_answer!(response, event) do
-    case response do
-      {{:ok, answer}, state} ->
-        {answer, state}
-
-      {nil, _state} ->
-        raise KeyError, message: "expected answer in response to event: #{inspect(event)}"
-    end
-  end
-
-  @doc """
-  Makes a synchronous call to the machine and waits for it to execute any transitions
-  that result from the given event, returning the new machine state.
-
-  Shares semantics with `GenServer.call/3`. See those docs for `timeout` behavior.
-  """
-  @spec call(server, event, timeout()) :: State.t()
-  defdelegate call(protean, event), to: Server
-  defdelegate call(protean, event, timeout), to: Server
+  @spec call(server, event, timeout()) :: {State.t(), replies :: [term()]}
+  def call(protean, event, timeout \\ 5000), do: Server.call(protean, event, timeout)
 
   @doc """
   Sends an asynchronous event to the machine.
@@ -340,7 +309,7 @@ defmodule Protean do
   Shares semantics with `GenServer.cast/2`.
   """
   @spec send(server, event) :: :ok
-  defdelegate send(protean, event), to: Server
+  def send(protean, event), do: Server.send(protean, event)
 
   @doc """
   Sends an event to the machine after `time` in milliseconds has passed.
@@ -348,7 +317,9 @@ defmodule Protean do
   Returns a timer reference that can be canceled with `Process.cancel_timer/1`.
   """
   @spec send_after(server, event, non_neg_integer()) :: reference()
-  defdelegate send_after(protean, event, time), to: Server
+  def send_after(protean, event, time) when is_integer(time) and time >= 0 do
+    Server.send_after(protean, event, time)
+  end
 
   @doc """
   Synchronously retrieve the current machine state.
@@ -356,47 +327,54 @@ defmodule Protean do
   TODO: Allow optional timeout as with `call/3`.
   """
   @spec current(server) :: State.t()
-  defdelegate current(protean), to: Server
+  def current(protean), do: Server.current(protean)
 
   @doc "TODO"
-  defdelegate stop(protean, reason), to: Server
-  defdelegate stop(protean), to: Server
+  @spec stop(server, reason :: term(), timeout()) :: :ok
+  def stop(protean, reason \\ :default, timeout \\ :infinity)
+
+  def stop(protean, :default, timeout) do
+    Server.stop(protean, {:shutdown, Protean.current(protean)}, timeout)
+  end
+
+  def stop(protean, reason, timeout), do: Server.stop(protean, reason, timeout)
 
   @doc """
   Subscribes the caller to a running machine, returning a reference.
 
-  Processes subscribed to a machine will receive messages whenever the machine transitions. (Note
-  that a machine can transition to the same state it was in previously.)
+  Subscribers will receive messages whenever the machine transitions, as well as a `:DOWN`
+  message when the machine exits. (This can be controlled with the `:monitor` option.)
 
-  Messages on transition will be delivered in the shape of:
+  Messages are sent in the shape of:
 
-      {:state, state, answer, ref}
+      {:state, ref, {state, replies}}
 
   where:
 
-    * `state` is the `Protean.State` resulting from the transition;
-    * `answer` is one of `nil` or `{:ok, term()}`
-    * `ref` is a monitor reference.
+    * `ref` is a monitor reference returned by the subscription;
+    * `state` is the machine state resulting from the transition;
+    * `replies` is a (possibly empty) list of replies resulting from actions on transition.
 
-  As with monitor, if the process is already dead when calling `Protean.subscribe/2`, a `:DOWN`
-  message is delivered immediately.
+  If the process is already dead when subscribing, a `:DOWN` message is delivered immediately.
 
-  ## Options
+  ## Arguments
 
-    * `:to` - defaults to `:all` - can be one of:
-      * `:all` - receive all transitions;
-      * `:answer` - receive only transitions that include an `{:ok, term()}` answer.
-    * `:monitor` - defaults to `true` - whether to additionally monitor the machine so that a
-      `:DOWN` message can be received.
+    * `server` - machine to subscribe the caller to;
+    * `subscribe_to` - one of `:all` (default) or `:replies`, in which case messages will only be
+      sent to the caller if the `replies` list is non-empty;
+    * `options`:
+      * `:monitor` - whether to receive a `:DOWN` message on receive exit (defaults to `true`).
 
   """
-  @spec subscribe(server, [subscribe_option]) :: reference()
-  defdelegate subscribe(protean, opts), to: Server
-  defdelegate subscribe(protean), to: Server
+  @spec subscribe(server, subscribe_to :: term(), [subscribe_option]) :: reference()
+  def subscribe(protean, subscribe_to \\ :all, opts \\ []) do
+    opts = Keyword.put_new(opts, :monitor, true)
+    Server.subscribe(protean, subscribe_to, opts)
+  end
 
   @doc "Unsubscribes the caller from the machine."
   @spec unsubscribe(server, reference()) :: :ok
-  defdelegate unsubscribe(protean, ref), to: Server
+  def unsubscribe(protean, ref), do: Server.unsubscribe(protean, ref)
 
   @doc false
   defdelegate ping(pid), to: Server
@@ -435,17 +413,7 @@ defmodule Protean do
       Module.defines?(env.module, {:action, 3}, :def) &&
         quote do
           @impl Protean
-          def action(_, _, _), do: nil
-        end,
-      Module.defines?(env.module, {:invoke, 3}, :def) &&
-        quote do
-          @impl Protean
-          def invoke(_, _, _), do: nil
-        end,
-      Module.defines?(env.module, {:delay, 3}, :def) &&
-        quote do
-          @impl Protean
-          def delay(_, _, _), do: nil
+          def handle_action(state, _, _), do: {:noreply, state}
         end,
       Module.defines?(env.module, {:guard, 3}, :def) &&
         quote do

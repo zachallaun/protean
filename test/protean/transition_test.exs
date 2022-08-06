@@ -22,7 +22,7 @@ defmodule Protean.TransitionTest do
 
     @tag machine: :auto_transition_machine_2
     test "trigger actions in correct order", %{interpreter: interpreter} do
-      {_, interpreter} =
+      {interpreter, []} =
         interpreter
         |> Interpreter.start()
         |> Interpreter.handle_event(:goto_b)

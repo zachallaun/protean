@@ -191,13 +191,6 @@ defmodule Protean.Action do
   end
 
   @doc "TODO"
-  def answer(%State{} = state, value), do: answer(value) |> put_action(state)
-
-  def answer(value) do
-    new({:answer, value})
-  end
-
-  @doc "TODO"
   def send(%State{} = state, event, opts) do
     send(event, opts) |> put_action(state)
   end
@@ -245,9 +238,31 @@ defmodule Protean.Action do
   def exec_action({:delegate, action}, interpreter) do
     %{state: state, config: config} = interpreter
 
-    case config.callback_module.action(action, state, state.event) do
-      nil -> {:cont, interpreter}
-      %State{} = state -> {:cont, interpreter, State.actions(state)}
+    case config.callback_module.handle_action(action, state, state.event) do
+      {:noreply, state} ->
+        {:cont, interpreter, State.actions(state)}
+
+      {:reply, reply, state} ->
+        {:cont, Interpreter.put_reply(interpreter, reply), State.actions(state)}
+
+      %State{} = state ->
+        {:cont, interpreter, State.actions(state)}
+
+      other ->
+        require Logger
+
+        Logger.error("""
+        Received invalid return value from action callback. Expected one of:
+
+          {:noreply, state}
+          {:reply, reply, state}
+
+        Got:
+
+          #{inspect(other)}
+        """)
+
+        {:cont, interpreter}
     end
   end
 
@@ -267,11 +282,6 @@ defmodule Protean.Action do
       end
 
     exec_action({:assign, :merge, assigns}, interpreter)
-  end
-
-  def exec_action({:answer, value}, interpreter) do
-    %{state: state} = interpreter
-    {:cont, %{interpreter | state: State.put_answer(state, value)}}
   end
 
   def exec_action({:send, event, to}, interpreter) do

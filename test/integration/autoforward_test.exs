@@ -17,7 +17,7 @@ defmodule ProteanIntegration.AutoforwardTest do
     ]
 
     @impl true
-    def action(:log_data, state, {_, value}) do
+    def handle_action(:log_data, state, {_, value}) do
       Protean.Action.assign_in(state, [:data], &[value | &1])
     end
   end

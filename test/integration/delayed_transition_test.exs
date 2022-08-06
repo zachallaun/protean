@@ -41,11 +41,11 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     ]
 
     @impl Protean
-    def action(:save_path, %{context: %{path: path}} = state, _event) do
+    def handle_action(:save_path, %{context: %{path: path}} = state, _event) do
       Protean.Action.assign(state, :path, [MapSet.to_list(state.value) | path])
     end
 
-    def action(:blow_up, _state, _event) do
+    def handle_action(:blow_up, _state, _event) do
       raise "should never get here!"
     end
   end

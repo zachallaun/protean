@@ -64,13 +64,13 @@ defmodule ProteanIntegration.InternalTransitionsTest do
       ]
     ]
 
-    def action("add_a_entry", state, _), do: add(state, :on_entry, "a")
-    def action("add_a1_entry", state, _), do: add(state, :on_entry, "a1")
-    def action("add_a2_entry", state, _), do: add(state, :on_entry, "a2")
+    def handle_action("add_a_entry", state, _), do: add(state, :on_entry, "a")
+    def handle_action("add_a1_entry", state, _), do: add(state, :on_entry, "a1")
+    def handle_action("add_a2_entry", state, _), do: add(state, :on_entry, "a2")
 
-    def action("add_a_exit", state, _), do: add(state, :on_exit, "a")
-    def action("add_a1_exit", state, _), do: add(state, :on_exit, "a1")
-    def action("add_a2_exit", state, _), do: add(state, :on_exit, "a2")
+    def handle_action("add_a_exit", state, _), do: add(state, :on_exit, "a")
+    def handle_action("add_a1_exit", state, _), do: add(state, :on_exit, "a1")
+    def handle_action("add_a2_exit", state, _), do: add(state, :on_exit, "a2")
 
     def add(state, key, value) do
       current = state.context[key]

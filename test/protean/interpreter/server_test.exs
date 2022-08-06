@@ -24,8 +24,8 @@ defmodule Protean.Interpreter.ServerTest do
     Process.flag(:trap_exit, true)
     {:ok, pid} = TestMachine.start_link()
     assert Server.matches?(pid, :a)
-    assert :ok = Server.stop(pid)
-    assert_receive {:EXIT, _pid, {:shutdown, %Protean.State{}}}
+    assert :ok = Server.stop(pid, :normal, :infinity)
+    assert_receive {:EXIT, _pid, :normal}
   end
 
   @tag machine: {TestMachine, name: NamedMachine}
@@ -34,8 +34,8 @@ defmodule Protean.Interpreter.ServerTest do
   end
 
   @tag machine: TestMachine
-  test "call/2", %{machine: server} do
-    assert state = %State{} = Server.call(server, :goto_b)
+  test "call/3", %{machine: server} do
+    assert {state = %State{}, []} = Server.call(server, :goto_b, 5000)
     assert State.matches?(state, :b)
   end
 

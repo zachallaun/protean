@@ -18,7 +18,7 @@ defmodule Protean.Interpreter do
     running: false,
     internal_queue: :queue.new(),
     invoked: %{},
-    subscribed: []
+    subscribers: %{}
   ]
 
   @type t :: %Interpreter{
@@ -29,7 +29,7 @@ defmodule Protean.Interpreter do
           running: boolean(),
           internal_queue: :queue.queue(),
           invoked: invoked,
-          subscribed: [{pid(), reference(), :all | :answer}]
+          subscribers: %{reference() => %{pid: pid(), to: :all | :replies}}
         }
 
   @type invoked :: %{invoked_id => invoked_service}
@@ -105,40 +105,36 @@ defmodule Protean.Interpreter do
   Handle an event, executing any transitions, actions, and side-effects associated with the
   current machine state.
 
-  Returns a possible answer and the interpreter state:
-
-    * `{{:ok, answer}, interpreter}` - if any actions resulting from handling the event set an
-      answer on the machine state;
-    * `{nil, interpreter}` - if no actions ran or none that ran set an answer.
+  Returns a tuple of the interpreter and any replies resulting from actions that were run.
 
   """
-  @spec handle_event(t, Protean.event()) :: {{:ok, term()}, t} | {nil, t}
+  @spec handle_event(t, Protean.event()) :: {t, [term()]}
   def handle_event(%Interpreter{running: true} = interpreter, %Events.Platform{} = event) do
     interpreter
     |> process_event(event, false)
-    |> pop_answer()
+    |> pop_replies()
   end
 
   def handle_event(%Interpreter{running: true} = interpreter, event) do
     interpreter
     |> autoforward_event(event)
     |> process_event(event)
-    |> pop_answer()
+    |> pop_replies()
   end
 
-  def handle_event(interpreter, _event), do: {nil, interpreter}
+  def handle_event(interpreter, _event), do: {interpreter, []}
 
-  defp pop_answer(%Interpreter{state: state} = interpreter) do
-    {answer, state} = State.pop_answer(state)
-    {answer, with_state(interpreter, state)}
+  defp pop_replies(%Interpreter{state: state} = interpreter) do
+    {replies, state} = State.pop_replies(state)
+    {with_state(interpreter, state), replies}
   end
 
-  def subscribe(interpreter, subscriber) do
-    update_in(interpreter.subscribed, &[subscriber | &1])
+  def subscribe(interpreter, %{pid: pid, ref: ref, to: to}) do
+    put_in(interpreter.subscribers[ref], %{pid: pid, to: to})
   end
 
   def unsubscribe(interpreter, ref) do
-    update_in(interpreter.subscribed, &Enum.reject(&1, fn {_, ref2, _} -> ref === ref2 end))
+    update_in(interpreter.subscribers, &Map.delete(&1, ref))
   end
 
   @doc false
@@ -238,22 +234,22 @@ defmodule Protean.Interpreter do
 
   defp notify_subscribers(interpreter) do
     state = state(interpreter)
-    answer = State.get_answer(state)
+    replies = State.get_replies(state)
 
-    interpreter.subscribed
-    |> Enum.filter(fn subscriber ->
-      case {subscriber, answer} do
-        {{_, _, :all}, _} -> true
-        {{_, _, :answer}, {:ok, _}} -> true
-        _ -> false
-      end
+    interpreter.subscribers
+    |> Enum.filter(fn {_ref, subscriber} ->
+      should_notify?(subscriber, !Enum.empty?(replies))
     end)
-    |> Enum.each(fn {pid, ref, _} ->
-      send(pid, {:state, state, answer, ref})
+    |> Enum.each(fn {ref, %{pid: pid}} ->
+      send(pid, {:state, ref, {state, replies}})
     end)
 
     interpreter
   end
+
+  defp should_notify?(subscriber, has_replies?)
+  defp should_notify?(%{to: :replies}, false), do: false
+  defp should_notify?(_, _), do: true
 
   defp set_event(interpreter, event) do
     put_in(interpreter.state.event, event)
@@ -326,5 +322,10 @@ defmodule Protean.Interpreter do
   @doc false
   def with_state(interpreter, state) do
     put_in(interpreter.state, state)
+  end
+
+  @doc false
+  def put_reply(interpreter, reply) do
+    update_in(interpreter.state, &State.put_reply(&1, reply))
   end
 end
