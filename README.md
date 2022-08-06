@@ -38,27 +38,24 @@ defmodule Counter do
   use Protean
   alias Protean.Action
 
-  @impl true
-  def machine do
-    [
-      initial: "active",
-      context: [
-        count: 0,
-        min: nil,
-        max: nil
-      ],
-      states: [
-        active: [
-          on: [
-            {"Inc", actions: :increment, guard: [not: :at_max]},
-            {"Dec", actions: :decrement, guard: [not: :at_min]},
-            {{"Set", _}, actions: :set_min_or_max},
-            {{"Log", _}, actions: :log}
-          ]
+  @machine [
+    initial: "active",
+    context: [
+      count: 0,
+      min: nil,
+      max: nil
+    ],
+    states: [
+      active: [
+        on: [
+          {"Inc", actions: :increment, guard: [not: :at_max]},
+          {"Dec", actions: :decrement, guard: [not: :at_min]},
+          {match({"Set", _}), actions: :set_min_or_max},
+          {match({"Log", _}), actions: :log}
         ]
       ]
     ]
-  end
+  ]
 
   @impl true
   def action(:increment, state, _event), do: Action.assign_in(state, [:count], & &1 + 1)
@@ -238,7 +235,7 @@ Things are changing pretty regularly, however, and some documentation is certain
 
 ## Installation
 
-This package is under active development and is pre-0.1. If you would like to experiment with it, you can install from git directly:
+This package is under active development and is pre-0.1. If you would like to experiment with it, install directly from the repository:
 
 ```elixir
 def deps do
