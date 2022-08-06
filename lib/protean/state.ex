@@ -12,7 +12,7 @@ defmodule Protean.State do
     context: %{},
     private: %{
       actions: [],
-      answer: nil
+      replies: []
     }
   ]
 
@@ -29,7 +29,7 @@ defmodule Protean.State do
 
   @opaque private_state :: %{
             actions: [Action.unresolved()],
-            answer: {:ok, term()} | nil
+            replies: [term()]
           }
 
   @doc false
@@ -128,14 +128,14 @@ defmodule Protean.State do
     do: {actions(state), assign_actions(state)}
 
   @doc false
-  def put_answer(state, answer),
-    do: put_in(state.private.answer, {:ok, answer})
+  def put_reply(state, reply),
+    do: update_in(state.private.replies, &[reply | &1])
 
   @doc false
-  def get_answer(state),
-    do: state.private.answer
+  def get_replies(state),
+    do: state.private.replies |> Enum.reverse()
 
   @doc false
-  def pop_answer(state),
-    do: {state.private.answer, put_in(state.private.answer, nil)}
+  def pop_replies(state),
+    do: {get_replies(state), put_in(state.private.replies, [])}
 end

@@ -94,39 +94,60 @@ defmodule Protean.TestCase do
   running machine process.
   """
   def assert_protean(pid, instructions) do
-    Enum.each(instructions, fn
-      {:ask, {event, expected_answer}} ->
-        {actual_answer, _} = Protean.ask(pid, event)
-        assert actual_answer == expected_answer
-
-      {:ask!, {event, expected_answer}} ->
-        {actual_answer, _} = Protean.ask!(pid, event)
-        assert actual_answer == expected_answer
-
+    Enum.reduce(instructions, nil, fn
       # Actions
-      {:call, event} ->
+      {:call, event}, _ ->
         Protean.call(pid, event)
 
-      {:send_async, event} ->
+      {:send_async, event}, _ ->
         Protean.send(pid, event)
+        nil
 
       # Utilities
-      {:sleep, milliseconds} when is_integer(milliseconds) ->
+      {:sleep, milliseconds}, _ when is_integer(milliseconds) ->
         :timer.sleep(milliseconds)
+        nil
 
       # Assertions
-      {:matches, descriptor} ->
+      {:matches, descriptor}, acc ->
         state = Protean.current(pid)
         assert Protean.matches?(state, descriptor)
+        acc
 
-      {:context, context} ->
+      {:context, context}, acc ->
         current_context = Protean.current(pid).context
 
         for {key, value} <- Enum.into(context, []) do
           assert current_context[key] == value
         end
 
-      other ->
+        acc
+
+      {:last_matches, descriptor}, {state, _} = acc ->
+        assert Protean.matches?(state, descriptor)
+        acc
+
+      {:last_context, context}, {state, _} = acc ->
+        for {key, value} <- Enum.into(context, []) do
+          assert state.context[key] == value
+        end
+
+        acc
+
+      {:last_replies, expected}, {_, actual} = acc ->
+        assert actual == expected
+        acc
+
+      {:last_matches, _}, nil ->
+        raise "Used :last_matches but have no stored result"
+
+      {:last_context, _}, nil ->
+        raise "Used :last_context but have no stored result"
+
+      {:last_replies, _}, nil ->
+        raise "Used :last_replies but have no stored result"
+
+      other, _ ->
         raise "Unknown `assert_protean/2` instruction: #{inspect(other)}"
     end)
   end

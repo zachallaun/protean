@@ -168,7 +168,7 @@ You can see the individual docs for the functions in this module for details on 
 
 ### Familiar functions
 
-* `call/3` - Send an event synchronously to a Protean machine and receive the machine state resulting from any transitions in response.
+* `call/3` - Send an event synchronously to a Protean machine and receive the machine state and any replies resulting from transition.
 * `send/2` - Send an event asynchronously to a Protean machine. Always returns `:ok`.
 * `send_after/3` - Send an event to a Protean machine after a given delay. Like `Process.send_after/4`, returns a timer reference so that the send can be canceled with `Process.cancel_timer/2`.
 
@@ -176,7 +176,6 @@ You can see the individual docs for the functions in this module for details on 
 
 * `current/1` - Get the current machine state of a running Protean machine.
 * `matches?/2` - Query the currently active state(s) of a machine.
-* `ask/3` - Like `call/3`, but potentially returns an "answer" value in addition to the machine state.
 * `subscribe/2` (and `unsubscribe/2`) - Subscribes the calling process to receive a message on every state transition.
 
 ## Protean Supervisor
@@ -222,6 +221,7 @@ Things are changing pretty regularly, however, and some documentation is certain
 
 ## Todo
 
+- [ ] Add `stream` with similar options as `subscribe` so that you can get a stream of `{state, replies}` or just a stream of replies.
 - [ ] Actions
   - [ ] Spawn in assigns
   - [ ] Raise action (queues event in internal queue)

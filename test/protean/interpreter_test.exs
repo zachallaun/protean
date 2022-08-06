@@ -32,11 +32,11 @@ defmodule Protean.InterpreterTest do
 
     test "transitions based on guard conditions", %{interpreter: interpreter} do
       with interpreter <- Interpreter.start(interpreter) do
-        {_, interpreter} = Interpreter.handle_event(interpreter, :go)
+        {interpreter, _} = Interpreter.handle_event(interpreter, :go)
         assert Interpreter.state(interpreter).value == MapSet.new([["straight", "#"]])
 
-        {_, interpreter} = Interpreter.handle_event(interpreter, :set_left)
-        {_, interpreter} = Interpreter.handle_event(interpreter, :go)
+        {interpreter, _} = Interpreter.handle_event(interpreter, :set_left)
+        {interpreter, _} = Interpreter.handle_event(interpreter, :go)
 
         assert Interpreter.state(interpreter).value == MapSet.new([["left", "#"]])
       end
