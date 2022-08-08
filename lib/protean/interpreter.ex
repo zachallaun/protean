@@ -250,7 +250,7 @@ defmodule Protean.Interpreter do
 
   @spec select_automatic_transitions(t) :: [Transition.t()]
   defp select_automatic_transitions(%{config: machine, state: state}) do
-    Machinery.select_automatic_transitions(machine, state)
+    Machinery.select_transitions(machine, state, state.event, :automatic_transitions)
   end
 
   @spec select_transitions(t, Protean.event()) :: [Transition.t()]

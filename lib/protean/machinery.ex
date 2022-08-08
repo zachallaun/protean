@@ -145,26 +145,14 @@ defmodule Protean.Machinery do
     id1 == id2 || Node.descendant?(id1, id2)
   end
 
-  @spec select_automatic_transitions(MachineConfig.t(), State.t()) :: [Transition.t()]
-  def select_automatic_transitions(config, state) do
-    nodes = MachineConfig.active(config, state.value)
-
-    case first_enabled_transition(nodes, config, state, state.event, :automatic_transitions) do
-      nil -> []
-      transition -> [transition]
-    end
-  end
-
   @spec select_transitions(MachineConfig.t(), State.t(), Protean.event()) :: [Transition.t()]
-  def select_transitions(config, state, event) do
+  def select_transitions(config, state, event, attribute \\ :transitions) do
     # TODO: Handle conflicting transitions
     # TODO: order nodes correctly (specificity + document order)
-    nodes = MachineConfig.active(config, state.value)
-
-    case first_enabled_transition(nodes, config, state, event) do
-      nil -> []
-      transition -> [transition]
-    end
+    config
+    |> MachineConfig.active(state.value)
+    |> first_enabled_transition(config, state, event, attribute)
+    |> List.wrap()
   end
 
   @doc """
@@ -178,7 +166,7 @@ defmodule Protean.Machinery do
     end
   end
 
-  defp first_enabled_transition(nodes, config, state, event, attribute \\ :transitions) do
+  defp first_enabled_transition(nodes, config, state, event, attribute) do
     nodes
     |> Enum.flat_map(&Map.get(&1, attribute))
     |> find_enabled_transition(config, state, event)
