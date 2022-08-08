@@ -93,7 +93,7 @@ defmodule Protean.Machinery do
           {target_ids :: [Node.id()], to_exit :: [Node.t()], to_enter :: [Node.t()]}
   defp transition_result(config, state, transition) do
     current_active = MachineConfig.active(config, state.value)
-    domain = transition_domain(transition)
+    domain = Transition.domain(transition)
 
     to_exit =
       cond do
@@ -166,23 +166,8 @@ defmodule Protean.Machinery do
     |> MapSet.new()
   end
 
-  @spec transition_domain(Transition.t()) :: Node.id()
-  defp transition_domain(%Transition{target_ids: []}), do: nil
-
-  defp transition_domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
-    if t.internal && all_descendants_of?(source_id, target_ids) do
-      source_id
-    else
-      Node.common_ancestor_id([source_id | target_ids])
-    end
-  end
-
   defp loose_descendant?(id1, id2) do
     id1 == id2 || Node.descendant?(id1, id2)
-  end
-
-  defp all_descendants_of?(id, ids) do
-    Enum.all?(ids, &Node.descendant?(&1, id))
   end
 
   @spec select_automatic_transitions(MachineConfig.t(), State.t()) :: [Transition.t()]

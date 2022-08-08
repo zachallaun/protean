@@ -34,12 +34,36 @@ defmodule Protean.Transition do
           actions: [Action.t()]
         }
 
+  def new(opts \\ []) do
+    transition =
+      opts
+      |> Keyword.take([:source_id, :target_ids, :match?, :guard, :internal, :actions])
+      |> then(&struct(Transition, &1))
+
+    transition
+  end
+
   @doc """
   Checks whether the transition is enabled for the given event.
   """
   @spec enabled?(t, Protean.event() | nil, State.t(), callback_module :: module()) :: boolean()
   def enabled?(transition, event, state, module) do
     matches?(transition, event) && guard_allows?(transition, state, event, module)
+  end
+
+  @spec domain(Transition.t()) :: Node.id()
+  def domain(%Transition{target_ids: []}), do: nil
+
+  def domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
+    if t.internal && all_descendants_of?(source_id, target_ids) do
+      source_id
+    else
+      Node.common_ancestor_id([source_id | target_ids])
+    end
+  end
+
+  defp all_descendants_of?(id, ids) do
+    Enum.all?(ids, &Node.descendant?(&1, id))
   end
 
   defp matches?(%Transition{match?: nil}, _), do: true
