@@ -2,6 +2,8 @@ defmodule Protean.Events do
   @moduledoc false
 
   defmodule Platform do
+    @moduledoc false
+
     defstruct [:type, :id]
   end
 
