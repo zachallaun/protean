@@ -246,24 +246,28 @@ defmodule Protean.Parser do
   defp parse_transition({matcher, transition}, id) when is_list(transition) do
     target_ids = resolve_targets(transition[:target], id)
 
-    %Transition{
+    [
       source_id: id,
       target_ids: target_ids,
       match?: matcher,
       actions: parse_actions(transition[:actions]),
       guard: parse_guard(transition[:guard])
-    }
-    |> add_internal(target_ids, transition[:internal])
+    ]
+    |> add_internal(transition[:internal])
+    |> Transition.new()
   end
 
-  defp add_internal(transition, target_ids, internal) do
-    case {transition.source_id, target_ids, internal} do
-      {id, [id], nil} -> %{transition | internal: true}
-      {id, [id], false} -> %{transition | internal: false}
-      {id, [id], _} -> %{transition | internal: true}
-      {_, _, true} -> %{transition | internal: true}
-      {_, _, _} -> %{transition | internal: false}
-    end
+  defp add_internal(t, internal) do
+    override =
+      case {t[:source_id], t[:target_ids], internal} do
+        {id, [id], nil} -> true
+        {id, [id], false} -> false
+        {id, [id], _} -> true
+        {_, _, true} -> true
+        {_, _, _} -> false
+      end
+
+    Keyword.put(t, :internal, override)
   end
 
   defp parse_guard(nil), do: nil

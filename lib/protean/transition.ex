@@ -21,6 +21,7 @@ defmodule Protean.Transition do
     :target_ids,
     :match?,
     :guard,
+    :domain,
     internal: false,
     actions: []
   ]
@@ -31,16 +32,15 @@ defmodule Protean.Transition do
           match?: (term() -> boolean()) | term() | nil,
           guard: Guard.guard(),
           internal: boolean(),
-          actions: [Action.t()]
+          actions: [Action.t()],
+          domain: Node.id()
         }
 
   def new(opts \\ []) do
-    transition =
-      opts
-      |> Keyword.take([:source_id, :target_ids, :match?, :guard, :internal, :actions])
-      |> then(&struct(Transition, &1))
-
-    transition
+    opts
+    |> Keyword.take([:source_id, :target_ids, :match?, :guard, :internal, :actions])
+    |> then(&struct(Transition, &1))
+    |> with_domain()
   end
 
   @doc """
@@ -52,15 +52,7 @@ defmodule Protean.Transition do
   end
 
   @spec domain(Transition.t()) :: Node.id()
-  def domain(%Transition{target_ids: []}), do: nil
-
-  def domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
-    if t.internal && all_descendants_of?(source_id, target_ids) do
-      source_id
-    else
-      Node.common_ancestor_id([source_id | target_ids])
-    end
-  end
+  def domain(%Transition{domain: domain}), do: domain
 
   defp all_descendants_of?(id, ids) do
     Enum.all?(ids, &Node.descendant?(&1, id))
@@ -75,5 +67,17 @@ defmodule Protean.Transition do
 
   defp guard_allows?(%Transition{guard: guard}, state, event, module) do
     Guard.allows?(guard, state, event, module)
+  end
+
+  def with_domain(%Transition{target_ids: []} = t) do
+    %{t | domain: nil}
+  end
+
+  def with_domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
+    if t.internal && all_descendants_of?(source_id, target_ids) do
+      %{t | domain: source_id}
+    else
+      %{t | domain: Node.common_ancestor_id([source_id | target_ids])}
+    end
   end
 end
