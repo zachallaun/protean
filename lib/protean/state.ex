@@ -9,6 +9,7 @@ defmodule Protean.State do
   defstruct [
     :value,
     :event,
+    final: MapSet.new(),
     context: %{},
     private: %{
       actions: [],
@@ -18,6 +19,7 @@ defmodule Protean.State do
 
   @type t :: %State{
           value: value,
+          final: value,
           event: Protean.event() | nil,
           context: context,
           private: private_state
@@ -78,6 +80,12 @@ defmodule Protean.State do
   @spec assign_active(t, [Node.id(), ...]) :: State.t()
   def assign_active(state, ids) do
     %{state | value: MapSet.new(ids)}
+  end
+
+  @doc "Assign a set of currently final states."
+  @spec assign_final(t, MapSet.t(Node.id())) :: State.t()
+  def assign_final(state, ids) do
+    %{state | final: ids}
   end
 
   @doc """

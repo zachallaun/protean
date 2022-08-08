@@ -284,17 +284,16 @@ defmodule Protean.Interpreter do
       |> Machinery.take_transitions(state, transitions)
       |> State.pop_actions()
 
-    final_states =
-      state.value
-      |> MapSet.difference(interpreter.state.value)
-      |> Machinery.final_ancestors(config, state)
+    newly_final =
+      state.final
+      |> MapSet.difference(interpreter.state.final)
 
-    final_states
+    newly_final
     |> Enum.map(&Events.platform(:done, &1))
     |> Enum.reduce(interpreter, &add_internal(&2, &1))
     |> with_state(state)
     |> exec_all(actions)
-    |> then(&if config.root.id in final_states, do: stop(&1), else: &1)
+    |> then(&if config.root.id in state.final, do: stop(&1), else: &1)
   end
 
   defp exec_all(interpreter, [action | rest]) do

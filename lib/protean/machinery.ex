@@ -15,49 +15,6 @@ defmodule Protean.Machinery do
   alias Protean.State
   alias Protean.Transition
 
-  @doc """
-  Return the ids of any ancestors of the given nodes that are in a final state.
-  """
-  @spec final_ancestors(State.value(), MachineConfig.t(), State.t()) :: [Node.id()]
-  def final_ancestors(ids, config, state) do
-    for id <- ids do
-      parent_id = Node.parent_id(id)
-      grandparent_id = Node.parent_id(parent_id)
-
-      if grandparent_id && MachineConfig.fetch!(config, grandparent_id).type == :parallel do
-        [parent_id, grandparent_id]
-      else
-        [parent_id]
-      end
-    end
-    |> Enum.concat()
-    |> Enum.uniq()
-    |> Enum.filter(&in_final_state?(MachineConfig.fetch!(config, &1), state))
-  end
-
-  @spec in_final_state?(Node.t(), State.t()) :: boolean()
-  defp in_final_state?(%Node{type: :atomic}, _), do: false
-
-  defp in_final_state?(%Node{type: :final} = node, state) do
-    node.id in state.value
-  end
-
-  defp in_final_state?(%Node{type: :compound} = node, state) do
-    node
-    |> active_child(state.value)
-    |> in_final_state?(state)
-  end
-
-  defp in_final_state?(%Node{type: :parallel} = node, state) do
-    Enum.all?(node.states, &in_final_state?(&1, state))
-  end
-
-  defp active_child(%Node{type: :compound} = node, active_ids) do
-    Enum.find(node.states, fn child ->
-      Enum.any?(active_ids, &loose_descendant?(&1, child.id))
-    end)
-  end
-
   @spec take_transitions(MachineConfig.t(), State.t(), [Transition.t()]) :: State.t()
   def take_transitions(config, state, transitions)
 
@@ -84,8 +41,11 @@ defmodule Protean.Machinery do
         Enum.flat_map(to_enter, &Node.entry_actions/1)
       ])
 
+    final_states = final_ancestors(config, value)
+
     state
     |> State.assign_active(value)
+    |> State.assign_final(final_states)
     |> State.put_actions(actions)
   end
 
@@ -175,6 +135,48 @@ defmodule Protean.Machinery do
   defp find_enabled_transition(transitions, config, state, event) do
     Enum.find(transitions, fn transition ->
       Transition.enabled?(transition, event, state, config.callback_module)
+    end)
+  end
+
+  # Return the ancestors of the given active leaves that are in a final state
+  @spec final_ancestors(MachineConfig.t(), State.value()) :: MapSet.t(Node.id())
+  defp final_ancestors(config, ids) do
+    for id <- ids do
+      parent_id = Node.parent_id(id)
+      grandparent_id = Node.parent_id(parent_id)
+
+      if grandparent_id && MachineConfig.fetch!(config, grandparent_id).type == :parallel do
+        [parent_id, grandparent_id]
+      else
+        [parent_id]
+      end
+    end
+    |> Enum.concat()
+    |> Enum.uniq()
+    |> Enum.filter(&in_final_state?(MachineConfig.fetch!(config, &1), ids))
+    |> MapSet.new()
+  end
+
+  @spec in_final_state?(Node.t(), State.value()) :: boolean()
+  defp in_final_state?(%Node{type: :atomic}, _), do: false
+
+  defp in_final_state?(%Node{type: :final} = node, value) do
+    node.id in value
+  end
+
+  defp in_final_state?(%Node{type: :compound} = node, value) do
+    node
+    |> active_child(value)
+    |> in_final_state?(value)
+  end
+
+  defp in_final_state?(%Node{type: :parallel} = node, value) do
+    Enum.all?(node.states, &in_final_state?(&1, value))
+  end
+
+  defp active_child(%Node{type: :compound} = node, active_ids) do
+    Enum.find(node.states, fn child ->
+      Enum.any?(active_ids, &loose_descendant?(&1, child.id))
     end)
   end
 end
