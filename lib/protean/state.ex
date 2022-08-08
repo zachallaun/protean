@@ -1,5 +1,10 @@
 defmodule Protean.State do
-  @moduledoc false
+  @moduledoc """
+  Snapshot of active states, context, and the latest event seen by the machine.
+
+  This module is rarely interacted with directly. Instead, use the API exposed by the top-level
+  `Protean`, such as `Protean.matches?/2`, or actions exposed by `Protean.Action`.
+  """
 
   alias __MODULE__
   alias Protean.Action
@@ -44,9 +49,6 @@ defmodule Protean.State do
   @doc false
   def get_and_update(state, key, fun), do: Map.get_and_update(state, key, fun)
 
-  @doc """
-  TODO: Descriptor usage
-  """
   @spec matches?(t, Node.id()) :: boolean()
   @spec matches?(t, String.t()) :: boolean()
   @spec matches?(t, atom()) :: boolean()
@@ -76,28 +78,27 @@ defmodule Protean.State do
     |> Enum.reverse()
   end
 
-  @doc "Assign a new set of active states."
+  @doc false
   @spec assign_active(t, [Node.id(), ...]) :: State.t()
   def assign_active(state, ids) do
     %{state | value: MapSet.new(ids)}
   end
 
-  @doc "Assign a set of currently final states."
+  @doc false
   @spec assign_final(t, MapSet.t(Node.id())) :: State.t()
   def assign_final(state, ids) do
     %{state | final: ids}
   end
 
-  @doc """
-  Assign data to a state's context.
-
-  Usage:
-
-    * `assign(state, key, value)` - Assigns value to key in state's context.
-    * `assign(state, %{})` - Merges the update map into a state's context.
-    * `assign(state, enumerable)` - Collects the key/values of `enumerable` into a map, then
-      merges that map into the state's context.
-  """
+  # Assign data to a state's context.
+  #
+  # Usage:
+  #
+  #   * `assign(state, key, value)` - Assigns value to key in state's context.
+  #   * `assign(state, %{})` - Merges the update map into a state's context.
+  #   * `assign(state, enumerable)` - Collects the key/values of `enumerable` into a map, then
+  #     merges that map into the state's context.
+  @doc false
   @spec assign(t, any, any) :: t
   @spec assign(t, %{any => any}) :: t
   @spec assign(t, Enumerable.t()) :: t

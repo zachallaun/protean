@@ -1,5 +1,9 @@
 defmodule Protean.Supervisor do
-  @moduledoc false
+  @moduledoc """
+  Supervisor used by the Protean interpreter to manage subprocesses.
+
+  See the "Supervisors" section of the `Protean` documentation for more details.
+  """
 
   use DynamicSupervisor
 

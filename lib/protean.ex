@@ -19,14 +19,15 @@ defmodule Protean do
   @type event :: term()
 
   @typedoc "Option values for `start*` functions."
-  @type start_option :: interpreter_option | GenServer.option()
+  @type start_option :: machine_option | GenServer.option()
 
-  @type interpreter_option ::
-          {:machine, MachineConfig.t()}
-          | {:module, module()}
-          | {:context, State.context()}
-          | {:parent, server | pid()}
+  @typedoc "Option values for Protean machines."
+  @type machine_option ::
+          {:context, State.context()}
           | {:supervisor, Supervisor.name()}
+          | {:machine, MachineConfig.t()}
+          | {:module, module()}
+          | {:parent, server | pid()}
 
   @typedoc "Option values for `subscribe/2`."
   @type subscribe_option ::

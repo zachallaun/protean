@@ -52,7 +52,7 @@ defmodule Protean.Interpreter do
   Create a new `Interpreter`. The returned interpreter will still need to be started, which could
   result in additional side-effects. See `start/1`.
   """
-  @spec new([Protean.intepreter_option()]) :: Interpreter.t()
+  @spec new([Protean.machine_option()]) :: Interpreter.t()
   def new(opts) do
     config = Keyword.fetch!(opts, :machine)
     state = MachineConfig.initial_state(config)

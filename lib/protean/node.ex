@@ -1,5 +1,7 @@
 defmodule Protean.Node do
-  @moduledoc false
+  @moduledoc """
+  Internal representation of an individual node in a `Protean.MachineConfig` struct.
+  """
 
   alias __MODULE__
   alias Protean.Action

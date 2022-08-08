@@ -137,7 +137,7 @@ children = [
 Supervisor.start_link(children, strategy: :one_for_one)
 ```
 
-Protean machines also accept the same options as `Protean.start_link/3`.
+Protean machines also accept the same options as `Protean.start_link/2`.
 See those docs for more details.
 
 For instance, here's how you could start the `Counter` with a custom name:

@@ -19,8 +19,8 @@ defmodule Protean.Action do
 
   ## High-level API
 
-  The most common way to use actions is through the `c:Protean.action/3` callback. This callback
-  is run when an action is specified like this:
+  The most common way to use actions is through the `c:Protean.handle_action/3` callback.
+  This callback is run when an action is specified like this:
 
       [
         # ...
@@ -32,12 +32,12 @@ defmodule Protean.Action do
   These are then handled in callbacks:
 
       @impl Protean
-      def action(:first_action, state, _event) do
+      def handle_action(:first_action, state, _event) do
         # ...
         state
       end
 
-      def action(:second_action, state, _event) do
+      def handle_action(:second_action, state, _event) do
         # ...
         state
       end
@@ -45,7 +45,7 @@ defmodule Protean.Action do
   Action callbacks must always return the machine state, but they can attach actions to that
   state that will be immediately executed by the interpreter. For instance:
 
-      def action(:update_data, state, {:data_updated, changes}) do
+      def handle_action(:update_data, state, {:data_updated, changes}) do
         state
         |> Action.assign_in([:data], &Map.merge(&1, changes))
       end
@@ -53,7 +53,7 @@ defmodule Protean.Action do
   In this case, `assign_in/3` is being used to update some data in the machine `:context`.
   But, we could perform additional actions if we wish, such as:
 
-      def action(:update_data, state, {:data_updated, changes}) do
+      def handle_action(:update_data, state, {:data_updated, changes}) do
         %{topic: topic, other_process: pid, data: data} = state.context
         new_data = Map.merge(data, changes)
 
@@ -81,7 +81,7 @@ defmodule Protean.Action do
   then call the `c:exec_action/2` callback on the module, passing it the associated argument and
   the interpreter in its current state. If it is not an `%Action{}`, wrap it in one that
   automatically delegates to the callback module associated with the machine. This is where
-  `c:Protean.action/3` is called.
+  `c:Protean.handle_action/3` is called.
 
   Many of Protean's more "dynamic" features boil down to syntax sugar over actions, including
   `:invoke` and delayed transitions using `:after`. Modules implementing the action behaviour

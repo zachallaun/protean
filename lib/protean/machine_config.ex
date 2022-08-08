@@ -1,5 +1,7 @@
 defmodule Protean.MachineConfig do
-  @moduledoc false
+  @doc """
+  Data structure representing a Protean machine.
+  """
 
   alias __MODULE__
   alias Protean.Node
