@@ -15,6 +15,25 @@ defmodule Protean.Machinery do
   alias Protean.State
   alias Protean.Transition
 
+  @doc "Transition in response to an event."
+  @spec transition(MachineConfig.t(), State.t(), Protean.event()) :: State.t()
+  def transition(config, state, event) do
+    with transitions <- select_transitions(config, state, event) do
+      take_transitions(config, state, transitions)
+    end
+  end
+
+  @doc "Select any machine transitions that apply to the given event in the current state."
+  @spec select_transitions(MachineConfig.t(), State.t(), Protean.event()) :: [Transition.t()]
+  def select_transitions(config, state, event, attribute \\ :transitions) do
+    # TODO: Handle conflicting transitions
+    # TODO: order nodes correctly (specificity + document order)
+    config
+    |> MachineConfig.active(state.value)
+    |> first_enabled_transition(config, state, event, attribute)
+    |> List.wrap()
+  end
+
   @spec take_transitions(MachineConfig.t(), State.t(), [Transition.t()]) :: State.t()
   def take_transitions(config, state, transitions)
 
@@ -103,27 +122,6 @@ defmodule Protean.Machinery do
 
   defp loose_descendant?(id1, id2) do
     id1 == id2 || Node.descendant?(id1, id2)
-  end
-
-  @spec select_transitions(MachineConfig.t(), State.t(), Protean.event()) :: [Transition.t()]
-  def select_transitions(config, state, event, attribute \\ :transitions) do
-    # TODO: Handle conflicting transitions
-    # TODO: order nodes correctly (specificity + document order)
-    config
-    |> MachineConfig.active(state.value)
-    |> first_enabled_transition(config, state, event, attribute)
-    |> List.wrap()
-  end
-
-  @doc """
-  Given a machine, a machine state, and an event, transition to the next state
-  if the machine defines a transition for the given state and event.
-  """
-  @spec transition(MachineConfig.t(), State.t(), Protean.event()) :: State.t()
-  def transition(config, state, event) do
-    with transitions <- select_transitions(config, state, event) do
-      take_transitions(config, state, transitions)
-    end
   end
 
   defp first_enabled_transition(nodes, config, state, event, attribute) do
