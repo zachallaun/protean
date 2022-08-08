@@ -52,7 +52,7 @@ defmodule Protean.Transition do
   end
 
   @spec domain(Transition.t()) :: Node.id()
-  def domain(%Transition{domain: domain}), do: domain
+  def domain(%Transition{} = t), do: t.domain
 
   defp all_descendants_of?(id, ids) do
     Enum.all?(ids, &Node.descendant?(&1, id))
@@ -69,11 +69,11 @@ defmodule Protean.Transition do
     Guard.allows?(guard, state, event, module)
   end
 
-  def with_domain(%Transition{target_ids: []} = t) do
+  defp with_domain(%Transition{target_ids: []} = t) do
     %{t | domain: nil}
   end
 
-  def with_domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
+  defp with_domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
     if t.internal && all_descendants_of?(source_id, target_ids) do
       %{t | domain: source_id}
     else

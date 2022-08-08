@@ -201,7 +201,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
           ]
         ],
         # shouldn't get here
-        send: []
+        sent: []
       ]
     ]
 

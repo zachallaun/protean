@@ -89,73 +89,48 @@ defmodule Protean.Machinery do
     |> State.put_actions(actions)
   end
 
-  @spec transition_result(MachineConfig.t(), State.t(), Transition.t()) ::
-          {target_ids :: [Node.id()], to_exit :: [Node.t()], to_enter :: [Node.t()]}
   defp transition_result(config, state, transition) do
-    current_active = MachineConfig.active(config, state.value)
     domain = Transition.domain(transition)
 
+    active_in_scope =
+      config
+      |> MachineConfig.active(state.value)
+      |> Enum.filter(&Node.descendant?(&1.id, domain))
+      |> MapSet.new()
+
+    targets = effective_targets(config, transition)
+
     to_exit =
-      cond do
-        is_nil(domain) -> MapSet.new()
-        transition.internal -> internal_exit_set(domain, current_active, transition.target_ids)
-        true -> external_exit_set(domain, current_active)
-      end
-
-    remaining_active = MapSet.difference(current_active, to_exit)
-
-    to_enter =
-      MachineConfig.active(config, transition.target_ids)
-      |> Enum.filter(fn node ->
-        if transition.internal do
-          Node.descendant?(node.id, domain) &&
-            !Enum.any?(transition.target_ids, &Node.descendant?(node.id, &1))
-        else
-          Node.descendant?(node.id, domain)
-        end
+      Enum.filter(active_in_scope, fn node ->
+        !Enum.all?(targets, fn target ->
+          (transition.internal && node == target) || Node.descendant?(node.id, target.id)
+        end)
       end)
       |> MapSet.new()
-      |> MapSet.difference(remaining_active)
 
-    case {Enum.empty?(to_exit), Enum.empty?(to_enter)} do
-      {true, true} ->
-        :ok
+    remaining_active = MapSet.difference(active_in_scope, to_exit)
 
-      {false, false} ->
-        :ok
-
-      _ ->
-        values = [
-          internal: transition.internal,
-          current: state.value,
-          source_id: transition.source_id,
-          target_ids: transition.target_ids,
-          domain: domain,
-          to_exit: Enum.map(to_exit, & &1.id),
-          to_enter: Enum.map(to_enter, & &1.id),
-          remaining: Enum.map(remaining_active, & &1.id)
-        ]
-
-        raise "One of exit or entry sets is empty but the other isn't. This means Protean made a boo-boo:\n#{inspect(values)}"
-    end
+    to_enter = MapSet.difference(targets, remaining_active)
 
     {to_exit, to_enter}
   end
 
-  # On internal, exit any descendants of the domain that aren't a target or parent of a target
-  defp internal_exit_set(domain, active, target_ids) do
-    Enum.filter(active, fn node ->
-      Node.descendant?(node.id, domain) &&
-        !Enum.any?(target_ids, fn tid -> tid == node.id || Node.descendant?(node.id, tid) end)
-    end)
+  @spec effective_targets(MachineConfig.t(), Transition.t()) :: MapSet.t(Node.t())
+  defp effective_targets(config, %Transition{internal: true} = t) do
+    domain = Transition.domain(t)
+
+    t.target_ids
+    |> Enum.flat_map(&MachineConfig.lineage(config, &1))
+    |> Enum.filter(&Node.descendant?(&1.id, domain))
     |> MapSet.new()
   end
 
-  # On external transitions, exit any nodes that are descendants of the transition domain.
-  defp external_exit_set(domain_id, active) do
-    Enum.filter(active, fn node ->
-      Node.descendant?(node.id, domain_id)
-    end)
+  defp effective_targets(config, %Transition{internal: false} = t) do
+    domain = Transition.domain(t)
+
+    config
+    |> MachineConfig.active(t.target_ids)
+    |> Enum.filter(&Node.descendant?(&1.id, domain))
     |> MapSet.new()
   end
 

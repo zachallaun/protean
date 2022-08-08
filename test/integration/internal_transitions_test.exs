@@ -96,7 +96,6 @@ defmodule ProteanIntegration.InternalTransitionsTest do
       )
     end
 
-    @tag here: true
     test "internal relative transitions do not trigger entry/exit actions", %{machine: machine} do
       assert_protean(machine,
         call: :a2_internal,
