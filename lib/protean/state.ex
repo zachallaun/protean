@@ -75,13 +75,7 @@ defmodule Protean.State do
   end
 
   @doc "Assign a new set of active states."
-  @spec assign_active(t, [Node.t(), ...]) :: State.t()
   @spec assign_active(t, [Node.id(), ...]) :: State.t()
-  def assign_active(state, [%Node{} | _] = nodes) do
-    node_ids = Enum.map(nodes, & &1.id)
-    %{state | value: MapSet.new(node_ids)}
-  end
-
   def assign_active(state, ids) do
     %{state | value: MapSet.new(ids)}
   end

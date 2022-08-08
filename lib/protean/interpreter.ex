@@ -278,23 +278,23 @@ defmodule Protean.Interpreter do
 
   # A microstep fully processes a set of transitions, updating the state configuration and
   # executing any resulting actions.
-  defp microstep(transitions, %Interpreter{state: state, config: machine} = interpreter) do
+  defp microstep(transitions, %Interpreter{state: state, config: config} = interpreter) do
     {actions, state} =
-      machine
+      config
       |> Machinery.take_transitions(state, transitions)
       |> State.pop_actions()
 
     final_states =
       state.value
       |> MapSet.difference(interpreter.state.value)
-      |> Machinery.final_ancestors(machine, state)
+      |> Machinery.final_ancestors(config, state)
 
     final_states
     |> Enum.map(&Events.platform(:done, &1))
     |> Enum.reduce(interpreter, &add_internal(&2, &1))
     |> with_state(state)
     |> exec_all(actions)
-    |> then(&if machine.root.id in final_states, do: stop(&1), else: &1)
+    |> then(&if config.root.id in final_states, do: stop(&1), else: &1)
   end
 
   defp exec_all(interpreter, [action | rest]) do

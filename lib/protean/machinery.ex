@@ -64,15 +64,13 @@ defmodule Protean.Machinery do
   def take_transitions(_config, state, []), do: state
 
   def take_transitions(config, state, transitions) do
-    [to_exit, to_enter] =
+    {exit_sets, entry_sets} =
       transitions
       |> Enum.map(&transition_result(config, state, &1))
       |> Enum.unzip()
-      |> Tuple.to_list()
-      |> Enum.map(fn items -> items |> Enum.concat() |> Enum.uniq() end)
 
-    to_exit = Node.exit_order(to_exit)
-    to_enter = Node.entry_order(to_enter)
+    to_exit = exit_sets |> Enum.reduce(&MapSet.union/2) |> Node.exit_order()
+    to_enter = entry_sets |> Enum.reduce(&MapSet.union/2) |> Node.entry_order()
 
     value =
       state.value
@@ -80,9 +78,11 @@ defmodule Protean.Machinery do
       |> MapSet.union(leaf_ids(to_enter))
 
     actions =
-      Enum.flat_map(to_exit, & &1.exit) ++
-        Enum.flat_map(transitions, & &1.actions) ++
-        Enum.flat_map(to_enter, & &1.entry)
+      Enum.concat([
+        Enum.flat_map(to_exit, &Node.exit_actions/1),
+        Enum.flat_map(transitions, &Transition.actions/1),
+        Enum.flat_map(to_enter, &Node.entry_actions/1)
+      ])
 
     state
     |> State.assign_active(value)

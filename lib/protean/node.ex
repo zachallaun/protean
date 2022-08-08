@@ -114,6 +114,14 @@ defmodule Protean.Node do
           order: non_neg_integer() | nil
         }
 
+  @doc "Return the entry actions associated with the node."
+  @spec entry_actions(t) :: [Action.t()]
+  def entry_actions(%Node{} = n), do: n.entry
+
+  @doc "Return the exit actions associated with the node."
+  @spec exit_actions(t) :: [Action.t()]
+  def exit_actions(%Node{} = n), do: n.exit
+
   @doc """
   Resolve a Node to its leaves (atomic or final) by either returning the
   given node or following the node's children.

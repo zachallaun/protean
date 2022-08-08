@@ -43,6 +43,10 @@ defmodule Protean.Transition do
     |> with_domain()
   end
 
+  @doc "Return the actions associated with a transition"
+  @spec actions(t) :: [Action.t()]
+  def actions(%Transition{} = t), do: t.actions
+
   @doc """
   Checks whether the transition is enabled for the given event.
   """
