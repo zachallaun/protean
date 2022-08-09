@@ -65,12 +65,25 @@ defmodule Protean.MixProject do
     [
       main: @name,
       source_url: @source_url,
-      # source_ref: "v#{@version}",
       extras: [
         # "docs/guides/introduction.livemd": [title: "Introduction"]
       ],
       groups_for_extras: [
         # Guides: Path.wildcard("docs/guides/*")
+      ],
+      groups_for_modules: [
+        "Core Concepts": [
+          Protean.MachineConfig,
+          Protean.State,
+          Protean.Transition,
+          Protean.Action,
+          Protean.Guard
+        ],
+        Mechanics: [Protean.Interpreter, Protean.Machinery, Protean.Node, Protean.Supervisor]
+      ],
+      groups_for_functions: [
+        "Callback Actions": &(&1[:type] == :callback_action),
+        "Inline Actions": &(&1[:type] == :inline_action)
       ]
     ]
   end

@@ -3,44 +3,51 @@ defmodule Protean.Action do
   Protean manages state, processes, and side-effects through **actions**, data structures
   describing things that should occur as a result of a transition.
 
-  When a Protean machine transitions from one state to the next (or even "self-transitions" back
+  ## Introduction
+
+  When a Protean machine transitions from one state to the next (or even self-transitions back
   to the same state), the interpreter collects any actions that should be performed as a result
   of that transition. Actions are then executed in a specific order:
 
-  * Exit actions - Any `:exit` actions specified on states that are exiting as a result of the
-    transition.
-  * Transition actions - Any `:actions` specified on the transition that responded to the event.
-  * Entry actions - Any `:entry` actions specified on the states being entered.
+    * Exit actions - Any `:exit` actions specified on states that are exiting as a result of the
+      transition.
+    * Transition actions - Any `:actions` specified on the transition that responded to the event.
+    * Entry actions - Any `:entry` actions specified on the states being entered.
 
-  The execution of an action can change the state of the machine (it's context, for example), or
-  run some side-effect (like broadcasting a PubSub message). Action execution can additionally
-  produce more actions that will be executed immediately before moving onto the next top-level
-  action as described above.
+  Actions are a unifying abstraction that serve many purposes:
 
-  ## High-level API
+    * assign and update a machine's context;
+    * produce additional actions to be run immediately after;
+    * run arbitrary side-effects, like broadcasting a PubSub message;
+    * reply to the sender of the event with a value;
+    * spawn additional processes whose lifecycle can be tied to machine execution.
+
+  I recommend reading the sections below to gain a better understanding of how and where actions
+  can be applied, then review the "Callback Actions" and "Inline Actions" provided by this module.
+
+  ## Handling an action
 
   The most common way to use actions is through the `c:Protean.handle_action/3` callback.
   This callback is run when an action is specified like this:
 
       [
         # ...
+        entry: [:entering_state]
         on: [
-          {:some_event, actions: [:first_action, :second_action]}
-        ]
+          {match(%MyEvent{}), actions: [:first_action, :second_action]}
+        ],
+        exit: [:exiting_state]
       ]
 
   These are then handled in callbacks:
 
-      @impl Protean
-      def handle_action(:first_action, state, _event) do
+      @impl true
+      def handle_action(:first_action, state, %MyEvent{data: data}) do
         # ...
-        state
+        {:reply, reply, state}
       end
 
-      def handle_action(:second_action, state, _event) do
-        # ...
-        state
-      end
+  See `c:Protean.handle_action/3` for possible return values and their effect.
 
   Action callbacks must always return the machine state, but they can attach actions to that
   state that will be immediately executed by the interpreter. For instance:
@@ -64,29 +71,30 @@ defmodule Protean.Action do
         |> Action.assign(:data, new_data)
       end
 
-  Note: Best practice is to let the interpreter execute as many actions as possible, as opposed to
-  performing explicit side-effects in the callback. This is because actions can potentially halt
-  the execution of any remaining actions, but side-effects executed in the callback will occur
-  before any of the returned actions can be executed.
+  > #### Note about return values {: .tip}
+  >
+  > These last two examples have returned the state directly, which is equivalent to returning
+  > `{:noreply, state}`. You can also emit replies that will be available to the sender of the
+  > event using `{:reply, reply, state}`. This can be very useful for creating client APIs around
+  > your machines, much like you would do with `GenServer`.
 
-  `Protean.Action` provides a number of helpers for specifying actions. See individual function
-  documentation for more.
+  The best practice is to let the interpreter execute as many actions as possible, as opposed to
+  performing explicit side-effects in the callback. In many cases, such as spawning additional
+  processes, this allows Protean to supervise and tie process lifecycle to the machine's
+  lifecycle (or changes in state).
 
   ## Low-level API: the Action behaviour
 
-  Ultimately, all actions resolve to `t:Protean.Action.t()`, a simple struct containing a module
+  Ultimately, all actions resolve to `t:Protean.Action.t/0`, a simple struct containing a module
   and an argument. The module is expected to implement the `Protean.Action` behaviour.
 
-  Action execution, then, follows a simple logic: if the action being executed is an `%Action{}`,
-  then call the `c:exec_action/2` callback on the module, passing it the associated argument and
-  the interpreter in its current state. If it is not an `%Action{}`, wrap it in one that
-  automatically delegates to the callback module associated with the machine. This is where
+  Action execution, then, follows a simple logic: if the action being executed is a `Protean.Action` struct, call the `c:exec_action/2` callback on the module, passing it the associated
+  argument and the interpreter in its current state. Otherwise, wrap it in a struct that
+  delegates to the callback module associated with the machine. This is how
   `c:Protean.handle_action/3` is called.
 
-  Many of Protean's more "dynamic" features boil down to syntax sugar over actions, including
-  `:invoke` and delayed transitions using `:after`. Modules implementing the action behaviour
-  have direct access to the interpreter and therefore must be careful, well, not to muck anything
-  up.
+  Many of features features boil down to syntax sugar over actions, including `:invoke` and
+  delayed transitions using `:after`.
   """
 
   import Kernel, except: [send: 2]
@@ -106,6 +114,7 @@ defmodule Protean.Action do
           arg: term()
         }
 
+  @typedoc "Allowed return value from `c:exec_action/2`."
   @type exec_action_return ::
           {:cont, Interpreter.t()}
           | {:cont, Interpreter.t(), [t]}
@@ -122,17 +131,13 @@ defmodule Protean.Action do
   """
   @callback exec_action(action_arg :: term(), Interpreter.t()) :: exec_action_return
 
-  @doc """
-  Create a new Protean action.
-
-  `module` is expected to implement the `Protean.Action` behaviour.
-  """
+  @doc false
   @spec new(module(), term()) :: t
   def new(module, arg), do: %Action{module: module, arg: arg}
 
   defp new(arg), do: new(__MODULE__, arg)
 
-  @doc "Executes an action given an interpreter. See `c:exec_action/2`."
+  @doc false
   @spec exec(t | term(), Interpreter.t()) :: exec_action_return
   def exec(%Action{module: module, arg: arg}, interpreter) do
     case module.exec_action(arg, interpreter) do
@@ -150,27 +155,45 @@ defmodule Protean.Action do
     |> exec(interpreter)
   end
 
-  @doc "TODO"
-  @doc type: :action
+  @doc """
+  Attach a custom action that implements the `Protean.Action` behaviour.
+  """
+  @doc type: :callback_action
   @spec put(State.t(), t) :: State.t()
   def put(%State{} = state, %Action{} = action), do: put_action(action, state)
 
-  @doc "TODO"
-  @doc type: :action
+  @doc false
   def delegate(%State{} = state, action), do: delegate(action) |> put_action(state)
 
+  @doc false
   def delegate(action) do
     new({:delegate, action})
   end
 
-  @doc "TODO"
+  @doc """
+  Attach an action that assigns to a state's context.
+  """
+  @doc type: :callback_action
+  @spec assign(State.t(), key :: term(), value :: term()) :: State.t()
+  @spec assign(State.t(), assigns :: term()) :: State.t()
   def assign(%State{} = state, key, value), do: assign(key, value) |> put_action(state)
   def assign(%State{} = state, assigns), do: assign(assigns) |> put_action(state)
 
+  @doc """
+  Create an inline action that will assign to state context.
+  """
+  @doc type: :inline_action
+  @spec assign(key :: term(), value :: term()) :: t
   def assign(key, value) do
     new({:assign, :merge, %{key => value}})
   end
 
+  @doc """
+  Create an inline action that applies a function to or merges assigns into state context.
+  """
+  @doc type: :inline_action
+  @spec assign(fun :: function()) :: t
+  @spec assign(assigns :: term()) :: t
   def assign(fun) when is_function(fun) do
     new({:assign, :update, fun})
   end
@@ -179,9 +202,23 @@ defmodule Protean.Action do
     new({:assign, :merge, Enum.into(assigns, %{})})
   end
 
-  @doc "TODO"
+  @doc """
+  Attach an action that assigns into a state's context.
+
+  Similar to `put_in/3`.
+  """
+  @doc type: :callback_action
+  @spec assign_in(State.t(), [term(), ...], term()) :: State.t()
   def assign_in(%State{} = state, path, value), do: assign_in(path, value) |> put_action(state)
 
+  @doc """
+  Create an inline action that will assign into state context.
+
+  Similar to `put_in/3`.
+  """
+  @doc type: :inline_action
+  @spec assign_in([term(), ...], function()) :: t
+  @spec assign_in([term(), ...], term()) :: t
   def assign_in(path, fun) when is_list(path) and is_function(fun) do
     assign(fn %{context: context} -> update_in(context, path, fun) end)
   end
@@ -190,11 +227,20 @@ defmodule Protean.Action do
     assign(fn %{context: context} -> put_in(context, path, value) end)
   end
 
-  @doc "TODO"
+  @doc """
+  Attach an action that will send a message to a process.
+  """
+  @doc type: :callback_action
+  @spec send(State.t(), event :: term(), [term()]) :: State.t()
   def send(%State{} = state, event, opts) do
     send(event, opts) |> put_action(state)
   end
 
+  @doc """
+  Create an inline action that will send a message to a process.
+  """
+  @doc type: :inline_action
+  @spec send(event :: term(), [term()]) :: t
   def send(event, opts \\ []) do
     if delay = opts[:delay] do
       new({:send_after, event, opts[:to], delay})
@@ -203,9 +249,16 @@ defmodule Protean.Action do
     end
   end
 
-  @doc "TODO"
+  @doc """
+  Attach an action that executes the first of a list of actions whose guard is truthy.
+  """
+  @doc type: :callback_action
   def choose(%State{} = state, actions), do: choose(actions) |> put_action(state)
 
+  @doc """
+  Create an inline action that will execute the first of a list of actions whose guard is truthy.
+  """
+  @doc type: :inline_action
   def choose(actions) when is_list(actions) do
     new({:choose, actions})
   end
@@ -229,12 +282,14 @@ defmodule Protean.Action do
     new({:invoke, :stream, stream, id, opts})
   end
 
+  @doc false
   def invoke(:cancel, id) do
     new({:invoke, :cancel, id})
   end
 
   # Action callbacks
 
+  @doc false
   def exec_action({:delegate, action}, interpreter) do
     %{state: state, config: config} = interpreter
 
