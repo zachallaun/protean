@@ -2,7 +2,7 @@
 
 <!-- MDOC !-->
 
-_Caveat emptor: Protean is a library for personal learning and exploration, not (yet) for doing Serious Work_.
+_Caveat emptor: Protean started as a library for personal learning and exploration. It should not yet be relied upon._
 
 An experimental Elixir library for managing state and side-effects through the use of event-driven statecharts.
 It is heavily inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir idioms and OTP conventions.
