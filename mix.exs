@@ -65,6 +65,7 @@ defmodule Protean.MixProject do
     [
       main: @name,
       source_url: @source_url,
+      output: "docs/ex_doc",
       extras: [
         # "docs/guides/introduction.livemd": [title: "Introduction"]
       ],
