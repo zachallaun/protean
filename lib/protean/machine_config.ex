@@ -4,9 +4,9 @@ defmodule Protean.MachineConfig do
   """
 
   alias __MODULE__
+  alias Protean.Context
   alias Protean.Node
   alias Protean.Parser
-  alias Protean.Context
   alias Protean.Utils
 
   @enforce_keys [:id, :root, :default_assigns]

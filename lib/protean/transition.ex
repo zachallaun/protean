@@ -11,10 +11,10 @@ defmodule Protean.Transition do
 
   alias __MODULE__
   alias Protean.Action
+  alias Protean.Context
   alias Protean.Events
   alias Protean.Guard
   alias Protean.Node
-  alias Protean.Context
 
   defstruct [
     :source_id,

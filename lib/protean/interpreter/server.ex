@@ -5,8 +5,8 @@ defmodule Protean.Interpreter.Server do
 
   use GenServer
 
-  alias Protean.Interpreter
   alias Protean.Context
+  alias Protean.Interpreter
 
   @prefix :"$protean"
 

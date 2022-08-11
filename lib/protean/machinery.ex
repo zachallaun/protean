@@ -10,9 +10,9 @@ defmodule Protean.Machinery do
   It is uncommon to use this module independently of the `Protean` behaviour.
   """
 
+  alias Protean.Context
   alias Protean.MachineConfig
   alias Protean.Node
-  alias Protean.Context
   alias Protean.Transition
 
   @doc "Transition in response to an event."

@@ -5,10 +5,10 @@ defmodule Protean.Interpreter do
 
   alias __MODULE__
   alias Protean.Action
+  alias Protean.Context
   alias Protean.Events
   alias Protean.MachineConfig
   alias Protean.Machinery
-  alias Protean.Context
 
   defstruct [
     :config,

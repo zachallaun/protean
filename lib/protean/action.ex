@@ -100,10 +100,10 @@ defmodule Protean.Action do
   import Kernel, except: [send: 2]
 
   alias __MODULE__
+  alias Protean.Context
   alias Protean.Events
   alias Protean.Guard
   alias Protean.Interpreter
-  alias Protean.Context
 
   @enforce_keys [:module, :arg]
   defstruct [:module, :arg]
