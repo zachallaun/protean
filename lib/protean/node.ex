@@ -204,10 +204,6 @@ defmodule Protean.Node do
     |> Enum.map(&Enum.reverse/1)
     |> Enum.map(&Enum.take(&1, shortest - 1))
     |> do_common_ancestor_id()
-  rescue
-    e ->
-      require IEx
-      IEx.pry()
   end
 
   defp do_common_ancestor_id(ids, acc \\ [])
