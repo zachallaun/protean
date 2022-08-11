@@ -4,8 +4,9 @@
 
 _Caveat emptor: Protean started as a library for personal learning and exploration. It should not yet be relied upon._
 
-An experimental Elixir library for managing state and side-effects through the use of event-driven statecharts.
-It is heavily inspired by [XContext](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir idioms and OTP conventions.
+A library for managing state and side-effects with event-driven statecharts.
+
+Protean is heavily inspired by [XContext](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir idioms and OTP conventions.
 Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standard, though not completely.
 
 **What are statecharts?**
