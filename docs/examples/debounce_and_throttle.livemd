@@ -61,8 +61,8 @@ defmodule Examples.Debounce do
   def delay(:timeout, %{assigns: %{timeout: t}}, _), do: t
 
   @impl true
-  def handle_action(:reply_with_latest_event, state, event) do
-    {:reply, event, state}
+  def handle_action(:reply_with_latest_event, context, event) do
+    {:reply, event, context}
   end
 end
 ```
@@ -83,7 +83,7 @@ However, if any events come in while we're `debouncing`, we do an external self-
 
 ```elixir
 debouncing: [
-  # After the delay specified by the `delay(:timeout, state, event)`
+  # After the delay specified by the `delay(:timeout, context, event)`
   # callback, reply with the last event and transition back to waiting.
   after: [
     delay: :timeout,
@@ -240,16 +240,16 @@ defmodule Examples.Throttle do
   def guard(:has_event?, _, _), do: true
 
   @impl Protean
-  def handle_action(:set_last, state, event) do
-    Action.assign(state, :last_event, event)
+  def handle_action(:set_last, context, event) do
+    Action.assign(context, :last_event, event)
   end
 
-  def handle_action(:reply_last, state, _) do
-    {:reply, state.assigns.last_event, state}
+  def handle_action(:reply_last, context, _) do
+    {:reply, context.assigns.last_event, context}
   end
 
-  def handle_action(:reply_and_clear_last, state, _) do
-    {:reply, state.assigns.last_event, Action.assign(state, :last_event, nil)}
+  def handle_action(:reply_and_clear_last, context, _) do
+    {:reply, context.assigns.last_event, Action.assign(context, :last_event, nil)}
   end
 end
 ```
@@ -281,7 +281,7 @@ end)
 
 Enum.each(1..4, fn _ ->
   receive do
-    {:state, _, {_state, message}} ->
+    {:state, _, {_context, message}} ->
       time = DateTime.utc_now()
       IO.inspect({message, at: time}, label: "received")
   after

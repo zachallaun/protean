@@ -107,8 +107,8 @@ defmodule ProteanIntegration.InvokedMachineTest do
     ]
 
     @impl Protean
-    def handle_action("save_event", state, event) do
-      Protean.Action.assign(state, :crash_event, event)
+    def handle_action("save_event", context, event) do
+      Protean.Action.assign(context, :crash_event, event)
     end
   end
 

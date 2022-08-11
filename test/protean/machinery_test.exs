@@ -38,9 +38,9 @@ defmodule Protean.MachineryTest do
       machine: machine,
       initial: initial
     } do
-      state = Machinery.transition(machine, initial, :event_a)
-      assert state.value == MapSet.new([["state_b", "#"]])
-      assert state.private.actions == ["entry_a", "exit_a", "event_a_action", "entry_b"]
+      context = Machinery.transition(machine, initial, :event_a)
+      assert context.value == MapSet.new([["state_b", "#"]])
+      assert context.private.actions == ["entry_a", "exit_a", "event_a_action", "entry_b"]
     end
   end
 
@@ -58,15 +58,15 @@ defmodule Protean.MachineryTest do
     end
 
     test "can transition within a parallel state", %{machine: machine, initial: initial} do
-      state = Machinery.transition(machine, initial, :foo_event)
+      context = Machinery.transition(machine, initial, :foo_event)
 
-      assert state.value ==
+      assert context.value ==
                MapSet.new([
                  ["state_a1", "parallel_state_a", "#"],
                  ["bar", "state_a2", "parallel_state_a", "#"]
                ])
 
-      assert state.private.actions == initial.private.actions ++ ["exit_foo", "entry_bar"]
+      assert context.private.actions == initial.private.actions ++ ["exit_foo", "entry_bar"]
     end
   end
 end

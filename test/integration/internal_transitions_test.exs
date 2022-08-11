@@ -64,17 +64,17 @@ defmodule ProteanIntegration.InternalTransitionsTest do
       ]
     ]
 
-    def handle_action("add_a_entry", state, _), do: add(state, :on_entry, "a")
-    def handle_action("add_a1_entry", state, _), do: add(state, :on_entry, "a1")
-    def handle_action("add_a2_entry", state, _), do: add(state, :on_entry, "a2")
+    def handle_action("add_a_entry", context, _), do: add(context, :on_entry, "a")
+    def handle_action("add_a1_entry", context, _), do: add(context, :on_entry, "a1")
+    def handle_action("add_a2_entry", context, _), do: add(context, :on_entry, "a2")
 
-    def handle_action("add_a_exit", state, _), do: add(state, :on_exit, "a")
-    def handle_action("add_a1_exit", state, _), do: add(state, :on_exit, "a1")
-    def handle_action("add_a2_exit", state, _), do: add(state, :on_exit, "a2")
+    def handle_action("add_a_exit", context, _), do: add(context, :on_exit, "a")
+    def handle_action("add_a1_exit", context, _), do: add(context, :on_exit, "a1")
+    def handle_action("add_a2_exit", context, _), do: add(context, :on_exit, "a2")
 
-    def add(state, key, value) do
-      current = state.assigns[key]
-      Action.assign(state, %{key => [value | current]})
+    def add(context, key, value) do
+      current = context.assigns[key]
+      Action.assign(context, %{key => [value | current]})
     end
   end
 
@@ -149,7 +149,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     ]
 
     @impl Protean
-    def handle_action(:noop, state, _), do: state
+    def handle_action(:noop, context, _), do: context
   end
 
   describe "parent transitions" do

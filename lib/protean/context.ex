@@ -45,25 +45,25 @@ defmodule Protean.Context do
 
   # Partial Access behaviour (not defining `pop/2`)
   @doc false
-  def fetch(state, key), do: Map.fetch(state, key)
+  def fetch(context, key), do: Map.fetch(context, key)
   @doc false
-  def get_and_update(state, key, fun), do: Map.get_and_update(state, key, fun)
+  def get_and_update(context, key, fun), do: Map.get_and_update(context, key, fun)
 
   @spec matches?(t, Node.id()) :: boolean()
   @spec matches?(t, String.t()) :: boolean()
   @spec matches?(t, atom()) :: boolean()
-  def matches?(state, descriptor)
+  def matches?(context, descriptor)
 
   def matches?(%Context{value: value}, query) when is_list(query) do
     Enum.any?(value, fn id -> id == query || Node.descendant?(id, query) end)
   end
 
-  def matches?(state, query) when is_binary(query) do
-    matches?(state, parse_match_query(query))
+  def matches?(context, query) when is_binary(query) do
+    matches?(context, parse_match_query(query))
   end
 
-  def matches?(state, query) when is_atom(query) do
-    matches?(state, to_string(query))
+  def matches?(context, query) when is_atom(query) do
+    matches?(context, to_string(query))
   end
 
   defp parse_match_query(""), do: ["#"]
@@ -80,65 +80,65 @@ defmodule Protean.Context do
 
   @doc false
   @spec assign_active(t, [Node.id(), ...]) :: t
-  def assign_active(state, ids) do
-    %{state | value: MapSet.new(ids)}
+  def assign_active(context, ids) do
+    %{context | value: MapSet.new(ids)}
   end
 
   @doc false
   @spec assign_final(t, MapSet.t(Node.id())) :: t
-  def assign_final(state, ids) do
-    %{state | final: ids}
+  def assign_final(context, ids) do
+    %{context | final: ids}
   end
 
-  # Assign data to a state's assigns.
+  # Assign data to a context's assigns.
   #
   # Usage:
   #
-  #   * `assign(state, key, value)` - Assigns value to key in state's assigns.
-  #   * `assign(state, %{})` - Merges the update map into a state's assigns.
-  #   * `assign(state, enumerable)` - Collects the key/values of `enumerable` into a map, then
-  #     merges that map into the state's assigns.
+  #   * `assign(context, key, value)` - Assigns value to key in context's assigns.
+  #   * `assign(context, %{})` - Merges the update map into a context's assigns.
+  #   * `assign(context, enumerable)` - Collects the key/values of `enumerable` into a map, then
+  #     merges that map into the context's assigns.
   @doc false
   @spec assign(t, any, any) :: t
   @spec assign(t, %{any => any}) :: t
   @spec assign(t, Enumerable.t()) :: t
-  def assign(%Context{assigns: assigns} = state, key, value),
-    do: %{state | assigns: Map.put(assigns, key, value)}
+  def assign(%Context{assigns: assigns} = context, key, value),
+    do: %{context | assigns: Map.put(assigns, key, value)}
 
-  def assign(%Context{assigns: assigns} = state, updates) when is_map(updates),
-    do: %{state | assigns: Map.merge(assigns, updates)}
+  def assign(%Context{assigns: assigns} = context, updates) when is_map(updates),
+    do: %{context | assigns: Map.merge(assigns, updates)}
 
-  def assign(state, enum),
-    do: assign(state, Enum.into(enum, %{}))
-
-  @doc false
-  def actions(state), do: state.private.actions
+  def assign(context, enum),
+    do: assign(context, Enum.into(enum, %{}))
 
   @doc false
-  def assign_actions(state, actions \\ []),
-    do: put_in(state.private.actions, actions)
+  def actions(context), do: context.private.actions
 
   @doc false
-  def update_actions(state, fun),
-    do: update_in(state.private.actions, fun)
+  def assign_actions(context, actions \\ []),
+    do: put_in(context.private.actions, actions)
 
   @doc false
-  def put_actions(state, actions),
-    do: update_actions(state, &(&1 ++ actions))
+  def update_actions(context, fun),
+    do: update_in(context.private.actions, fun)
 
   @doc false
-  def pop_actions(state),
-    do: {actions(state), assign_actions(state)}
+  def put_actions(context, actions),
+    do: update_actions(context, &(&1 ++ actions))
 
   @doc false
-  def put_reply(state, reply),
-    do: update_in(state.private.replies, &[reply | &1])
+  def pop_actions(context),
+    do: {actions(context), assign_actions(context)}
 
   @doc false
-  def get_replies(state),
-    do: state.private.replies |> Enum.reverse()
+  def put_reply(context, reply),
+    do: update_in(context.private.replies, &[reply | &1])
 
   @doc false
-  def pop_replies(state),
-    do: {get_replies(state), put_in(state.private.replies, [])}
+  def get_replies(context),
+    do: context.private.replies |> Enum.reverse()
+
+  @doc false
+  def pop_replies(context),
+    do: {get_replies(context), put_in(context.private.replies, [])}
 end

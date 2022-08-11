@@ -26,8 +26,8 @@ defmodule ProteanIntegration.InvokedStreamTest do
     ]
 
     @impl true
-    def handle_action("write_data", state, {_, value}) do
-      state
+    def handle_action("write_data", context, {_, value}) do
+      context
       |> Action.assign_in([:data], &[value | &1])
     end
   end
@@ -36,10 +36,10 @@ defmodule ProteanIntegration.InvokedStreamTest do
   test "invoked streams emit events until consumed", %{machine: machine} do
     :timer.sleep(50)
 
-    %{assigns: assigns} = state = Protean.current(machine)
+    %{assigns: assigns} = context = Protean.current(machine)
 
     assert length(assigns[:data]) == 5
-    assert Protean.matches?(state, "stream_consumed")
+    assert Protean.matches?(context, "stream_consumed")
   end
 
   defmodule StreamMachine2 do
@@ -68,13 +68,13 @@ defmodule ProteanIntegration.InvokedStreamTest do
     ]
 
     @impl true
-    def invoke("stream_from_event", _state, {_, stream}) do
+    def invoke("stream_from_event", _context, {_, stream}) do
       Stream.map(stream, &{:stream_data, &1})
     end
 
     @impl true
-    def handle_action("write_data", state, {_, value}) do
-      state
+    def handle_action("write_data", context, {_, value}) do
+      context
       |> Action.assign_in([:data], &[value | &1])
     end
   end

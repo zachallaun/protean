@@ -40,11 +40,11 @@ defmodule ProteanIntegration.PingPongTest do
     ]
 
     @impl true
-    def handle_action("reply", state, {ping_or_pong, from}) do
-      %{assigns: %{received: received}} = state
+    def handle_action("reply", context, {ping_or_pong, from}) do
+      %{assigns: %{received: received}} = context
       reply = if ping_or_pong == "ping", do: "pong", else: "ping"
 
-      state
+      context
       |> Action.assign(received: [ping_or_pong | received])
       |> Action.send({reply, self()}, to: from)
     end

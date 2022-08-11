@@ -58,19 +58,26 @@ defmodule Counter do
   ]
 
   @impl true
-  def handle_action(:increment, state, _event), do: Action.assign_in(state, [:count], & &1 + 1)
-  def handle_action(:decrement, state, _event), do: Action.assign_in(state, [:count], & &1 - 1)
+  def handle_action(:increment, context, _event) do
+    context
+    |> Action.assign_in([:count], & &1 + 1)
+  end
 
-  def handle_action(:set_min_or_max, state, {"Set", {key, val}}) do
-    state
+  def handle_action(:decrement, context, _event) do
+    context
+    |> Action.assign_in([:count], & &1 - 1)
+  end
+
+  def handle_action(:set_min_or_max, context, {"Set", {key, val}}) do
+    context
     |> Action.assign(key, val)
   end
 
-  def handle_action(:log, state, {"Log", attribute}) do
-    %{assigns: assigns} = state
+  def handle_action(:log, context, {"Log", attribute}) do
+    %{assigns: assigns} = context
     IO.puts("#{attribute}: #{assigns[attribute]}")
 
-    state
+    context
   end
 
   @impl true
@@ -165,13 +172,13 @@ You can see the individual docs for the functions in this module for details on 
 
 ### Familiar functions
 
-* `call/3` - Send an event synchronously to a Protean machine and receive the machine state and any replies resulting from transition.
+* `call/3` - Send an event synchronously to a Protean machine and receive the machine context and any replies resulting from transition.
 * `send/2` - Send an event asynchronously to a Protean machine. Always returns `:ok`.
 * `send_after/3` - Send an event to a Protean machine after a given delay. Like `Process.send_after/4`, returns a timer reference so that the send can be canceled with `Process.cancel_timer/2`.
 
 ### Additional functions specific to Protean machines
 
-* `current/1` - Get the current machine state of a running Protean machine.
+* `current/1` - Get the current machine context of a running Protean machine.
 * `matches?/2` - Query the currently active state(s) of a machine.
 * `subscribe/2` (and `unsubscribe/2`) - Subscribes the calling process to receive a message on every state transition.
 
@@ -218,7 +225,7 @@ Things are changing pretty regularly, however, and some documentation is certain
 
 ## Todo
 
-- [ ] Add `stream` with similar options as `subscribe` so that you can get a stream of `{state, replies}` or just a stream of replies.
+- [ ] Add `stream` with similar options as `subscribe` so that you can get a stream of `{context, replies}` or just a stream of replies.
 - [ ] Actions
   - [ ] Spawn in assigns
   - [ ] Raise action (queues event in internal queue)

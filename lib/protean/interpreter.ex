@@ -12,7 +12,7 @@ defmodule Protean.Interpreter do
 
   defstruct [
     :config,
-    :state,
+    :context,
     :parent,
     :supervisor,
     running: false,
@@ -23,7 +23,7 @@ defmodule Protean.Interpreter do
 
   @type t :: %Interpreter{
           config: MachineConfig.t(),
-          state: Context.t(),
+          context: Context.t(),
           parent: pid(),
           supervisor: Supervisor.supervisor(),
           running: boolean(),
@@ -55,12 +55,12 @@ defmodule Protean.Interpreter do
   @spec new([Protean.machine_option()]) :: Interpreter.t()
   def new(opts) do
     config = Keyword.fetch!(opts, :machine)
-    state = MachineConfig.initial_state(config)
+    context = MachineConfig.initial_context(config)
     initial_assigns = Keyword.get(opts, :assigns, %{})
 
     %Interpreter{
       config: config,
-      state: Context.assign(state, initial_assigns),
+      context: Context.assign(context, initial_assigns),
       parent: Keyword.get(opts, :parent),
       supervisor: Keyword.get(opts, :supervisor)
     }
@@ -103,7 +103,7 @@ defmodule Protean.Interpreter do
 
   @doc """
   Handle an event, executing any transitions, actions, and side-effects associated with the
-  current machine state.
+  current machine context.
 
   Returns a tuple of the interpreter and any replies resulting from actions that were run.
   """
@@ -123,9 +123,9 @@ defmodule Protean.Interpreter do
 
   def handle_event(interpreter, _event), do: {interpreter, []}
 
-  defp pop_replies(%Interpreter{state: state} = interpreter) do
-    {replies, state} = Context.pop_replies(state)
-    {with_state(interpreter, state), replies}
+  defp pop_replies(%Interpreter{context: context} = interpreter) do
+    {replies, context} = Context.pop_replies(context)
+    {with_context(interpreter, context), replies}
   end
 
   def subscribe(interpreter, %{pid: pid, ref: ref, to: to}) do
@@ -169,10 +169,10 @@ defmodule Protean.Interpreter do
   end
 
   @doc """
-  Return the current machine state.
+  Return the current machine context.
   """
-  @spec state(t) :: Context.t()
-  def state(%Interpreter{state: state}), do: state
+  @spec context(t) :: Context.t()
+  def context(%Interpreter{context: context}), do: context
 
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
   # internal events are processed before awaiting an external event.
@@ -218,15 +218,15 @@ defmodule Protean.Interpreter do
   end
 
   defp notify_subscribers(interpreter) do
-    state = state(interpreter)
-    replies = Context.get_replies(state)
+    context = context(interpreter)
+    replies = Context.get_replies(context)
 
     interpreter.subscribers
     |> Enum.filter(fn {_ref, subscriber} ->
       should_notify?(subscriber, !Enum.empty?(replies))
     end)
     |> Enum.each(fn {ref, %{pid: pid}} ->
-      send(pid, {:state, ref, {state, replies}})
+      send(pid, {:state, ref, {context, replies}})
     end)
 
     interpreter
@@ -237,17 +237,17 @@ defmodule Protean.Interpreter do
   defp should_notify?(_, _), do: true
 
   defp set_event(interpreter, event) do
-    put_in(interpreter.state.event, event)
+    put_in(interpreter.context.event, event)
   end
 
   @spec select_automatic_transitions(t) :: [Transition.t()]
-  defp select_automatic_transitions(%{config: machine, state: state}) do
-    Machinery.select_transitions(machine, state, state.event, :automatic_transitions)
+  defp select_automatic_transitions(%{config: machine, context: context}) do
+    Machinery.select_transitions(machine, context, context.event, :automatic_transitions)
   end
 
   @spec select_transitions(t, Protean.event()) :: [Transition.t()]
-  defp select_transitions(%{config: machine, state: state}, event) do
-    Machinery.select_transitions(machine, state, event)
+  defp select_transitions(%{config: machine, context: context}, event) do
+    Machinery.select_transitions(machine, context, event)
   end
 
   @spec autoforward_event(t, Protean.event()) :: t
@@ -270,22 +270,22 @@ defmodule Protean.Interpreter do
 
   # A microstep fully processes a set of transitions, updating the state configuration and
   # executing any resulting actions.
-  defp microstep(transitions, %Interpreter{state: state, config: config} = interpreter) do
-    {actions, state} =
+  defp microstep(transitions, %Interpreter{context: context, config: config} = interpreter) do
+    {actions, context} =
       config
-      |> Machinery.take_transitions(state, transitions)
+      |> Machinery.take_transitions(context, transitions)
       |> Context.pop_actions()
 
     newly_final =
-      state.final
-      |> MapSet.difference(interpreter.state.final)
+      context.final
+      |> MapSet.difference(interpreter.context.final)
 
     newly_final
     |> Enum.map(&Events.platform(:done, &1))
     |> Enum.reduce(interpreter, &add_internal(&2, &1))
-    |> with_state(state)
+    |> with_context(context)
     |> exec_all(actions)
-    |> then(&if config.root.id in state.final, do: stop(&1), else: &1)
+    |> then(&if config.root.id in context.final, do: stop(&1), else: &1)
   end
 
   defp exec_all(interpreter, [action | rest]) do
@@ -304,12 +304,12 @@ defmodule Protean.Interpreter do
   end
 
   @doc false
-  def with_state(interpreter, state) do
-    put_in(interpreter.state, state)
+  def with_context(interpreter, context) do
+    put_in(interpreter.context, context)
   end
 
   @doc false
   def put_reply(interpreter, reply) do
-    update_in(interpreter.state, &Context.put_reply(&1, reply))
+    update_in(interpreter.context, &Context.put_reply(&1, reply))
   end
 end

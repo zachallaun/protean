@@ -18,11 +18,11 @@ defmodule Protean.InterpreterTest do
     end
 
     test "executes initial entry actions on start", %{interpreter: interpreter} do
-      assert Enum.count(Context.actions(interpreter.state)) == 1
+      assert Enum.count(Context.actions(interpreter.context)) == 1
 
       with interpreter <- Interpreter.start(interpreter) do
-        assert Enum.empty?(Context.actions(interpreter.state))
-        assert interpreter.state.assigns[:acc] == ["entering_a"]
+        assert Enum.empty?(Context.actions(interpreter.context))
+        assert interpreter.context.assigns[:acc] == ["entering_a"]
       end
     end
   end
@@ -33,12 +33,12 @@ defmodule Protean.InterpreterTest do
     test "transitions based on guard conditions", %{interpreter: interpreter} do
       with interpreter <- Interpreter.start(interpreter) do
         {interpreter, _} = Interpreter.handle_event(interpreter, :go)
-        assert Interpreter.state(interpreter).value == MapSet.new([["straight", "#"]])
+        assert Interpreter.context(interpreter).value == MapSet.new([["straight", "#"]])
 
         {interpreter, _} = Interpreter.handle_event(interpreter, :set_left)
         {interpreter, _} = Interpreter.handle_event(interpreter, :go)
 
-        assert Interpreter.state(interpreter).value == MapSet.new([["left", "#"]])
+        assert Interpreter.context(interpreter).value == MapSet.new([["left", "#"]])
       end
     end
   end

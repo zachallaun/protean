@@ -55,11 +55,11 @@ defmodule Protean.MachineConfig do
   def fetch!(%MachineConfig{idmap: idmap}, id), do: Map.fetch!(idmap, id)
 
   @doc """
-  Compute the initial state for a machine configuration, including any entry actions that result
+  Compute the initial context for a machine configuration, including any entry actions that result
   from entering the default states.
   """
-  @spec initial_state(t) :: Context.t()
-  def initial_state(%MachineConfig{} = config) do
+  @spec initial_context(t) :: Context.t()
+  def initial_context(%MachineConfig{} = config) do
     active_ids =
       config.root
       |> Node.resolve_to_leaves()

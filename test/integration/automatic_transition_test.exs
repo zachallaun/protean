@@ -52,8 +52,8 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     ]
 
     @impl true
-    def handle_action(action_name, %{assigns: %{acc: acc}} = state, _event) do
-      Action.assign(state, :acc, [action_name | acc])
+    def handle_action(action_name, %{assigns: %{acc: acc}} = context, _event) do
+      Action.assign(context, :acc, [action_name | acc])
     end
 
     @impl true

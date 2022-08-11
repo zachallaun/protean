@@ -42,40 +42,40 @@ defmodule Protean.Action do
   These are then handled in callbacks:
 
       @impl true
-      def handle_action(:first_action, state, %MyEvent{data: data}) do
+      def handle_action(:first_action, context, %MyEvent{data: data}) do
         # ...
-        {:reply, reply, state}
+        {:reply, reply, context}
       end
 
   See `c:Protean.handle_action/3` for possible return values and their effect.
 
-  Action callbacks must always return the machine state, but they can attach actions to that
-  state that will be immediately executed by the interpreter. For instance:
+  Action callbacks must always return the machine context, but they can attach actions to that
+  context that will be immediately executed by the interpreter. For instance:
 
-      def handle_action(:update_data, state, {:data_updated, changes}) do
-        state
+      def handle_action(:update_data, context, {:data_updated, changes}) do
+        context
         |> Action.assign_in([:data], &Map.merge(&1, changes))
       end
 
   In this case, `assign_in/3` is being used to update some data in the machine `:assigns`.
   But, we could perform additional actions if we wish, such as:
 
-      def handle_action(:update_data, state, {:data_updated, changes}) do
-        %{topic: topic, other_process: pid, data: data} = state.assigns
+      def handle_action(:update_data, context, {:data_updated, changes}) do
+        %{topic: topic, other_process: pid, data: data} = context.assigns
         new_data = Map.merge(data, changes)
 
         PubSub.broadcast!(@pubsub, topic, {:data_updated, changes})
 
-        state
+        context
         |> Action.send({:data_commited, new_data}, to: pid)
         |> Action.assign(:data, new_data)
       end
 
   > #### Note about return values {: .tip}
   >
-  > These last two examples have returned the state directly, which is equivalent to returning
-  > `{:noreply, state}`. You can also emit replies that will be available to the sender of the
-  > event using `{:reply, reply, state}`. This can be very useful for creating client APIs around
+  > These last two examples have returned the context directly, which is equivalent to returning
+  > `{:noreply, context}`. You can also emit replies that will be available to the sender of the
+  > event using `{:reply, reply, context}`. This can be very useful for creating client APIs around
   > your machines, much like you would do with `GenServer`.
 
   The best practice is to let the interpreter execute as many actions as possible, as opposed to
@@ -160,10 +160,10 @@ defmodule Protean.Action do
   """
   @doc type: :callback_action
   @spec put(Context.t(), t) :: Context.t()
-  def put(%Context{} = state, %Action{} = action), do: put_action(action, state)
+  def put(%Context{} = context, %Action{} = action), do: put_action(action, context)
 
   @doc false
-  def delegate(%Context{} = state, action), do: delegate(action) |> put_action(state)
+  def delegate(%Context{} = context, action), do: delegate(action) |> put_action(context)
 
   @doc false
   def delegate(action) do
@@ -176,8 +176,8 @@ defmodule Protean.Action do
   @doc type: :callback_action
   @spec assign(Context.t(), key :: term(), value :: term()) :: Context.t()
   @spec assign(Context.t(), assigns :: term()) :: Context.t()
-  def assign(%Context{} = state, key, value), do: assign(key, value) |> put_action(state)
-  def assign(%Context{} = state, assigns), do: assign(assigns) |> put_action(state)
+  def assign(%Context{} = context, key, value), do: assign(key, value) |> put_action(context)
+  def assign(%Context{} = context, assigns), do: assign(assigns) |> put_action(context)
 
   @doc """
   Create an inline action that will assign to machine context.
@@ -209,7 +209,8 @@ defmodule Protean.Action do
   """
   @doc type: :callback_action
   @spec assign_in(Context.t(), [term(), ...], term()) :: Context.t()
-  def assign_in(%Context{} = state, path, value), do: assign_in(path, value) |> put_action(state)
+  def assign_in(%Context{} = context, path, value),
+    do: assign_in(path, value) |> put_action(context)
 
   @doc """
   Create an inline action that will assign into machine context.
@@ -232,8 +233,8 @@ defmodule Protean.Action do
   """
   @doc type: :callback_action
   @spec send(Context.t(), event :: term(), [term()]) :: Context.t()
-  def send(%Context{} = state, event, opts) do
-    send(event, opts) |> put_action(state)
+  def send(%Context{} = context, event, opts) do
+    send(event, opts) |> put_action(context)
   end
 
   @doc """
@@ -253,7 +254,7 @@ defmodule Protean.Action do
   Attach an action that executes the first of a list of actions whose guard is truthy.
   """
   @doc type: :callback_action
-  def choose(%Context{} = state, actions), do: choose(actions) |> put_action(state)
+  def choose(%Context{} = context, actions), do: choose(actions) |> put_action(context)
 
   @doc """
   Create an inline action that will execute the first of a list of actions whose guard is truthy.
@@ -291,17 +292,17 @@ defmodule Protean.Action do
 
   @doc false
   def exec_action({:delegate, action}, interpreter) do
-    %{state: state, config: config} = interpreter
+    %{context: context, config: config} = interpreter
 
-    case config.callback_module.handle_action(action, state, state.event) do
-      {:noreply, state} ->
-        {:cont, interpreter, Context.actions(state)}
+    case config.callback_module.handle_action(action, context, context.event) do
+      {:noreply, context} ->
+        {:cont, interpreter, Context.actions(context)}
 
-      {:reply, reply, state} ->
-        {:cont, Interpreter.put_reply(interpreter, reply), Context.actions(state)}
+      {:reply, reply, context} ->
+        {:cont, Interpreter.put_reply(interpreter, reply), Context.actions(context)}
 
-      %Context{} = state ->
-        {:cont, interpreter, Context.actions(state)}
+      %Context{} = context ->
+        {:cont, interpreter, Context.actions(context)}
 
       other ->
         require Logger
@@ -309,8 +310,8 @@ defmodule Protean.Action do
         Logger.error("""
         Received invalid return value from action callback. Expected one of:
 
-          {:noreply, state}
-          {:reply, reply, state}
+          {:noreply, context}
+          {:reply, reply, context}
 
         Got:
 
@@ -322,18 +323,18 @@ defmodule Protean.Action do
   end
 
   def exec_action({:assign, :merge, assigns}, interpreter) do
-    %{state: state} = interpreter
-    {:cont, %{interpreter | state: Context.assign(state, assigns)}}
+    %{context: context} = interpreter
+    {:cont, %{interpreter | context: Context.assign(context, assigns)}}
   end
 
   def exec_action({:assign, :update, fun}, interpreter) do
-    %{state: state} = interpreter
+    %{context: context} = interpreter
 
     assigns =
       case Function.info(fun, :arity) do
         {_, 0} -> fun.()
-        {_, 1} -> fun.(state)
-        {_, 2} -> fun.(state, state.event)
+        {_, 1} -> fun.(context)
+        {_, 2} -> fun.(context, context.event)
       end
 
     exec_action({:assign, :merge, assigns}, interpreter)
@@ -470,8 +471,8 @@ defmodule Protean.Action do
   end
 
   defp guard_allows?({_, guard: guard}, interpreter) do
-    %{state: state, config: config} = interpreter
-    Guard.allows?(guard, state, state.event, config.callback_module)
+    %{context: context, config: config} = interpreter
+    Guard.allows?(guard, context, context.event, config.callback_module)
   end
 
   defp guard_allows?(_, _), do: true
@@ -479,8 +480,8 @@ defmodule Protean.Action do
   defp normalize_choice({action, _}), do: action
   defp normalize_choice(action), do: action
 
-  defp put_action(action, state) do
-    Context.put_actions(state, [action])
+  defp put_action(action, context) do
+    Context.put_actions(context, [action])
   end
 
   defp resolve_recipient(_interpreter, nil), do: self()
@@ -496,8 +497,8 @@ defmodule Protean.Action do
   defp run_task(f) when is_function(f), do: f.()
 
   defp run_callback(callback_name, arg, interpreter) do
-    %{state: state, config: config} = interpreter
+    %{context: context, config: config} = interpreter
 
-    apply(config.callback_module, callback_name, [arg, state, state.event])
+    apply(config.callback_module, callback_name, [arg, context, context.event])
   end
 end

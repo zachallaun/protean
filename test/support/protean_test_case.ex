@@ -51,7 +51,7 @@ defmodule Protean.TestCase do
   ### Helpers
 
   Provides test helper to turn a list of instructions into events sent to the machine and
-  assertions on the machine's state. See `assert_protean/2`.
+  assertions on the machine's context. See `assert_protean/2`.
   """
 
   use ExUnit.CaseTemplate
@@ -110,8 +110,8 @@ defmodule Protean.TestCase do
 
       # Assertions
       {:matches, descriptor}, acc ->
-        state = Protean.current(pid)
-        assert Protean.matches?(state, descriptor)
+        context = Protean.current(pid)
+        assert Protean.matches?(context, descriptor)
         acc
 
       {:assigns, assigns}, acc ->
@@ -123,13 +123,13 @@ defmodule Protean.TestCase do
 
         acc
 
-      {:last_matches, descriptor}, {state, _} = acc ->
-        assert Protean.matches?(state, descriptor)
+      {:last_matches, descriptor}, {context, _} = acc ->
+        assert Protean.matches?(context, descriptor)
         acc
 
-      {:last_assigns, assigns}, {state, _} = acc ->
+      {:last_assigns, assigns}, {context, _} = acc ->
         for {key, value} <- Enum.into(assigns, []) do
-          assert state.assigns[key] == value
+          assert context.assigns[key] == value
         end
 
         acc

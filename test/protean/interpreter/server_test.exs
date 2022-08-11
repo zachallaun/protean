@@ -35,8 +35,8 @@ defmodule Protean.Interpreter.ServerTest do
 
   @tag machine: TestMachine
   test "call/3", %{machine: server} do
-    assert {state = %Context{}, []} = Server.call(server, :goto_b, 5000)
-    assert Context.matches?(state, :b)
+    assert {context = %Context{}, []} = Server.call(server, :goto_b, 5000)
+    assert Context.matches?(context, :b)
   end
 
   @tag machine: TestMachine

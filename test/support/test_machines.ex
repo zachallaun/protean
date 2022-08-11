@@ -20,14 +20,14 @@ defmodule TestMachines do
 
     case machine do
       %MachineConfig{} = config ->
-        %{machine: config, initial: MachineConfig.initial_state(config)}
+        %{machine: config, initial: MachineConfig.initial_context(config)}
 
       module when is_atom(module) ->
         config = module.__protean_machine__()
 
         %{
           machine: config,
-          initial: MachineConfig.initial_state(config),
+          initial: MachineConfig.initial_context(config),
           interpreter: Interpreter.new(machine: config)
         }
     end
@@ -261,12 +261,12 @@ defmodule TestMachines do
     ]
 
     @impl true
-    def handle_action("entering_a", %{assigns: %{acc: acc}} = state, _event) do
-      Action.assign(state, :acc, ["entering_a" | acc])
+    def handle_action("entering_a", %{assigns: %{acc: acc}} = context, _event) do
+      Action.assign(context, :acc, ["entering_a" | acc])
     end
 
-    def handle_action("exiting_a", %{assigns: %{acc: acc}} = state, _event) do
-      Action.assign(state, :acc, ["exiting_a" | acc])
+    def handle_action("exiting_a", %{assigns: %{acc: acc}} = context, _event) do
+      Action.assign(context, :acc, ["exiting_a" | acc])
     end
   end
 
@@ -323,9 +323,9 @@ defmodule TestMachines do
     ]
 
     @impl true
-    def handle_action(action_name, state, _event) do
-      %{acc: acc} = state.assigns
-      Action.assign(state, :acc, [action_name | acc])
+    def handle_action(action_name, context, _event) do
+      %{acc: acc} = context.assigns
+      Action.assign(context, :acc, [action_name | acc])
     end
   end
 

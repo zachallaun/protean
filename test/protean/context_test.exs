@@ -38,8 +38,8 @@ defmodule Protean.ContextTest do
   end
 
   defp matches_test({state_value, match_test, expected_result}) do
-    with state <- %Context{value: state_value} do
-      assert Context.matches?(state, match_test) === expected_result,
+    with context <- %Context{value: state_value} do
+      assert Context.matches?(context, match_test) === expected_result,
              "expected #{inspect(state_value)}" <>
                ((expected_result && " to match ") || " to NOT match ") <>
                "#{inspect(match_test)}"

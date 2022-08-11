@@ -67,7 +67,7 @@ defmodule Protean do
       ]
 
       @impl true
-      def invoke("my_task", _state, event_data) do
+      def invoke("my_task", _context, event_data) do
         {__MODULE__, :run_my_task, [event_data]}
       end
 
@@ -77,12 +77,12 @@ defmodule Protean do
   @doc """
   Optional callback for actions specified in response to a transition.
 
-  Receives the current machine state and event triggering the action as arguments. Returns one
+  Receives the current machine context and event triggering the action as arguments. Returns one
   of:
 
-    * `state` - same as `{:noreply, state}`
-    * `{:noreply, state}` - the machine state with any new actions
-    * `{:reply, reply, state}` - a reply and the machine state with any new actions
+    * `context` - same as `{:noreply, context}`
+    * `{:noreply, context}` - the machine context with any new actions
+    * `{:reply, reply, context}` - a reply and the machine context with any new actions
 
   ## Example
 
@@ -98,21 +98,21 @@ defmodule Protean do
       ]
 
       @impl true
-      def handle_action(:assign_data, state, {:data, data}) do
-        state
+      def handle_action(:assign_data, context, {:data, data}) do
+        context
         |> Protean.Action.assign(:last_received, data)
       end
 
-      def handle_action(:broadcast_data, state, _) do
-        %{notify: pid, last_received: data} = state.assigns
+      def handle_action(:broadcast_data, context, _) do
+        %{notify: pid, last_received: data} = context.assigns
 
         PubSub.broadcast!(@pubsub, @topic, data)
 
-        state =
-          state
+        context =
+          context
           |> Protean.Action.send({:data, data}, to: pid)
 
-        {:reply, data, state}
+        {:reply, data, context}
       end
 
   """
@@ -145,7 +145,7 @@ defmodule Protean do
       ]
 
       @impl true
-      def guard(:valid_user?, state, {_, user}) do
+      def guard(:valid_user?, context, {_, user}) do
         User.changeset(%User{}, user).valid?
       end
 
@@ -173,8 +173,8 @@ defmodule Protean do
       ]
 
       @impl true
-      def delay("my_delay", state, _) do
-        state.assigns[:configured_delay] || 1000
+      def delay("my_delay", context, _) do
+        context.assigns[:configured_delay] || 1000
       end
 
   """
@@ -296,7 +296,7 @@ defmodule Protean do
   @doc """
   Makes a synchronous call to the machine, awaiting any transitions that result.
 
-  Returns a tuple of `{state, replies}`, where `state` is the next state of the machine, and
+  Returns a tuple of `{context, replies}`, where `context` is the next state of the machine, and
   `replies` is a (possibly empty) list of replies returned by action callbacks resulting from the
   event.
   """
@@ -322,7 +322,7 @@ defmodule Protean do
   end
 
   @doc """
-  Synchronously retrieve the current machine state.
+  Synchronously retrieve the current machine context.
 
   TODO: Allow optional timeout as with `call/3`.
   """
@@ -347,12 +347,12 @@ defmodule Protean do
 
   Messages are sent in the shape of:
 
-      {:state, ref, {state, replies}}
+      {:state, ref, {context, replies}}
 
   where:
 
     * `ref` is a monitor reference returned by the subscription;
-    * `state` is the machine state resulting from the transition;
+    * `context` is the machine context resulting from the transition;
     * `replies` is a (possibly empty) list of replies resulting from actions on transition.
 
   If the process is already dead when subscribing, a `:DOWN` message is delivered immediately.
@@ -392,13 +392,13 @@ defmodule Protean do
   @spec matches?(server, descriptor :: term()) :: boolean()
   def matches?(item, descriptor)
 
-  def matches?(%Context{} = state, descriptor) do
-    Context.matches?(state, descriptor)
+  def matches?(%Context{} = context, descriptor) do
+    Context.matches?(context, descriptor)
   end
 
   def matches?(%Interpreter{} = interpreter, descriptor) do
     interpreter
-    |> Interpreter.state()
+    |> Interpreter.context()
     |> Context.matches?(descriptor)
   end
 
@@ -413,7 +413,7 @@ defmodule Protean do
       Module.defines?(env.module, {:action, 3}, :def) &&
         quote do
           @impl Protean
-          def handle_action(state, _, _), do: {:noreply, state}
+          def handle_action(context, _, _), do: {:noreply, context}
         end,
       Module.defines?(env.module, {:guard, 3}, :def) &&
         quote do

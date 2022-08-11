@@ -21,7 +21,7 @@ defmodule ProteanIntegration.HigherOrderGuardTest do
     ]
 
     @impl true
-    def guard("asked_nicely", _state, {_, :please}), do: true
+    def guard("asked_nicely", _context, {_, :please}), do: true
   end
 
   defmodule HigherOrderGuardMachine2 do
@@ -44,7 +44,7 @@ defmodule ProteanIntegration.HigherOrderGuardTest do
     ]
 
     @impl true
-    def guard("asked_nicely", _state, {_, :please}), do: true
+    def guard("asked_nicely", _context, {_, :please}), do: true
   end
 
   @tag machine: HigherOrderGuardMachine1

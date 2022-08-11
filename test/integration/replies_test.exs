@@ -15,12 +15,12 @@ defmodule ProteanIntegration.RepliesTest do
     ]
 
     @impl true
-    def handle_action({:respond, response}, state, _) do
-      {:reply, response, state}
+    def handle_action({:respond, response}, context, _) do
+      {:reply, response, context}
     end
 
-    def handle_action(:no_response, state, _) do
-      {:noreply, state}
+    def handle_action(:no_response, context, _) do
+      {:noreply, context}
     end
   end
 

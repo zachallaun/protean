@@ -41,7 +41,7 @@ defmodule Protean.Interpreter.Server do
   end
 
   def current(pid) do
-    GenServer.call(pid, {@prefix, :current_state})
+    GenServer.call(pid, {@prefix, :current_context})
   end
 
   def matches?(pid, pattern) do
@@ -91,8 +91,8 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_call({@prefix, :current_state}, _from, interpreter) do
-    {:reply, Interpreter.state(interpreter), interpreter}
+  def handle_call({@prefix, :current_context}, _from, interpreter) do
+    {:reply, Interpreter.context(interpreter), interpreter}
   end
 
   def handle_call({@prefix, :ping}, _from, interpreter) do
@@ -137,7 +137,7 @@ defmodule Protean.Interpreter.Server do
     if Interpreter.running?(interpreter) do
       {:noreply, interpreter}
     else
-      {:stop, {:shutdown, Interpreter.state(interpreter)}, interpreter}
+      {:stop, {:shutdown, Interpreter.context(interpreter)}, interpreter}
     end
   end
 
@@ -148,6 +148,6 @@ defmodule Protean.Interpreter.Server do
 
   defp run_event(interpreter, event) do
     {interpreter, replies} = Interpreter.handle_event(interpreter, event)
-    {interpreter, {Interpreter.state(interpreter), replies}}
+    {interpreter, {Interpreter.context(interpreter), replies}}
   end
 end

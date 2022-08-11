@@ -33,17 +33,17 @@ defmodule ProteanIntegration.ChooseTest do
     ]
 
     @impl Protean
-    def handle_action("set_switch", state, {_, value}) do
-      Action.assign(state, :switch, value)
+    def handle_action("set_switch", context, {_, value}) do
+      Action.assign(context, :switch, value)
     end
 
-    def handle_action("set_data_" <> value, state, _event) do
-      %{assigns: %{data: data}} = state
-      Action.assign(state, :data, [value | data])
+    def handle_action("set_data_" <> value, context, _event) do
+      %{assigns: %{data: data}} = context
+      Action.assign(context, :data, [value | data])
     end
 
-    def handle_action("make_a_choice", state, _event) do
-      Action.choose(state, [
+    def handle_action("make_a_choice", context, _event) do
+      Action.choose(context, [
         {"set_data_a", guard: "switch_on"},
         {"set_data_b", guard: "switch_off"},
         {"set_data_d", guard: "switch_off"},

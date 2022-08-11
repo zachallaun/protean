@@ -17,8 +17,8 @@ defmodule ProteanIntegration.SendEventTest do
     ]
 
     @impl Protean
-    def handle_action("echo", state, {:echo, echo}) do
-      state
+    def handle_action("echo", context, {:echo, echo}) do
+      context
       |> Action.send({:echo, echo}, to: :parent)
     end
   end

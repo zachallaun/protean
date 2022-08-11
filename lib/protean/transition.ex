@@ -51,8 +51,8 @@ defmodule Protean.Transition do
   Checks whether the transition is enabled for the given event.
   """
   @spec enabled?(t, Protean.event() | nil, Context.t(), callback_module :: module()) :: boolean()
-  def enabled?(transition, event, state, module) do
-    matches?(transition, event) && guard_allows?(transition, state, event, module)
+  def enabled?(transition, event, context, module) do
+    matches?(transition, event) && guard_allows?(transition, context, event, module)
   end
 
   @spec domain(Transition.t()) :: Node.id()
@@ -69,8 +69,8 @@ defmodule Protean.Transition do
 
   defp guard_allows?(%Transition{guard: nil}, _, _, _), do: true
 
-  defp guard_allows?(%Transition{guard: guard}, state, event, module) do
-    Guard.allows?(guard, state, event, module)
+  defp guard_allows?(%Transition{guard: guard}, context, event, module) do
+    Guard.allows?(guard, context, event, module)
   end
 
   defp with_domain(%Transition{target_ids: []} = t) do

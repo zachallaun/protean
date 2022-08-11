@@ -23,8 +23,8 @@ defmodule ProteanIntegration.SimpleTest do
     ]
 
     @impl true
-    def handle_action("do_set", state, {_, data}) do
-      state
+    def handle_action("do_set", context, {_, data}) do
+      context
       |> Protean.Action.assign(:data, data)
     end
   end

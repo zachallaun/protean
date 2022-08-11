@@ -39,8 +39,8 @@ defmodule ProteanIntegration.InvokedTaskTest do
     ]
 
     @impl true
-    def handle_action("save_result", state, {_, result}) do
-      Action.assign(state, :result, result)
+    def handle_action("save_result", context, {_, result}) do
+      Action.assign(context, :result, result)
     end
   end
 
