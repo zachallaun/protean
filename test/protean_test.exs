@@ -127,34 +127,34 @@ defmodule ProteanTest do
   @tag machine: MachineWithoutCallbacks
   test "separate callback_module can be specified", %{machine: machine} do
     assert_protean(machine,
-      context: [data: :foo]
+      assigns: [data: :foo]
     )
   end
 
-  defmodule DefaultContext do
+  defmodule DefaultAssigns do
     use Protean
 
     @machine [
-      context: %{data: :foo},
+      assigns: %{data: :foo},
       initial: "init",
       states: [init: []]
     ]
   end
 
-  describe "machines with context:" do
-    test "started with default context" do
-      {:ok, pid} = DefaultContext.start_link()
-      assert Protean.current(pid).context == %{data: :foo}
+  describe "machines with assigns:" do
+    test "started with default assigns" do
+      {:ok, pid} = DefaultAssigns.start_link()
+      assert Protean.current(pid).assigns == %{data: :foo}
     end
 
-    test "started with replacement context" do
-      {:ok, pid} = DefaultContext.start_link(context: %{data: :bar})
-      assert Protean.current(pid).context == %{data: :bar}
+    test "started with replacement assigns" do
+      {:ok, pid} = DefaultAssigns.start_link(assigns: %{data: :bar})
+      assert Protean.current(pid).assigns == %{data: :bar}
     end
 
-    test "started with added context" do
-      {:ok, pid} = DefaultContext.start_link(context: %{bar: :baz})
-      assert Protean.current(pid).context == %{data: :foo, bar: :baz}
+    test "started with added assigns" do
+      {:ok, pid} = DefaultAssigns.start_link(assigns: %{bar: :baz})
+      assert Protean.current(pid).assigns == %{data: :foo, bar: :baz}
     end
   end
 end

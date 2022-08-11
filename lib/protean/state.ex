@@ -1,6 +1,6 @@
 defmodule Protean.State do
   @moduledoc """
-  Snapshot of active states, context, and the latest event seen by the machine.
+  Snapshot of active states, assigns, and the latest event seen by the machine.
 
   This module is rarely interacted with directly. Instead, use the API exposed by the top-level
   `Protean`, such as `Protean.matches?/2`, or actions exposed by `Protean.Action`.
@@ -10,12 +10,12 @@ defmodule Protean.State do
   alias Protean.Action
   alias Protean.Node
 
-  @derive {Inspect, only: [:value, :event, :context]}
+  @derive {Inspect, only: [:value, :event, :assigns]}
   defstruct [
     :value,
     :event,
     final: MapSet.new(),
-    context: %{},
+    assigns: %{},
     private: %{
       actions: [],
       replies: []
@@ -26,13 +26,13 @@ defmodule Protean.State do
           value: value,
           final: value,
           event: Protean.event() | nil,
-          context: context,
+          assigns: assigns,
           private: private_state
         }
 
   @type value :: MapSet.t(Node.id())
 
-  @type context :: %{any => any}
+  @type assigns :: %{any => any}
 
   @opaque private_state :: %{
             actions: [Action.unresolved()],
@@ -90,23 +90,23 @@ defmodule Protean.State do
     %{state | final: ids}
   end
 
-  # Assign data to a state's context.
+  # Assign data to a state's assigns.
   #
   # Usage:
   #
-  #   * `assign(state, key, value)` - Assigns value to key in state's context.
-  #   * `assign(state, %{})` - Merges the update map into a state's context.
+  #   * `assign(state, key, value)` - Assigns value to key in state's assigns.
+  #   * `assign(state, %{})` - Merges the update map into a state's assigns.
   #   * `assign(state, enumerable)` - Collects the key/values of `enumerable` into a map, then
-  #     merges that map into the state's context.
+  #     merges that map into the state's assigns.
   @doc false
   @spec assign(t, any, any) :: t
   @spec assign(t, %{any => any}) :: t
   @spec assign(t, Enumerable.t()) :: t
-  def assign(%State{context: context} = state, key, value),
-    do: %{state | context: Map.put(context, key, value)}
+  def assign(%State{assigns: assigns} = state, key, value),
+    do: %{state | assigns: Map.put(assigns, key, value)}
 
-  def assign(%State{context: context} = state, updates) when is_map(updates),
-    do: %{state | context: Map.merge(context, updates)}
+  def assign(%State{assigns: assigns} = state, updates) when is_map(updates),
+    do: %{state | assigns: Map.merge(assigns, updates)}
 
   def assign(state, enum),
     do: assign(state, Enum.into(enum, %{}))

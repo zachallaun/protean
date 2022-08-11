@@ -7,7 +7,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
 
     @machine [
       initial: :a,
-      context: %{
+      assigns: %{
         acc: [],
         allow: false
       },
@@ -52,12 +52,12 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     ]
 
     @impl true
-    def handle_action(action_name, %{context: %{acc: acc}} = state, _event) do
+    def handle_action(action_name, %{assigns: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, [action_name | acc])
     end
 
     @impl true
-    def guard("allow?", %{context: %{allow: true}}, _event), do: true
+    def guard("allow?", %{assigns: %{allow: true}}, _event), do: true
   end
 
   @moduletag machine: TestMachine
@@ -66,7 +66,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     assert_protean(machine,
       call: :goto_b,
       matches: "d",
-      context: [acc: ["auto_to_d", "auto_to_c"]]
+      assigns: [acc: ["auto_to_d", "auto_to_c"]]
     )
   end
 

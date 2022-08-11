@@ -11,7 +11,7 @@ defmodule Protean.TestCase do
           use Protean
 
           @machine [
-            context: [
+            assigns: [
               foo: 1,
               bar: 2
             ],
@@ -32,7 +32,7 @@ defmodule Protean.TestCase do
             matches: "a",
             send: "goto_b",
             matches: "b",
-            context: [foo: 1]
+            assigns: [foo: 1]
           ])
         end
       end
@@ -42,11 +42,11 @@ defmodule Protean.TestCase do
   Provides the following tag usage through ExUnit's `setup` and `on_exit` callbacks:
 
     * `@tag machine: Machine` - Starts and monitors the machine process. Adds the following to
-       context: `%{machine: machine_pid, ref: monitor_ref}`
+       assigns: `%{machine: machine_pid, ref: monitor_ref}`
     * `@tag machine: {Machine, opts}` - Like the above but calls `Machine.start_link(opts)` to
       start the process with the given options.
     * `@tag machines: [{Machine, opts}, Machine]` - Will start all machines in the list with
-      given options and will add to context: `%{machines: [%{machine: pid, ref: ref}, ...]}`
+      given options and will add to assigns: `%{machines: [%{machine: pid, ref: ref}, ...]}`
 
   ### Helpers
 
@@ -63,12 +63,12 @@ defmodule Protean.TestCase do
     end
   end
 
-  setup context do
+  setup assigns do
     Process.flag(:trap_exit, true)
-    setup_context(context)
+    setup_assigns(assigns)
   end
 
-  defp setup_context(%{machines: machines}) when is_list(machines) do
+  defp setup_assigns(%{machines: machines}) when is_list(machines) do
     {all_machines, exit_funs} =
       machines
       |> Enum.map(&setup_machine/1)
@@ -79,15 +79,15 @@ defmodule Protean.TestCase do
     [machines: all_machines]
   end
 
-  defp setup_context(%{machine: machine}) do
-    {context_to_add, exit_fun} = setup_machine(machine)
+  defp setup_assigns(%{machine: machine}) do
+    {assigns_to_add, exit_fun} = setup_machine(machine)
 
     on_exit(exit_fun)
 
-    context_to_add
+    assigns_to_add
   end
 
-  defp setup_context(_other), do: :ok
+  defp setup_assigns(_other), do: :ok
 
   @doc """
   Runs through a list of instructions in order, sending events to and making assertions on the
@@ -114,11 +114,11 @@ defmodule Protean.TestCase do
         assert Protean.matches?(state, descriptor)
         acc
 
-      {:context, context}, acc ->
-        current_context = Protean.current(pid).context
+      {:assigns, assigns}, acc ->
+        current_assigns = Protean.current(pid).assigns
 
-        for {key, value} <- Enum.into(context, []) do
-          assert current_context[key] == value
+        for {key, value} <- Enum.into(assigns, []) do
+          assert current_assigns[key] == value
         end
 
         acc
@@ -127,9 +127,9 @@ defmodule Protean.TestCase do
         assert Protean.matches?(state, descriptor)
         acc
 
-      {:last_context, context}, {state, _} = acc ->
-        for {key, value} <- Enum.into(context, []) do
-          assert state.context[key] == value
+      {:last_assigns, assigns}, {state, _} = acc ->
+        for {key, value} <- Enum.into(assigns, []) do
+          assert state.assigns[key] == value
         end
 
         acc
@@ -141,8 +141,8 @@ defmodule Protean.TestCase do
       {:last_matches, _}, nil ->
         raise "Used :last_matches but have no stored result"
 
-      {:last_context, _}, nil ->
-        raise "Used :last_context but have no stored result"
+      {:last_assigns, _}, nil ->
+        raise "Used :last_assigns but have no stored result"
 
       {:last_replies, _}, nil ->
         raise "Used :last_replies but have no stored result"

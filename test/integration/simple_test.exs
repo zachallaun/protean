@@ -5,7 +5,7 @@ defmodule ProteanIntegration.SimpleTest do
     use Protean
 
     @machine [
-      context: [
+      assigns: [
         data: nil
       ],
       initial: "a",
@@ -36,12 +36,12 @@ defmodule ProteanIntegration.SimpleTest do
       matches: "a",
       call: :goto_b,
       matches: "b",
-      context: [data: nil],
+      assigns: [data: nil],
       call: {:set_data, :ok},
-      context: [data: :ok],
+      assigns: [data: :ok],
       call: :goto_a,
       matches: "a",
-      context: [data: :ok]
+      assigns: [data: :ok]
     )
   end
 end

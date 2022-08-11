@@ -16,7 +16,7 @@ defmodule Protean.Action do
 
   Actions are a unifying abstraction that serve many purposes:
 
-    * assign and update a machine's context;
+    * assign to and update a machine's context;
     * produce additional actions to be run immediately after;
     * run arbitrary side-effects, like broadcasting a PubSub message;
     * reply to the sender of the event with a value;
@@ -57,11 +57,11 @@ defmodule Protean.Action do
         |> Action.assign_in([:data], &Map.merge(&1, changes))
       end
 
-  In this case, `assign_in/3` is being used to update some data in the machine `:context`.
+  In this case, `assign_in/3` is being used to update some data in the machine `:assigns`.
   But, we could perform additional actions if we wish, such as:
 
       def handle_action(:update_data, state, {:data_updated, changes}) do
-        %{topic: topic, other_process: pid, data: data} = state.context
+        %{topic: topic, other_process: pid, data: data} = state.assigns
         new_data = Map.merge(data, changes)
 
         PubSub.broadcast!(@pubsub, topic, {:data_updated, changes})
@@ -171,7 +171,7 @@ defmodule Protean.Action do
   end
 
   @doc """
-  Attach an action that assigns to a state's context.
+  Attach an action that assigns to a machine's context.
   """
   @doc type: :callback_action
   @spec assign(State.t(), key :: term(), value :: term()) :: State.t()
@@ -180,7 +180,7 @@ defmodule Protean.Action do
   def assign(%State{} = state, assigns), do: assign(assigns) |> put_action(state)
 
   @doc """
-  Create an inline action that will assign to state context.
+  Create an inline action that will assign to machine context.
   """
   @doc type: :inline_action
   @spec assign(key :: term(), value :: term()) :: t
@@ -189,7 +189,7 @@ defmodule Protean.Action do
   end
 
   @doc """
-  Create an inline action that applies a function to or merges assigns into state context.
+  Create an inline action that applies a function to or merges assigns into machine context.
   """
   @doc type: :inline_action
   @spec assign(fun :: function()) :: t
@@ -203,7 +203,7 @@ defmodule Protean.Action do
   end
 
   @doc """
-  Attach an action that assigns into a state's context.
+  Attach an action that assigns into a machine's context.
 
   Similar to `put_in/3`.
   """
@@ -212,7 +212,7 @@ defmodule Protean.Action do
   def assign_in(%State{} = state, path, value), do: assign_in(path, value) |> put_action(state)
 
   @doc """
-  Create an inline action that will assign into state context.
+  Create an inline action that will assign into machine context.
 
   Similar to `put_in/3`.
   """
@@ -220,11 +220,11 @@ defmodule Protean.Action do
   @spec assign_in([term(), ...], function()) :: t
   @spec assign_in([term(), ...], term()) :: t
   def assign_in(path, fun) when is_list(path) and is_function(fun) do
-    assign(fn %{context: context} -> update_in(context, path, fun) end)
+    assign(fn %{assigns: assigns} -> update_in(assigns, path, fun) end)
   end
 
   def assign_in(path, value) when is_list(path) do
-    assign(fn %{context: context} -> put_in(context, path, value) end)
+    assign(fn %{assigns: assigns} -> put_in(assigns, path, value) end)
   end
 
   @doc """

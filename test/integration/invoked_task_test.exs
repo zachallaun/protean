@@ -6,7 +6,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     alias Protean.Action
 
     @machine [
-      context: [
+      assigns: [
         result: nil
       ],
       initial: "a",
@@ -51,7 +51,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
       assert_protean(machine,
         sleep: 50,
         matches: "b",
-        context: [result: :task_result]
+        assigns: [result: :task_result]
       )
     end
 
@@ -61,7 +61,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
         call: :goto_c,
         sleep: 30,
         matches: "d",
-        context: [result: :second_task_result]
+        assigns: [result: :second_task_result]
       )
     end
   end
@@ -71,7 +71,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     alias Protean.Action
 
     @machine [
-      context: [result: nil],
+      assigns: [result: nil],
       initial: "a",
       states: [
         a: [
@@ -104,7 +104,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
       assert_protean(machine,
         sleep: 30,
         matches: "b",
-        context: [result: {:task_return, :arg}]
+        assigns: [result: {:task_return, :arg}]
       )
     end
   end

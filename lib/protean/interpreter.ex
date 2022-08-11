@@ -56,11 +56,11 @@ defmodule Protean.Interpreter do
   def new(opts) do
     config = Keyword.fetch!(opts, :machine)
     state = MachineConfig.initial_state(config)
-    initial_context = Keyword.get(opts, :context, %{})
+    initial_assigns = Keyword.get(opts, :assigns, %{})
 
     %Interpreter{
       config: config,
-      state: State.assign(state, initial_context),
+      state: State.assign(state, initial_assigns),
       parent: Keyword.get(opts, :parent),
       supervisor: Keyword.get(opts, :supervisor)
     }
@@ -166,14 +166,6 @@ defmodule Protean.Interpreter do
     invoked
     |> Map.values()
     |> Enum.find(fn proc -> proc[:ref] === ref end)
-  end
-
-  @doc """
-  Sets the context of the current state.
-  """
-  @spec with_context(t, State.context()) :: t
-  def with_context(%Interpreter{} = interpreter, context) do
-    put_in(interpreter.state.context, context)
   end
 
   @doc """

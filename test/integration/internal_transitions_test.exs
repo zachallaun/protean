@@ -6,7 +6,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     alias Protean.Action
 
     @machine [
-      context: [
+      assigns: [
         on_entry: [],
         on_exit: []
       ],
@@ -73,7 +73,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     def handle_action("add_a2_exit", state, _), do: add(state, :on_exit, "a2")
 
     def add(state, key, value) do
-      current = state.context[key]
+      current = state.assigns[key]
       Action.assign(state, %{key => [value | current]})
     end
   end
@@ -84,15 +84,15 @@ defmodule ProteanIntegration.InternalTransitionsTest do
     test "internal self-transitions do not trigger entry/exit actions", %{machine: machine} do
       assert_protean(machine,
         call: :a1_self_internal,
-        context: [on_entry: ["a1", "a"], on_exit: []]
+        assigns: [on_entry: ["a1", "a"], on_exit: []]
       )
     end
 
     test "external self-transitions trigger entry/exit actions", %{machine: machine} do
       assert_protean(machine,
-        context: [on_entry: ["a1", "a"], on_exit: []],
+        assigns: [on_entry: ["a1", "a"], on_exit: []],
         call: :a1_self_external,
-        context: [on_entry: ["a1", "a1", "a"], on_exit: ["a1"]]
+        assigns: [on_entry: ["a1", "a1", "a"], on_exit: ["a1"]]
       )
     end
 
@@ -100,7 +100,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
       assert_protean(machine,
         call: :a2_internal,
         matches: "a.a2",
-        context: [on_entry: ["a2", "a1", "a"], on_exit: ["a1"]]
+        assigns: [on_entry: ["a2", "a1", "a"], on_exit: ["a1"]]
       )
     end
 
@@ -108,7 +108,7 @@ defmodule ProteanIntegration.InternalTransitionsTest do
       assert_protean(machine,
         call: :a2_external,
         matches: "a.a2",
-        context: [on_entry: ["a2", "a", "a1", "a"], on_exit: ["a", "a1"]]
+        assigns: [on_entry: ["a2", "a", "a1", "a"], on_exit: ["a", "a1"]]
       )
     end
 
@@ -116,10 +116,10 @@ defmodule ProteanIntegration.InternalTransitionsTest do
       assert_protean(machine,
         call: :b,
         matches: "b",
-        context: [on_entry: ["a1", "a"], on_exit: ["a", "a1"]],
+        assigns: [on_entry: ["a1", "a"], on_exit: ["a", "a1"]],
         call: :back_to_a,
         matches: "a.a1",
-        context: [on_entry: ["a1", "a", "a1", "a"], on_exit: ["a", "a1"]]
+        assigns: [on_entry: ["a1", "a", "a1", "a"], on_exit: ["a", "a1"]]
       )
     end
   end

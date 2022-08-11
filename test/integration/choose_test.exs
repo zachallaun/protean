@@ -6,7 +6,7 @@ defmodule ProteanIntegration.ChooseTest do
     alias Protean.Action
 
     @machine [
-      context: [switch: "on", data: []],
+      assigns: [switch: "on", data: []],
       initial: "a",
       states: [
         a: [
@@ -38,7 +38,7 @@ defmodule ProteanIntegration.ChooseTest do
     end
 
     def handle_action("set_data_" <> value, state, _event) do
-      %{context: %{data: data}} = state
+      %{assigns: %{data: data}} = state
       Action.assign(state, :data, [value | data])
     end
 
@@ -52,7 +52,7 @@ defmodule ProteanIntegration.ChooseTest do
     end
 
     @impl Protean
-    def guard("switch_" <> value, %{context: %{switch: value}}, _event), do: true
+    def guard("switch_" <> value, %{assigns: %{switch: value}}, _event), do: true
   end
 
   describe "choose action" do
@@ -61,26 +61,26 @@ defmodule ProteanIntegration.ChooseTest do
     test "inline chooses single action when its condition is true", %{machine: machine} do
       assert_protean(machine,
         call: "make_a_choice",
-        context: [data: ["a"]],
+        assigns: [data: ["a"]],
         call: {"set_switch", "off"},
         call: "make_a_choice",
-        context: [data: ["b", "a"]],
+        assigns: [data: ["b", "a"]],
         call: {"set_switch", "indeterminate"},
         call: "make_a_choice",
-        context: [data: ["c", "b", "a"]]
+        assigns: [data: ["c", "b", "a"]]
       )
     end
 
     test "pure chooses single action when its condition is true", %{machine: machine} do
       assert_protean(machine,
         call: "make_a_choice_pure",
-        context: [data: ["a"]],
+        assigns: [data: ["a"]],
         call: {"set_switch", "off"},
         call: "make_a_choice_pure",
-        context: [data: ["b", "a"]],
+        assigns: [data: ["b", "a"]],
         call: {"set_switch", "indeterminate"},
         call: "make_a_choice_pure",
-        context: [data: ["c", "b", "a"]]
+        assigns: [data: ["c", "b", "a"]]
       )
     end
   end

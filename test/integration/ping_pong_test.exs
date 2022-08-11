@@ -11,7 +11,7 @@ defmodule ProteanIntegration.PingPongTest do
     """
     @machine [
       initial: "waiting",
-      context: [
+      assigns: [
         received: []
       ],
       states: [
@@ -41,7 +41,7 @@ defmodule ProteanIntegration.PingPongTest do
 
     @impl true
     def handle_action("reply", state, {ping_or_pong, from}) do
-      %{context: %{received: received}} = state
+      %{assigns: %{received: received}} = state
       reply = if ping_or_pong == "ping", do: "pong", else: "ping"
 
       state
@@ -61,11 +61,11 @@ defmodule ProteanIntegration.PingPongTest do
     assert_protean(m1,
       call: {"ping", m2},
       sleep: 10,
-      context: [received: ["ping", "ping"]]
+      assigns: [received: ["ping", "ping"]]
     )
 
     assert_protean(m2,
-      context: [received: ["pong", "pong"]]
+      assigns: [received: ["pong", "pong"]]
     )
 
     Protean.call(m1, "listen")
@@ -74,11 +74,11 @@ defmodule ProteanIntegration.PingPongTest do
     assert_protean(m2,
       call: {"ping", m1},
       sleep: 10,
-      context: [received: ["ping", "ping", "pong", "pong"]]
+      assigns: [received: ["ping", "ping", "pong", "pong"]]
     )
 
     assert_protean(m1,
-      context: [received: ["pong", "pong", "ping", "ping"]]
+      assigns: [received: ["pong", "pong", "ping", "ping"]]
     )
   end
 end

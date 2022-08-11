@@ -18,7 +18,7 @@ Supervisor.start_link([Protean.Supervisor], strategy: :one_for_one)
 
 ## Introduction
 
-Debounce and throttle are techniques used to control streams of events, often in the context of user interfaces. Both are used to limit the flow of events.
+Debounce and throttle are techniques used to control streams of events, often in the assigns of user interfaces. Both are used to limit the flow of events.
 
 * **Debounce** limits events by buffering incoming events and only emitting the latest one after a certain amount of time has passed with no new events. Consider a real-time search field, for instance: the user starts typing, and each character emits a `change`. Instead of starting the search, canceling, and starting over on every keypress, you could _debounce_ the events, only emitting a change (and triggering the search) after the user has stopped typing for a certain amount of time.
 * **Throttle** emits the first event immediately, but then waits a certain amount of time before emitting another. This turns a potentially rapid stream of events into a constant interval (so long as events are coming faster than the timeout period).
@@ -29,13 +29,13 @@ Debounce and throttle are techniques used to control streams of events, often in
 defmodule Examples.Debounce do
   use Protean
 
-  @type context :: %{
+  @type assigns :: %{
           timeout: non_neg_integer()
         }
 
   @machine [
     initial: "waiting",
-    context: [
+    assigns: [
       timeout: 1_000
     ],
     states: [
@@ -58,7 +58,7 @@ defmodule Examples.Debounce do
   ]
 
   @impl Protean
-  def delay(:timeout, %{context: %{timeout: t}}, _), do: t
+  def delay(:timeout, %{assigns: %{timeout: t}}, _), do: t
 
   @impl true
   def handle_action(:reply_with_latest_event, state, event) do
@@ -75,7 +75,7 @@ end
 
 Our debounce machine relies on delayed- and self-transitions.
 
-We start in a `waiting` state, awaiting any event. When the first event comes in, we switch to a `debouncing` state. `debouncing` will define a delayed transition based on whatever timeout value is set in the machine context. If the delay goes by, we emit the latest event with a `:reply` tuple.
+We start in a `waiting` state, awaiting any event. When the first event comes in, we switch to a `debouncing` state. `debouncing` will define a delayed transition based on whatever timeout value is set in the machine assigns. If the delay goes by, we emit the latest event with a `:reply` tuple.
 
 However, if any events come in while we're `debouncing`, we do an external self-transition, resetting the timeout:
 
@@ -138,10 +138,10 @@ end
 [event: ~U[2022-08-08 02:39:11.807941Z], now: ~U[2022-08-08 02:39:12.809021Z]]
 ```
 
-By default, our debouncer is waiting for 1,000ms since the last event before emitting it, but we can control that behavior by providing a different `:timeout` in the machine's context.
+By default, our debouncer is waiting for 1,000ms since the last event before emitting it, but we can control that behavior by providing a different `:timeout` in the machine's assigns.
 
 ```elixir
-{:ok, debounce_500ms} = Examples.Debounce.start_link(context: %{timeout: 500})
+{:ok, debounce_500ms} = Examples.Debounce.start_link(assigns: %{timeout: 500})
 Protean.subscribe(debounce_500ms, :replies)
 ```
 
@@ -191,14 +191,14 @@ defmodule Examples.Throttle do
   use Protean
   alias Protean.Action
 
-  @type context :: %{
+  @type assigns :: %{
           timeout: non_neg_integer(),
           last_event: term()
         }
 
   @machine [
     initial: "waiting",
-    context: [
+    assigns: [
       timeout: 1_000,
       last_event: nil
     ],
@@ -233,10 +233,10 @@ defmodule Examples.Throttle do
   ]
 
   @impl Protean
-  def delay(:timeout, %{context: %{timeout: t}}, _), do: t
+  def delay(:timeout, %{assigns: %{timeout: t}}, _), do: t
 
   @impl Protean
-  def guard(:has_event?, %{context: %{last_event: nil}}, _), do: false
+  def guard(:has_event?, %{assigns: %{last_event: nil}}, _), do: false
   def guard(:has_event?, _, _), do: true
 
   @impl Protean
@@ -245,11 +245,11 @@ defmodule Examples.Throttle do
   end
 
   def handle_action(:reply_last, state, _) do
-    {:reply, state.context.last_event, state}
+    {:reply, state.assigns.last_event, state}
   end
 
   def handle_action(:reply_and_clear_last, state, _) do
-    {:reply, state.context.last_event, Action.assign(state, :last_event, nil)}
+    {:reply, state.assigns.last_event, Action.assign(state, :last_event, nil)}
   end
 end
 ```

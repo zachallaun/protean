@@ -22,7 +22,7 @@ defmodule Protean.InterpreterTest do
 
       with interpreter <- Interpreter.start(interpreter) do
         assert Enum.empty?(State.actions(interpreter.state))
-        assert interpreter.state.context[:acc] == ["entering_a"]
+        assert interpreter.state.assigns[:acc] == ["entering_a"]
       end
     end
   end

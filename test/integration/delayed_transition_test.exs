@@ -5,7 +5,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     use Protean
 
     @machine [
-      context: %{
+      assigns: %{
         path: []
       },
       initial: "a",
@@ -41,7 +41,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
     ]
 
     @impl Protean
-    def handle_action(:save_path, %{context: %{path: path}} = state, _event) do
+    def handle_action(:save_path, %{assigns: %{path: path}} = state, _event) do
       Protean.Action.assign(state, :path, [MapSet.to_list(state.value) | path])
     end
 
@@ -71,10 +71,10 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
     test "short-circuited transitions don't execute actions", %{machine: machine} do
       assert_protean(machine,
-        context: [path: [[["a", "#"]]]],
+        assigns: [path: [[["a", "#"]]]],
         call: :goto_d,
         sleep: 50,
-        context: [path: [[["d", "#"]], [["a", "#"]]]]
+        assigns: [path: [[["d", "#"]], [["a", "#"]]]]
       )
     end
 

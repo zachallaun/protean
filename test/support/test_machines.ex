@@ -3,17 +3,17 @@ defmodule TestMachines do
   alias Protean.Interpreter
   alias Protean.MachineConfig
 
-  def with_test_machine(%{machine: machine} = context) do
-    context
+  def with_test_machine(%{machine: machine} = assigns) do
+    assigns
     |> Map.merge(test_machine(machine))
   end
 
-  def with_test_machine(%{machines: machines} = context) do
-    context
+  def with_test_machine(%{machines: machines} = assigns) do
+    assigns
     |> Map.put(:machines, Enum.map(machines, &test_machine/1))
   end
 
-  def with_test_machine(context), do: context
+  def with_test_machine(assigns), do: assigns
 
   def test_machine(machine) do
     machine = apply(TestMachines, machine, [])
@@ -181,7 +181,7 @@ defmodule TestMachines do
     use Protean
 
     @machine [
-      context: %{
+      assigns: %{
         direction: :straight
       },
       initial: :straight,
@@ -212,13 +212,13 @@ defmodule TestMachines do
     ]
 
     @impl true
-    def guard("direction_straight?", %{context: %{direction: :straight}}, _event), do: true
+    def guard("direction_straight?", %{assigns: %{direction: :straight}}, _event), do: true
     def guard("direction_straight?", _, _), do: false
 
-    def guard("direction_left?", %{context: %{direction: :left}}, _event), do: true
+    def guard("direction_left?", %{assigns: %{direction: :left}}, _event), do: true
     def guard("direction_left?", _, _), do: false
 
-    def guard("direction_right?", %{context: %{direction: :right}}, _event), do: true
+    def guard("direction_right?", %{assigns: %{direction: :right}}, _event), do: true
     def guard("direction_right?", _, _), do: false
   end
 
@@ -231,7 +231,7 @@ defmodule TestMachines do
 
     @machine [
       initial: :a,
-      context: %{
+      assigns: %{
         acc: []
       },
       on: [
@@ -261,11 +261,11 @@ defmodule TestMachines do
     ]
 
     @impl true
-    def handle_action("entering_a", %{context: %{acc: acc}} = state, _event) do
+    def handle_action("entering_a", %{assigns: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["entering_a" | acc])
     end
 
-    def handle_action("exiting_a", %{context: %{acc: acc}} = state, _event) do
+    def handle_action("exiting_a", %{assigns: %{acc: acc}} = state, _event) do
       Action.assign(state, :acc, ["exiting_a" | acc])
     end
   end
@@ -297,7 +297,7 @@ defmodule TestMachines do
 
     @machine [
       initial: :a,
-      context: %{
+      assigns: %{
         acc: []
       },
       states: [
@@ -324,7 +324,7 @@ defmodule TestMachines do
 
     @impl true
     def handle_action(action_name, state, _event) do
-      %{acc: acc} = state.context
+      %{acc: acc} = state.assigns
       Action.assign(state, :acc, [action_name | acc])
     end
   end

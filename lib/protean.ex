@@ -23,7 +23,7 @@ defmodule Protean do
 
   @typedoc "Option values for Protean machines."
   @type machine_option ::
-          {:context, State.context()}
+          {:assigns, State.assigns()}
           | {:supervisor, Supervisor.name()}
           | {:machine, MachineConfig.t()}
           | {:module, module()}
@@ -104,7 +104,7 @@ defmodule Protean do
       end
 
       def handle_action(:broadcast_data, state, _) do
-        %{notify: pid, last_received: data} = state.context
+        %{notify: pid, last_received: data} = state.assigns
 
         PubSub.broadcast!(@pubsub, @topic, data)
 
@@ -174,7 +174,7 @@ defmodule Protean do
 
       @impl true
       def delay("my_delay", state, _) do
-        state.context[:configured_delay] || 1000
+        state.assigns[:configured_delay] || 1000
       end
 
   """
@@ -269,8 +269,7 @@ defmodule Protean do
 
   ## Options
 
-    * `:context` - context map that will be merged into the default context defined by the
-      machine.
+    * `:assigns` - assigns map that will be merged into the default machine context.
     * `:machine` - defaults to `module` - module used for machine definition.
     * `:module` - defaults to `module` - callback module used for actions, guards, invoke,
       etc. See "Callbacks".

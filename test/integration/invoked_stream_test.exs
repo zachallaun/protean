@@ -7,7 +7,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
 
     @machine [
       initial: "main",
-      context: [data: []],
+      assigns: [data: []],
       states: [
         main: [
           invoke: [
@@ -36,9 +36,9 @@ defmodule ProteanIntegration.InvokedStreamTest do
   test "invoked streams emit events until consumed", %{machine: machine} do
     :timer.sleep(50)
 
-    %{context: context} = state = Protean.current(machine)
+    %{assigns: assigns} = state = Protean.current(machine)
 
-    assert length(context[:data]) == 5
+    assert length(assigns[:data]) == 5
     assert Protean.matches?(state, "stream_consumed")
   end
 
@@ -48,7 +48,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
 
     @machine [
       initial: "waiting",
-      context: [data: []],
+      assigns: [data: []],
       states: [
         waiting: [
           on: [
@@ -85,7 +85,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
       call: {:stream, Stream.repeatedly(fn -> 1 end) |> Stream.take(5)},
       sleep: 50,
       matches: "waiting",
-      context: [data: [1, 1, 1, 1, 1]]
+      assigns: [data: [1, 1, 1, 1, 1]]
     )
   end
 end

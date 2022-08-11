@@ -14,14 +14,14 @@ defmodule Protean.Parser do
   Parses machine config into a `Node`.
   """
   def parse!(config) do
-    context = Keyword.get(config, :context, %{})
+    assigns = Keyword.get(config, :assigns, %{})
 
     {root, _order} =
       config
       |> parse_node()
       |> set_order()
 
-    {root, context}
+    {root, assigns}
   end
 
   defp set_order(node, order \\ 0)

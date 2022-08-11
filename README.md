@@ -10,12 +10,12 @@ Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standa
 
 **What are statecharts?**
 They are an extension to finite state machines that allow you to model complex behavior in a declarative, data-driven manner.
-They include nested and parallel states, enhanced/augmented state (through context), side-effects (through actions), process management (through invoke), and more.
+They include nested and parallel states, enhanced/augmented state (through assigns), side-effects (through actions), process management (through invoke), and more.
 To learn more about statecharts, I recommend [statecharts.dev](https://statecharts.dev/).
 
 ## Goals
 
-This project is currently an exploration of statecharts as they fit into the context of Elixir and OTP.
+This project is currently an exploration of statecharts as they fit into the assigns of Elixir and OTP.
 XState adopted the actor model in its implementation, so Elixir seemed like a natural fit.
 However, it may be that Elixir/OTP makes these abstractions unnecessary.
 
@@ -40,7 +40,7 @@ defmodule Counter do
 
   @machine [
     initial: "active",
-    context: [
+    assigns: [
       count: 0,
       min: nil,
       max: nil
@@ -67,18 +67,18 @@ defmodule Counter do
   end
 
   def handle_action(:log, state, {"Log", attribute}) do
-    %{context: context} = state
-    IO.puts("#{attribute}: #{context[attribute]}")
+    %{assigns: assigns} = state
+    IO.puts("#{attribute}: #{assigns[attribute]}")
 
     state
   end
 
   @impl true
-  def guard(:at_max, %{context: %{max: max, count: count}}, _event) do
+  def guard(:at_max, %{assigns: %{max: max, count: count}}, _event) do
     max && count >= max
   end
 
-  def guard(:at_min, %{context: %{min: min, count: count}}, _event) do
+  def guard(:at_min, %{assigns: %{min: min, count: count}}, _event) do
     min && count <= min
   end
 end
@@ -89,7 +89,7 @@ It can be started under a supervisor, but we'll start it directly.
 ```elixir
 {:ok, pid} = Protean.start_link(Counter)
 
-Protean.current(pid).context
+Protean.current(pid).assigns
 # %{count: 0, min: nil, max: nil}
 
 Protean.send(pid, "Inc")
@@ -97,12 +97,12 @@ Protean.send(pid, "Inc")
 
 Enum.each(1..4, fn _ -> Protean.send(pid, "Inc") end)
 
-Protean.current(pid).context
+Protean.current(pid).assigns
 # %{count: 5, min: nil, max: nil}
 
 Protean.call(pid, {"Set", {:max, 10}})
 # %Protean.State{
-#   context: %{count: 5, max: 10, min: nil},
+#   assigns: %{count: 5, max: 10, min: nil},
 #   event: {"Set", {:max, 10}},
 #   value: MapSet.new([["active", "#"]])
 # }
@@ -152,7 +152,7 @@ Supervisor.start_link(children, strategy: :one_for_one)
 
 Protean.current(MyCounter)
 # %Protean.State{
-#   context: %{count: 0, max: nil, min: nil},
+#   assigns: %{count: 0, max: nil, min: nil},
 #   event: "$protean.init",
 #   value: MapSet.new([["active", "#"]])
 # }

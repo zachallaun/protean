@@ -6,7 +6,7 @@ defmodule ProteanIntegration.AutoforwardTest do
 
     @machine [
       initial: "receiving",
-      context: [data: []],
+      assigns: [data: []],
       states: [
         receiving: [
           on: [
@@ -45,6 +45,6 @@ defmodule ProteanIntegration.AutoforwardTest do
     Protean.call(machine, {"event", "b"})
     Protean.call(machine, {"event", "c"})
 
-    assert %{data: ["c", "b", "a"]} = Protean.current(ChildMachine).context
+    assert %{data: ["c", "b", "a"]} = Protean.current(ChildMachine).assigns
   end
 end
