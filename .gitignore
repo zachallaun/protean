@@ -8,8 +8,7 @@
 /deps/
 
 # Where third-party dependencies like ExDoc output generated docs.
-/docs/ex_doc/*
-!/docs/ex_doc/.gitkeep
+/doc/
 
 # Ignore .fetch files in case you like to edit your project deps locally.
 /.fetch
