@@ -20,7 +20,7 @@ defmodule ProteanIntegration.CustomActionTest do
       initial: "init",
       assigns: [data: nil],
       states: [
-        init: [
+        atomic(:init,
           entry: [
             CustomAction.custom(),
             Protean.Action.assign(data: :ok)
@@ -28,7 +28,7 @@ defmodule ProteanIntegration.CustomActionTest do
           on: [
             event: []
           ]
-        ]
+        )
       ]
     ]
   end

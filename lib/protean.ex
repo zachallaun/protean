@@ -89,11 +89,10 @@ defmodule Protean do
       @machine [
         # ...
         on: [
-          {
-            match({:data, _any}),
+          match({:data, _any},
             target: :data_received,
             actions: [:assign_data, :broadcast_data]
-          }
+          )
         ]
       ]
 
@@ -210,7 +209,7 @@ defmodule Protean do
     Module.register_attribute(__CALLER__.module, @protean_machine_attr, persist: true)
 
     quote do
-      import Protean, only: [match: 1]
+      import Protean.Builder
       @behaviour Protean
       @before_compile Protean
 
@@ -236,26 +235,6 @@ defmodule Protean do
       def_default_impls(env),
       user_config && def_default_otp()
     ]
-  end
-
-  @doc """
-  Helper macro to allow match expressions on events during machine definition.
-
-  ## Example
-
-      @machine [
-        # ...
-        on: [
-          # Match events that are instances of `MyStruct`
-          {match(%MyStruct{}), target: "..."},
-
-          # Match anything
-          {match(_), target: "..."}
-        ]
-      ]
-  """
-  defmacro match(pattern) do
-    quote(do: fn expr -> match?(unquote(pattern), expr) end)
   end
 
   @doc """

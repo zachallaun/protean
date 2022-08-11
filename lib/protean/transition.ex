@@ -30,7 +30,7 @@ defmodule Protean.Transition do
           source_id: Node.id(),
           target_ids: [Node.id()] | nil,
           match?: (term() -> boolean()) | term() | nil,
-          guard: Guard.guard(),
+          guard: Guard.t(),
           internal: boolean(),
           actions: [Action.t()],
           domain: Node.id()

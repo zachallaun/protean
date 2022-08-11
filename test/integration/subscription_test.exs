@@ -7,16 +7,16 @@ defmodule ProteanIntegration.SubscriptionTest do
     @machine [
       initial: "a",
       states: [
-        a: [
+        atomic(:a,
           on: [
             {"b", target: "b", actions: :answer}
           ]
-        ],
-        b: [
+        ),
+        atomic(:b,
           on: [
             {"a", target: "a"}
           ]
-        ]
+        )
       ]
     ]
 

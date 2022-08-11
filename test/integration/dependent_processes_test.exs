@@ -6,7 +6,7 @@ defmodule ProteanIntegration.DependentProcessesTest do
 
     @machine [
       initial: "init",
-      states: [init: []]
+      states: [atomic(:init)]
     ]
   end
 
@@ -16,12 +16,12 @@ defmodule ProteanIntegration.DependentProcessesTest do
     @machine [
       initial: "init",
       states: [
-        init: [
+        atomic(:init,
           invoke: [
             proc: Child,
             id: "child"
           ]
-        ]
+        )
       ]
     ]
   end

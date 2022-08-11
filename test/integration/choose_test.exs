@@ -9,11 +9,10 @@ defmodule ProteanIntegration.ChooseTest do
       assigns: [switch: "on", data: []],
       initial: "a",
       states: [
-        a: [
+        atomic(:a,
           on: [
-            {match({"set_switch", _}), actions: "set_switch"},
-            {
-              "make_a_choice",
+            match({"set_switch", _}, actions: "set_switch"),
+            match("make_a_choice",
               actions: [
                 Action.choose([
                   {"set_data_a", guard: "switch_on"},
@@ -22,13 +21,10 @@ defmodule ProteanIntegration.ChooseTest do
                   "set_data_c"
                 ])
               ]
-            },
-            {
-              "make_a_choice_pure",
-              actions: "make_a_choice"
-            }
+            ),
+            match("make_a_choice_pure", actions: "make_a_choice")
           ]
-        ]
+        )
       ]
     ]
 

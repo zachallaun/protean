@@ -5,51 +5,42 @@ defmodule ProteanIntegration.FinalStatesTest do
     use Protean
 
     @machine [
-      initial: "init",
+      initial: :init,
       states: [
-        init: [],
-        simple_compound: [
+        atomic(:init),
+        compound(:simple_compound,
           initial: "a",
           states: [
-            a: [
-              on: [b: "b"]
-            ],
-            b: [type: :final]
+            atomic(:a, on: [b: "b"]),
+            final(:b)
           ],
           done: "nearly_done"
-        ],
-        simple_parallel: [
-          type: :parallel,
+        ),
+        parallel(:simple_parallel,
           states: [
-            p1: [
+            compound(:p1,
               initial: "a",
               states: [
-                a: [
-                  on: [b: "b"]
-                ],
-                b: [type: :final]
+                atomic(:a, on: [b: "b"]),
+                final(:b)
               ]
-            ],
-            p2: [
+            ),
+            compound(:p2,
               initial: "c",
               states: [
-                c: [
-                  on: [d: "d"]
-                ],
-                d: [type: :final]
+                atomic(:c, on: [d: "d"]),
+                final(:d)
               ]
-            ]
+            )
           ],
           done: "nearly_done"
-        ],
-        nearly_done: [
+        ),
+        atomic(:nearly_done,
           on: [
             all_done: "all_done"
           ]
-        ],
-        all_done: [
-          type: :final
-        ]
+        ),
+        final(:all_done)
       ],
       on: [
         simple_compound: "#simple_compound",

@@ -12,12 +12,12 @@ defmodule ProteanIntegration.InternalTransitionsTest do
       ],
       initial: "a",
       states: [
-        a: [
+        compound(:a,
+          initial: "a1",
           entry: ["add_a_entry"],
           exit: ["add_a_exit"],
-          initial: "a1",
           states: [
-            a1: [
+            atomic(:a1,
               entry: ["add_a1_entry"],
               exit: ["add_a1_exit"],
               on: [
@@ -29,11 +29,11 @@ defmodule ProteanIntegration.InternalTransitionsTest do
                   target: "a1"
                 ]
               ]
-            ],
-            a2: [
+            ),
+            atomic(:a2,
               entry: ["add_a2_entry"],
               exit: ["add_a2_exit"]
-            ]
+            )
           ],
           on: [
             a1_external: [
@@ -55,12 +55,12 @@ defmodule ProteanIntegration.InternalTransitionsTest do
               target: "b"
             ]
           ]
-        ],
-        b: [
+        ),
+        atomic(:b,
           on: [
             back_to_a: "a"
           ]
-        ]
+        )
       ]
     ]
 

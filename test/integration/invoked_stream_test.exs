@@ -9,19 +9,21 @@ defmodule ProteanIntegration.InvokedStreamTest do
       initial: "main",
       assigns: [data: []],
       states: [
-        main: [
+        atomic(:main,
           invoke: [
-            stream:
+            invoked(
+              :stream,
               fn -> {:stream_data, :rand.uniform()} end
               |> Stream.repeatedly()
               |> Stream.take(5),
-            done: "stream_consumed"
+              done: "stream_consumed"
+            )
           ],
           on: [
-            {match({:stream_data, _}), actions: "write_data"}
+            match({:stream_data, _}, actions: "write_data")
           ]
-        ],
-        stream_consumed: []
+        ),
+        atomic(:stream_consumed)
       ]
     ]
 
@@ -50,20 +52,20 @@ defmodule ProteanIntegration.InvokedStreamTest do
       initial: "waiting",
       assigns: [data: []],
       states: [
-        waiting: [
+        atomic(:waiting,
           on: [
-            {match({:stream, _}), "consuming"}
+            match({:stream, _}, "consuming")
           ]
-        ],
-        consuming: [
+        ),
+        atomic(:consuming,
           invoke: [
             stream: "stream_from_event",
             done: "waiting"
           ],
           on: [
-            {match({:stream_data, _}), actions: "write_data"}
+            match({:stream_data, _}, actions: "write_data")
           ]
-        ]
+        )
       ]
     ]
 

@@ -10,17 +10,16 @@ defmodule ProteanIntegration.InvokedMachineTest do
     @machine [
       initial: "parenting",
       states: [
-        parenting: [
+        atomic(:parenting,
           invoke: [
-            id: "child",
-            proc: ProteanIntegration.InvokedMachineTest.Child
+            invoked(:proc, ProteanIntegration.InvokedMachineTest.Child, id: "child")
           ],
           on: [
-            {:grow_it, actions: [Action.send(:grow, to: "child")]},
-            {match({:child_grown, _}), "relax"}
+            match(:grow_it, actions: [Action.send(:grow, to: "child")]),
+            match({:child_grown, _}, "relax")
           ]
-        ],
-        relax: []
+        ),
+        atomic(:relax)
       ]
     ]
   end
@@ -32,7 +31,7 @@ defmodule ProteanIntegration.InvokedMachineTest do
     @machine [
       initial: "growing",
       states: [
-        growing: [
+        atomic(:growing,
           on: [
             grow: [
               actions: [
@@ -41,8 +40,8 @@ defmodule ProteanIntegration.InvokedMachineTest do
               target: "grown"
             ]
           ]
-        ],
-        grown: []
+        ),
+        atomic(:grown)
       ]
     ]
   end
@@ -89,12 +88,13 @@ defmodule ProteanIntegration.InvokedMachineTest do
       states: [
         init: [
           invoke: [
-            id: "crashes",
-            proc: ProteanIntegration.InvokedMachineTest.Crashes,
-            error: [
-              actions: ["save_event"],
-              target: "invoke_crashed"
-            ]
+            invoked(:proc, ProteanIntegration.InvokedMachineTest.Crashes,
+              id: "crashes",
+              error: [
+                actions: ["save_event"],
+                target: "invoke_crashed"
+              ]
+            )
           ],
           on: [
             make_it_crash: [
@@ -157,11 +157,11 @@ defmodule ProteanIntegration.InvokedMachineTest do
       states: [
         init: [
           invoke: [
-            id: "crashes",
-            proc: ProteanIntegration.InvokedMachineTest.ImmediatelyCrashes,
-            error: [
-              target: "invoke_crashed"
-            ]
+            invoked(:proc, ProteanIntegration.InvokedMachineTest.ImmediatelyCrashes,
+              error: [
+                target: "invoke_crashed"
+              ]
+            )
           ]
         ],
         invoke_crashed: []

@@ -8,11 +8,11 @@ defmodule ProteanIntegration.SendEventTest do
     @machine [
       initial: "waiting",
       states: [
-        waiting: [
+        atomic(:waiting,
           on: [
-            {match({:echo, _}), actions: "echo"}
+            match({:echo, _}, actions: "echo")
           ]
-        ]
+        )
       ]
     ]
 

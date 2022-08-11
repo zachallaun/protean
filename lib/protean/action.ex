@@ -34,7 +34,7 @@ defmodule Protean.Action do
         # ...
         entry: [:entering_state]
         on: [
-          {match(%MyEvent{}), actions: [:first_action, :second_action]}
+          match(%MyEvent{}, actions: [:first_action, :second_action])
         ],
         exit: [:exiting_state]
       ]

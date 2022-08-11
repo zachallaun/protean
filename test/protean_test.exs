@@ -6,8 +6,10 @@ defmodule ProteanTest do
     use Protean
 
     @machine [
-      initial: "init",
-      states: [init: []]
+      initial: :init,
+      states: [
+        atomic(:init)
+      ]
     ]
   end
 
@@ -15,13 +17,13 @@ defmodule ProteanTest do
     use Protean
 
     @machine [
-      initial: "init",
+      initial: :init,
       states: [
-        init: [
+        atomic(:init,
           invoke: [
             task: {:timer, :sleep, [100]}
           ]
-        ]
+        )
       ]
     ]
   end
@@ -110,9 +112,7 @@ defmodule ProteanTest do
     @machine [
       initial: "init",
       states: [
-        init: [
-          entry: :my_action
-        ]
+        atomic(:init, entry: :my_action)
       ]
     ]
   end
@@ -137,7 +137,9 @@ defmodule ProteanTest do
     @machine [
       assigns: %{data: :foo},
       initial: "init",
-      states: [init: []]
+      states: [
+        atomic(:init)
+      ]
     ]
   end
 

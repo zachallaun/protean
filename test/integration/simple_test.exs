@@ -10,15 +10,15 @@ defmodule ProteanIntegration.SimpleTest do
       ],
       initial: "a",
       states: [
-        a: [
+        atomic(:a,
           on: [goto_b: "b"]
-        ],
-        b: [
+        ),
+        atomic(:b,
           on: [goto_a: "a"]
-        ]
+        )
       ],
       on: [
-        {match({:set_data, _}), actions: "do_set"}
+        match({:set_data, _}, actions: "do_set")
       ]
     ]
 

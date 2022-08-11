@@ -7,16 +7,16 @@ defmodule ProteanIntegration.HigherOrderGuardTest do
     @machine [
       initial: :a,
       states: [
-        a: [],
-        b: [],
-        c: [],
-        d: []
+        atomic(:a),
+        atomic(:b),
+        atomic(:c),
+        atomic(:d)
       ],
       on: [
         {:goto_a, target: ".a", guard: {:not, {:in, "#d"}}},
         {:goto_b, target: ".b", guard: {:in, "#a"}},
         {:goto_c, target: ".c", guard: {:or, [{:in, "#d"}, {:in, "#b"}]}},
-        {match({:goto_d, _}), target: ".d", guard: {:and, [{:in, "#c"}, "asked_nicely"]}}
+        match({:goto_d, _}, target: ".d", guard: {:and, [{:in, "#c"}, "asked_nicely"]})
       ]
     ]
 
@@ -30,16 +30,16 @@ defmodule ProteanIntegration.HigherOrderGuardTest do
     @machine [
       initial: :a,
       states: [
-        a: [],
-        b: [],
-        c: [],
-        d: []
+        atomic(:a),
+        atomic(:b),
+        atomic(:c),
+        atomic(:d)
       ],
       on: [
         {:goto_a, target: ".a", guard: [:not, in: "d"]},
         {:goto_b, target: ".b", guard: [in: "a"]},
         {:goto_c, target: ".c", guard: [:or, in: "d", in: "b"]},
-        {match({:goto_d, _}), target: ".d", guard: ["asked_nicely", in: "c"]}
+        match({:goto_d, _}, target: ".d", guard: ["asked_nicely", in: "c"])
       ]
     ]
 

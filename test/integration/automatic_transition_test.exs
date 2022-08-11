@@ -12,24 +12,24 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
         allow: false
       },
       states: [
-        a: [
+        atomic(:a,
           on: [
             goto_b: "b"
           ]
-        ],
-        b: [
+        ),
+        atomic(:b,
           always: [
             target: "c",
             actions: ["auto_to_c"]
           ]
-        ],
-        c: [
+        ),
+        atomic(:c,
           always: [
             target: "d",
             actions: ["auto_to_d"]
           ]
-        ],
-        d: [
+        ),
+        atomic(:d,
           always: [
             target: "a",
             guard: "allow?"
@@ -40,8 +40,8 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
               actions: [Action.assign(allow: true)]
             ]
           ]
-        ],
-        e: []
+        ),
+        atomic(:e)
       ],
       on: [
         goto_a: ".a",

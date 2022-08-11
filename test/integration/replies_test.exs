@@ -6,7 +6,7 @@ defmodule ProteanIntegration.RepliesTest do
 
     @machine [
       initial: "init",
-      states: [init: []],
+      states: [atomic(:init)],
       on: [
         {:no_reply, actions: [:no_response]},
         {:one_reply, actions: [{:respond, :one}]},

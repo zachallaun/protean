@@ -8,11 +8,11 @@ defmodule ProteanIntegration.AutoforwardTest do
       initial: "receiving",
       assigns: [data: []],
       states: [
-        receiving: [
+        atomic(:receiving,
           on: [
-            {match({"event", _}), actions: :log_data}
+            match({"event", _}, actions: :log_data)
           ]
-        ]
+        )
       ]
     ]
 
@@ -28,13 +28,13 @@ defmodule ProteanIntegration.AutoforwardTest do
     @machine [
       initial: "forwarding",
       states: [
-        forwarding: [
+        atomic(:forwarding,
           invoke: [
             proc: {Child, name: ChildMachine},
             id: "child",
             autoforward: true
           ]
-        ]
+        )
       ]
     ]
   end

@@ -9,32 +9,34 @@ defmodule ProteanIntegration.InvokedTaskTest do
       assigns: [
         result: nil
       ],
-      initial: "a",
+      initial: :a,
       states: [
-        a: [
+        atomic(:a,
           invoke: [
-            task: fn -> :task_result end,
-            done: [
-              actions: ["save_result"],
-              target: "b"
-            ]
+            invoked(:task, fn -> :task_result end,
+              done: [
+                actions: ["save_result"],
+                target: "b"
+              ]
+            )
           ]
-        ],
-        b: [
+        ),
+        atomic(:b,
           on: [
             goto_c: "c"
           ]
-        ],
-        c: [
+        ),
+        atomic(:c,
           invoke: [
-            task: fn -> :second_task_result end,
-            done: [
-              actions: ["save_result"],
-              target: "d"
-            ]
+            invoked(:task, fn -> :second_task_result end,
+              done: [
+                actions: ["save_result"],
+                target: "d"
+              ]
+            )
           ]
-        ],
-        d: []
+        ),
+        atomic(:d)
       ]
     ]
 

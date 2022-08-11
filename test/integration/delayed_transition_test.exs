@@ -10,29 +10,27 @@ defmodule ProteanIntegration.DelayedTransitionTest do
       },
       initial: "a",
       states: [
-        a: [
+        atomic(:a,
           entry: :save_path,
           after: [
-            delay: 50,
-            target: "b"
+            delay(50, target: "b")
           ]
-        ],
-        b: [
+        ),
+        atomic(:b,
           entry: :save_path,
           after: [
-            delay: 10,
-            target: "c"
+            delay(10, target: "c")
           ]
-        ],
-        c: [
+        ),
+        atomic(:c,
           entry: :save_path,
           on: [
             {"$protean.after.50-#.a", actions: [:blow_up]}
           ]
-        ],
-        d: [
+        ),
+        atomic(:d,
           entry: :save_path
-        ]
+        )
       ],
       on: [
         goto_c: ".c",

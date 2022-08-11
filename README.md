@@ -40,21 +40,21 @@ defmodule Counter do
   alias Protean.Action
 
   @machine [
-    initial: "active",
+    initial: :active,
     assigns: [
       count: 0,
       min: nil,
       max: nil
     ],
     states: [
-      active: [
+      atomic(:active,
         on: [
-          {"Inc", actions: :increment, guard: [not: :at_max]},
-          {"Dec", actions: :decrement, guard: [not: :at_min]},
-          {match({"Set", _}), actions: :set_min_or_max},
-          {match({"Log", _}), actions: :log}
+          match("Inc", actions: :increment, guard: [not: :at_max]),
+          match("Dec", actions: :decrement, guard: [not: :at_min]),
+          match({"Set", _}, actions: :set_min_or_max),
+          match({"Log", _}, actions: :log)
         ]
-      ]
+      )
     ]
   ]
 
@@ -126,256 +126,28 @@ Protean.send(pid, {"Log", :count})
 Protean machines are event-driven _statecharts_, which means that, unlike ordinary finite-state machines, they can have complex, nested, potentially parallel states.
 This is more easily visualized than read, and I highly recommend looking at XContext's [introduction to state machines and statecharts](https://xstate.js.org/docs/guides/introduction-to-state-machines-and-statecharts/) for that reason.
 
+Refer to `Protean.Builder` for documentation on machine definitions.
+When `use Protean` is invoked, functions and macros from `Protean.Builder` are imported automatically.
+
 ### The `@machine` attribute
 
-By default, Protean assumes that your machine is defined on the `@machine` attribute of the module that called `use Protean`.
+By default, Protean assumes that your machine is defined on the `@machine` attribute.
 
 ```elixir
 defmodule MyMachine do
   use Protean
 
   @machine [
-    initial: "my_initial_state",
+    initial: :my_initial_state,
     states: [
-      my_initial_state: [
+      atomic(:my_initial_state,
         # ...
-      ],
-      # other states
+      ),
+      # ...
     ]
   ]
 end
 ```
-
-## States
-
-One of the extensions that statecharts make to typical finite-state machines is a notion of hierarchy.
-States can contain child states, and the state type determines how those child states are entered or exited.
-
-Protean currently supports four types of states: `:compound`, `:parallel`, `:atomic`, and `:final`.
-
-> #### Note about state names {: .tip}
->
-> In order to take advantage of Elixir's keyword list syntax, state names are usually defined as keywords, but they are converted internally to strings.
-> Notice above, for instance, that we use `initial: "my_initial_state"` and then `my_initial_state: [` shortly thereafter.
-
-### The `:compound` state
-
-Compound states have children, of which only one can be active at a given time.
-They additional define an `:initial` attribute specifying which child should become active if we transition directly to the compound state.
-
-`@machine` points to the _root_, which itself is almost always a compound state:
-
-```elixir
-@machine [
-  type: :compound,
-  initial: "state_a",
-  states: [
-    state_a: []
-  ]
-]
-```
-
-Because `:compound` is the only state that has an `:initial`, we do not need to explicitly specify the `:type`.
-These two examples are equivalent:
-
-```elixir
-[
-  parent_state: [
-    type: :compound,
-    initial: "child_a",
-    states: [
-      child_a: [],
-      child_b: []
-    ]
-  ]
-]
-# equivalent to
-[
-  parent_state: [
-    initial: "child_a",
-    states: [
-      child_a: [],
-      child_b: []
-    ]
-  ]
-]
-```
-
-### The `:parallel` state
-
-Parallel states also have child states, but when a parallel state is entered, all of its children become active concurrently.
-
-Parallel states must be specified using `type: :parallel`.
-
-```elixir
-[
-  parent_state: [
-    type: :parallel,
-    states: [
-      child_a: [],
-      child_b: []
-    ]
-  ]
-]
-```
-
-### The `:atomic` state
-
-Atomic states are simple states that cannot define children, but represent some intermediary state of the machine.
-
-Atomic states can be specified with `type: :atomic`, but they are usually inferred.
-
-```elixir
-[
-  atomic_state: [
-    type: :atomic
-  ]
-]
-# equivalent to
-[
-  atomic_state: []
-]
-```
-
-### The `:final` state
-
-Final states are a variation of atomic states that represent some form of completion.
-These states are most useful in triggering `:done` transitions.
-Note that final states cannot define transitions of their own using `:on`.
-
-Final states must be specified with `type: :final`.
-
-```elixir
-[
-  final_state: [
-    type: :final
-  ]
-]
-```
-
-## Event transitions
-
-The most common way to transition from one state to another is in response to an event sent to the machine.
-This is done using the `:on` attribute of a state.
-This should point to a list of two-element tuples, where the first element matches the event, and the second is a keyword list specifying the transition.
-
-```elixir
-[
-  state_a: [
-    on: [
-      {:foo_event, target: "state_b"},
-      {:bar_event, target: "state_c"}
-    ]
-  ]
-]
-```
-
-### Pattern matching
-
-You can pattern match on events using the automatically-imported `Protean.match/1` macro.
-
-```elixir
-[
-  state_a: [
-    on: [
-      {match({:event_with_payload, _payload}), target: "state_b"},
-      {match(%Events.OtherEvent{}), target: "state_c"}
-    ]
-  ]
-]
-```
-
-This allows Protean machines to match on arbitrary events regardless of how they are sent to the machine.
-You could define a catch-all transition, for instance.
-
-```elixir
-[
-  state_a: [
-    {match({:specific_event, _payload}), target: "state_b"},
-    {match(_), target: "unknown_event_received"}
-  ]
-]
-```
-
-### Guards
-
-Guards add run-time checks to transitions and are specified using `:guard`.
-
-```elixir
-[
-  state_a: [
-    {:event, target: "state_b", guard: :custom_condition_met?}
-  ]
-]
-```
-
-See `Protean.Guard` and `c:guard/3` for additional details.
-
-### Actions
-
-Actions -- side effects to be performed when a transition occurs -- can be specified using `:actions` inside a transition.
-
-```elixir
-[
-  state_a: [
-    {match(_), actions: [:log_unexpected_event]}
-  ]
-]
-```
-
-See `Protean.Action` and `c:handle_action/3` for additional details.
-
-## Entry and exit actions
-
-In addition to `:actions` specified on a transition, states themselves can specify actions that should be run when that state is entered and exited.
-
-```elixir
-[
-  state_a: [
-    entry: [:my_entry_action],
-    exit: [:my_exit_action]
-  ]
-]
-```
-
-See `Protean.Action` and `c:handle_action/3` for additional details.
-
-## Invoked processes
-
-Invoked processes are subprocesses supervised by `Protean` that are started and terminated when the machine enters/exits the state that defines them.
-
-```elixir
-[
-  runner_state: [
-    invoke: [
-      task: :some_long_running_task,
-      done: [target: "completed", actions: [:save_result]],
-      error: [target: "failed", actions: [:log_error]]
-    ]
-  ]
-]
-```
-
-Because the `:invoke` above specified a `:task`, Protean will await the return value of the task and then trigger the `:done` transition associated with the invoke.
-If the task crashes, the `:error` transition is taken.
-
-In addition to tasks, Protean can invoke `:stream`, which sents messages from the stream to the machine as events, and `:proc`, arbitrary processes (including other machines) that define a supervisor child spec.
-
-If the machine exits the state before an invoked process ends, the process will be exited with a reason of `:normal`.
-
-See `c:invoke/3` for additional details.
-
-## Automatic transitions
-
-TODO: `:always`
-
-See [integration tests](https://github.com/zachallaun/protean/blob/main/test/integration/automatic_transition_test.exs) for examples for now.
-
-## Delayed transitions
-
-TODO: `:after`
-
-See [integration tests](https://github.com/zachallaun/protean/blob/main/test/integration/delayed_transition_test.exs) for examples for now.
 
 ## Starting supervised machines
 
@@ -484,7 +256,7 @@ Things are changing pretty regularly, however, and some documentation is certain
 - [ ] Fix all "FIXME"
 - [ ] Fix all "TODO"
 - [ ] Stricter machine config parsing with helpful error messages
-- [ ] Differentiate between internal and external events (internal events should not trigger catch-all )
+- [ ] Differentiate between internal and external events (internal events should not trigger catch-all)
 
 ## Installation
 

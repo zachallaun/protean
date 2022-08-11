@@ -15,27 +15,27 @@ defmodule ProteanIntegration.PingPongTest do
         received: []
       ],
       states: [
-        waiting: [
+        atomic(:waiting,
           on: [
             {"listen", "listening"}
           ]
-        ],
-        listening: [
+        ),
+        atomic(:listening,
           on: [
-            {match({"ping", _}), target: "ponged", actions: "reply"},
-            {match({"pong", _}), target: "pinged", actions: "reply"}
+            match({"ping", _}, target: "ponged", actions: "reply"),
+            match({"pong", _}, target: "pinged", actions: "reply")
           ]
-        ],
-        pinged: [
+        ),
+        atomic(:pinged,
           on: [
-            {match({"pong", _}), target: "waiting", actions: "reply"}
+            match({"pong", _}, target: "waiting", actions: "reply")
           ]
-        ],
-        ponged: [
+        ),
+        atomic(:ponged,
           on: [
-            {match({"ping", _}), target: "waiting", actions: "reply"}
+            match({"ping", _}, target: "waiting", actions: "reply")
           ]
-        ]
+        )
       ]
     ]
 

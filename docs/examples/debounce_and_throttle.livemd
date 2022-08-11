@@ -41,7 +41,7 @@ defmodule Examples.Debounce do
     states: [
       waiting: [
         on: [
-          {match(_), target: "debouncing"}
+          match(_, target: "debouncing")
         ]
       ],
       debouncing: [
@@ -51,7 +51,7 @@ defmodule Examples.Debounce do
           target: "waiting"
         ],
         on: [
-          {match(_), target: "debouncing", internal: false}
+          match(_, target: "debouncing", internal: false)
         ]
       ]
     ]
@@ -96,7 +96,7 @@ debouncing: [
     # internal: false makes it an external transition, so it's as if we
     # are leaving the debouncing state, which cancels the timer, and then
     # re-entering it, starting it again.
-    {match(_), target: "debouncing", actions: :set_last, internal: false}
+    match(_, target: "debouncing", actions: :set_last, internal: false)
   ]
 ]
 ```
@@ -203,7 +203,7 @@ defmodule Examples.Throttle do
       last_event: nil
     ],
     on: [
-      {match(_), actions: [:set_last]}
+      match(_, actions: [:set_last])
     ],
     states: [
       waiting: [

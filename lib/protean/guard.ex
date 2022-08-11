@@ -15,9 +15,6 @@ defprotocol Protean.Guard do
 
   """
 
-  @typedoc "Implements `Protean.Guard` protocol."
-  @type guard :: term()
-
   @spec allows?(t, Protean.Context.t(), Protean.event(), callback_module :: module()) :: boolean()
   def allows?(guard, context, event, module)
 end
