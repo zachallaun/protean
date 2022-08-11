@@ -5,7 +5,7 @@
 _Caveat emptor: Protean started as a library for personal learning and exploration. It should not yet be relied upon._
 
 An experimental Elixir library for managing state and side-effects through the use of event-driven statecharts.
-It is heavily inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir idioms and OTP conventions.
+It is heavily inspired by [XContext](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir idioms and OTP conventions.
 Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standard, though not completely.
 
 **What are statecharts?**
@@ -16,7 +16,7 @@ To learn more about statecharts, I recommend [statecharts.dev](https://statechar
 ## Goals
 
 This project is currently an exploration of statecharts as they fit into the assigns of Elixir and OTP.
-XState adopted the actor model in its implementation, so Elixir seemed like a natural fit.
+XContext adopted the actor model in its implementation, so Elixir seemed like a natural fit.
 However, it may be that Elixir/OTP makes these abstractions unnecessary.
 
 ## Example
@@ -101,7 +101,7 @@ Protean.current(pid).assigns
 # %{count: 5, min: nil, max: nil}
 
 Protean.call(pid, {"Set", {:max, 10}})
-# %Protean.State{
+# %Protean.Context{
 #   assigns: %{count: 5, max: 10, min: nil},
 #   event: {"Set", {:max, 10}},
 #   value: MapSet.new([["active", "#"]])
@@ -116,9 +116,9 @@ Protean.send(pid, {"Log", :count})
 ## Defining a statechart
 
 Protean machines are event-driven _statecharts_, which means that, unlike ordinary finite-state machines, they can have complex, nested, potentially parallel states.
-This is more easily visualized than read, and I highly recommend looking at XState's [introduction to state machines and statecharts](https://xstate.js.org/docs/guides/introduction-to-state-machines-and-statecharts/) for that reason.
+This is more easily visualized than read, and I highly recommend looking at XContext's [introduction to state machines and statecharts](https://xstate.js.org/docs/guides/introduction-to-state-machines-and-statecharts/) for that reason.
 
-### TODO: States
+### TODO: Contexts
 ### TODO: Transitions
 ### TODO: Guards and automatic transitions
 ### TODO: Actions
@@ -151,7 +151,7 @@ children = [
 Supervisor.start_link(children, strategy: :one_for_one)
 
 Protean.current(MyCounter)
-# %Protean.State{
+# %Protean.Context{
 #   assigns: %{count: 0, max: nil, min: nil},
 #   event: "$protean.init",
 #   value: MapSet.new([["active", "#"]])

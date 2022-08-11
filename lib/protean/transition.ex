@@ -14,7 +14,7 @@ defmodule Protean.Transition do
   alias Protean.Events
   alias Protean.Guard
   alias Protean.Node
-  alias Protean.State
+  alias Protean.Context
 
   defstruct [
     :source_id,
@@ -50,7 +50,7 @@ defmodule Protean.Transition do
   @doc """
   Checks whether the transition is enabled for the given event.
   """
-  @spec enabled?(t, Protean.event() | nil, State.t(), callback_module :: module()) :: boolean()
+  @spec enabled?(t, Protean.event() | nil, Context.t(), callback_module :: module()) :: boolean()
   def enabled?(transition, event, state, module) do
     matches?(transition, event) && guard_allows?(transition, state, event, module)
   end

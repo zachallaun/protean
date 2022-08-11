@@ -8,7 +8,7 @@ defmodule Protean.Interpreter do
   alias Protean.Events
   alias Protean.MachineConfig
   alias Protean.Machinery
-  alias Protean.State
+  alias Protean.Context
 
   defstruct [
     :config,
@@ -23,7 +23,7 @@ defmodule Protean.Interpreter do
 
   @type t :: %Interpreter{
           config: MachineConfig.t(),
-          state: State.t(),
+          state: Context.t(),
           parent: pid(),
           supervisor: Supervisor.supervisor(),
           running: boolean(),
@@ -60,7 +60,7 @@ defmodule Protean.Interpreter do
 
     %Interpreter{
       config: config,
-      state: State.assign(state, initial_assigns),
+      state: Context.assign(state, initial_assigns),
       parent: Keyword.get(opts, :parent),
       supervisor: Keyword.get(opts, :supervisor)
     }
@@ -124,7 +124,7 @@ defmodule Protean.Interpreter do
   def handle_event(interpreter, _event), do: {interpreter, []}
 
   defp pop_replies(%Interpreter{state: state} = interpreter) do
-    {replies, state} = State.pop_replies(state)
+    {replies, state} = Context.pop_replies(state)
     {with_state(interpreter, state), replies}
   end
 
@@ -171,7 +171,7 @@ defmodule Protean.Interpreter do
   @doc """
   Return the current machine state.
   """
-  @spec state(t) :: State.t()
+  @spec state(t) :: Context.t()
   def state(%Interpreter{state: state}), do: state
 
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
@@ -219,7 +219,7 @@ defmodule Protean.Interpreter do
 
   defp notify_subscribers(interpreter) do
     state = state(interpreter)
-    replies = State.get_replies(state)
+    replies = Context.get_replies(state)
 
     interpreter.subscribers
     |> Enum.filter(fn {_ref, subscriber} ->
@@ -274,7 +274,7 @@ defmodule Protean.Interpreter do
     {actions, state} =
       config
       |> Machinery.take_transitions(state, transitions)
-      |> State.pop_actions()
+      |> Context.pop_actions()
 
     newly_final =
       state.final
@@ -310,6 +310,6 @@ defmodule Protean.Interpreter do
 
   @doc false
   def put_reply(interpreter, reply) do
-    update_in(interpreter.state, &State.put_reply(&1, reply))
+    update_in(interpreter.state, &Context.put_reply(&1, reply))
   end
 end

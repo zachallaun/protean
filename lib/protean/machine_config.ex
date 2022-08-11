@@ -6,7 +6,7 @@ defmodule Protean.MachineConfig do
   alias __MODULE__
   alias Protean.Node
   alias Protean.Parser
-  alias Protean.State
+  alias Protean.Context
   alias Protean.Utils
 
   @enforce_keys [:id, :root, :default_assigns]
@@ -24,7 +24,7 @@ defmodule Protean.MachineConfig do
           id: binary(),
           root: Node.t(),
           idmap: %{Node.id() => Node.t()},
-          default_assigns: State.assigns(),
+          default_assigns: Context.assigns(),
           callback_module: module()
         }
 
@@ -58,7 +58,7 @@ defmodule Protean.MachineConfig do
   Compute the initial state for a machine configuration, including any entry actions that result
   from entering the default states.
   """
-  @spec initial_state(t) :: State.t()
+  @spec initial_state(t) :: Context.t()
   def initial_state(%MachineConfig{} = config) do
     active_ids =
       config.root
@@ -76,15 +76,15 @@ defmodule Protean.MachineConfig do
       |> Node.entry_order()
       |> Enum.flat_map(& &1.entry)
 
-    State.new(active_ids)
-    |> State.assign(config.default_assigns)
-    |> State.assign_actions(entry_actions)
+    Context.new(active_ids)
+    |> Context.assign(config.default_assigns)
+    |> Context.assign_actions(entry_actions)
   end
 
   @doc """
   Compute the full set of active nodes for the given states.
   """
-  @spec active(t, State.value()) :: MapSet.t(Node.t())
+  @spec active(t, Context.value()) :: MapSet.t(Node.t())
   def active(%MachineConfig{} = config, ids) do
     ids
     |> Enum.map(&fetch!(config, &1))

@@ -2,7 +2,7 @@ defmodule Protean.Interpreter.ServerTest do
   use Protean.TestCase
 
   alias Protean.Interpreter.Server
-  alias Protean.State
+  alias Protean.Context
 
   defmodule TestMachine do
     use Protean
@@ -30,13 +30,13 @@ defmodule Protean.Interpreter.ServerTest do
 
   @tag machine: {TestMachine, name: NamedMachine}
   test "server can be started with a name" do
-    assert %State{} = Server.current(NamedMachine)
+    assert %Context{} = Server.current(NamedMachine)
   end
 
   @tag machine: TestMachine
   test "call/3", %{machine: server} do
-    assert {state = %State{}, []} = Server.call(server, :goto_b, 5000)
-    assert State.matches?(state, :b)
+    assert {state = %Context{}, []} = Server.call(server, :goto_b, 5000)
+    assert Context.matches?(state, :b)
   end
 
   @tag machine: TestMachine

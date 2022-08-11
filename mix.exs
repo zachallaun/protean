@@ -75,7 +75,7 @@ defmodule Protean.MixProject do
       groups_for_modules: [
         "Core Concepts": [
           Protean.MachineConfig,
-          Protean.State,
+          Protean.Context,
           Protean.Transition,
           Protean.Action,
           Protean.Guard

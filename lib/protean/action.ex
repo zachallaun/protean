@@ -103,7 +103,7 @@ defmodule Protean.Action do
   alias Protean.Events
   alias Protean.Guard
   alias Protean.Interpreter
-  alias Protean.State
+  alias Protean.Context
 
   @enforce_keys [:module, :arg]
   defstruct [:module, :arg]
@@ -159,11 +159,11 @@ defmodule Protean.Action do
   Attach a custom action that implements the `Protean.Action` behaviour.
   """
   @doc type: :callback_action
-  @spec put(State.t(), t) :: State.t()
-  def put(%State{} = state, %Action{} = action), do: put_action(action, state)
+  @spec put(Context.t(), t) :: Context.t()
+  def put(%Context{} = state, %Action{} = action), do: put_action(action, state)
 
   @doc false
-  def delegate(%State{} = state, action), do: delegate(action) |> put_action(state)
+  def delegate(%Context{} = state, action), do: delegate(action) |> put_action(state)
 
   @doc false
   def delegate(action) do
@@ -174,10 +174,10 @@ defmodule Protean.Action do
   Attach an action that assigns to a machine's context.
   """
   @doc type: :callback_action
-  @spec assign(State.t(), key :: term(), value :: term()) :: State.t()
-  @spec assign(State.t(), assigns :: term()) :: State.t()
-  def assign(%State{} = state, key, value), do: assign(key, value) |> put_action(state)
-  def assign(%State{} = state, assigns), do: assign(assigns) |> put_action(state)
+  @spec assign(Context.t(), key :: term(), value :: term()) :: Context.t()
+  @spec assign(Context.t(), assigns :: term()) :: Context.t()
+  def assign(%Context{} = state, key, value), do: assign(key, value) |> put_action(state)
+  def assign(%Context{} = state, assigns), do: assign(assigns) |> put_action(state)
 
   @doc """
   Create an inline action that will assign to machine context.
@@ -208,8 +208,8 @@ defmodule Protean.Action do
   Similar to `put_in/3`.
   """
   @doc type: :callback_action
-  @spec assign_in(State.t(), [term(), ...], term()) :: State.t()
-  def assign_in(%State{} = state, path, value), do: assign_in(path, value) |> put_action(state)
+  @spec assign_in(Context.t(), [term(), ...], term()) :: Context.t()
+  def assign_in(%Context{} = state, path, value), do: assign_in(path, value) |> put_action(state)
 
   @doc """
   Create an inline action that will assign into machine context.
@@ -231,8 +231,8 @@ defmodule Protean.Action do
   Attach an action that will send a message to a process.
   """
   @doc type: :callback_action
-  @spec send(State.t(), event :: term(), [term()]) :: State.t()
-  def send(%State{} = state, event, opts) do
+  @spec send(Context.t(), event :: term(), [term()]) :: Context.t()
+  def send(%Context{} = state, event, opts) do
     send(event, opts) |> put_action(state)
   end
 
@@ -253,7 +253,7 @@ defmodule Protean.Action do
   Attach an action that executes the first of a list of actions whose guard is truthy.
   """
   @doc type: :callback_action
-  def choose(%State{} = state, actions), do: choose(actions) |> put_action(state)
+  def choose(%Context{} = state, actions), do: choose(actions) |> put_action(state)
 
   @doc """
   Create an inline action that will execute the first of a list of actions whose guard is truthy.
@@ -295,13 +295,13 @@ defmodule Protean.Action do
 
     case config.callback_module.handle_action(action, state, state.event) do
       {:noreply, state} ->
-        {:cont, interpreter, State.actions(state)}
+        {:cont, interpreter, Context.actions(state)}
 
       {:reply, reply, state} ->
-        {:cont, Interpreter.put_reply(interpreter, reply), State.actions(state)}
+        {:cont, Interpreter.put_reply(interpreter, reply), Context.actions(state)}
 
-      %State{} = state ->
-        {:cont, interpreter, State.actions(state)}
+      %Context{} = state ->
+        {:cont, interpreter, Context.actions(state)}
 
       other ->
         require Logger
@@ -323,7 +323,7 @@ defmodule Protean.Action do
 
   def exec_action({:assign, :merge, assigns}, interpreter) do
     %{state: state} = interpreter
-    {:cont, %{interpreter | state: State.assign(state, assigns)}}
+    {:cont, %{interpreter | state: Context.assign(state, assigns)}}
   end
 
   def exec_action({:assign, :update, fun}, interpreter) do
@@ -480,7 +480,7 @@ defmodule Protean.Action do
   defp normalize_choice(action), do: action
 
   defp put_action(action, state) do
-    State.put_actions(state, [action])
+    Context.put_actions(state, [action])
   end
 
   defp resolve_recipient(_interpreter, nil), do: self()

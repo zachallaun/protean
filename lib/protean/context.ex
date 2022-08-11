@@ -1,4 +1,4 @@
-defmodule Protean.State do
+defmodule Protean.Context do
   @moduledoc """
   Snapshot of active states, assigns, and the latest event seen by the machine.
 
@@ -22,7 +22,7 @@ defmodule Protean.State do
     }
   ]
 
-  @type t :: %State{
+  @type t :: %Context{
           value: value,
           final: value,
           event: Protean.event() | nil,
@@ -41,7 +41,7 @@ defmodule Protean.State do
 
   @doc false
   @spec new(Enumerable.t()) :: t
-  def new(value), do: %State{value: MapSet.new(value)}
+  def new(value), do: %Context{value: MapSet.new(value)}
 
   # Partial Access behaviour (not defining `pop/2`)
   @doc false
@@ -54,7 +54,7 @@ defmodule Protean.State do
   @spec matches?(t, atom()) :: boolean()
   def matches?(state, descriptor)
 
-  def matches?(%State{value: value}, query) when is_list(query) do
+  def matches?(%Context{value: value}, query) when is_list(query) do
     Enum.any?(value, fn id -> id == query || Node.descendant?(id, query) end)
   end
 
@@ -79,13 +79,13 @@ defmodule Protean.State do
   end
 
   @doc false
-  @spec assign_active(t, [Node.id(), ...]) :: State.t()
+  @spec assign_active(t, [Node.id(), ...]) :: t
   def assign_active(state, ids) do
     %{state | value: MapSet.new(ids)}
   end
 
   @doc false
-  @spec assign_final(t, MapSet.t(Node.id())) :: State.t()
+  @spec assign_final(t, MapSet.t(Node.id())) :: t
   def assign_final(state, ids) do
     %{state | final: ids}
   end
@@ -102,10 +102,10 @@ defmodule Protean.State do
   @spec assign(t, any, any) :: t
   @spec assign(t, %{any => any}) :: t
   @spec assign(t, Enumerable.t()) :: t
-  def assign(%State{assigns: assigns} = state, key, value),
+  def assign(%Context{assigns: assigns} = state, key, value),
     do: %{state | assigns: Map.put(assigns, key, value)}
 
-  def assign(%State{assigns: assigns} = state, updates) when is_map(updates),
+  def assign(%Context{assigns: assigns} = state, updates) when is_map(updates),
     do: %{state | assigns: Map.merge(assigns, updates)}
 
   def assign(state, enum),

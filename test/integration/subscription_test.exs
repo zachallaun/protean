@@ -33,10 +33,10 @@ defmodule ProteanIntegration.SubscriptionTest do
       ref = Protean.subscribe(machine)
 
       Protean.call(machine, "b")
-      assert_receive {:state, ^ref, {%Protean.State{}, _}}
+      assert_receive {:state, ^ref, {%Protean.Context{}, _}}
 
       Protean.call(machine, "b")
-      assert_receive {:state, ^ref, {%Protean.State{}, _}}
+      assert_receive {:state, ^ref, {%Protean.Context{}, _}}
 
       Protean.unsubscribe(machine, ref)
 

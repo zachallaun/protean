@@ -10,7 +10,7 @@ defmodule Protean do
   alias Protean.Interpreter
   alias Protean.Interpreter.Server
   alias Protean.MachineConfig
-  alias Protean.State
+  alias Protean.Context
 
   @typedoc "A running Protean machine process."
   @type server :: GenServer.server()
@@ -23,7 +23,7 @@ defmodule Protean do
 
   @typedoc "Option values for Protean machines."
   @type machine_option ::
-          {:assigns, State.assigns()}
+          {:assigns, Context.assigns()}
           | {:supervisor, Supervisor.name()}
           | {:machine, MachineConfig.t()}
           | {:module, module()}
@@ -72,7 +72,7 @@ defmodule Protean do
       end
 
   """
-  @callback invoke(term(), State.t(), event) :: term()
+  @callback invoke(term(), Context.t(), event) :: term()
 
   @doc """
   Optional callback for actions specified in response to a transition.
@@ -116,7 +116,7 @@ defmodule Protean do
       end
 
   """
-  @callback handle_action(term(), State.t(), event) :: State.t()
+  @callback handle_action(term(), Context.t(), event) :: Context.t()
 
   @doc """
   Optional callback to determine whether a conditional transition should occur.
@@ -150,7 +150,7 @@ defmodule Protean do
       end
 
   """
-  @callback guard(term(), State.t(), event) :: boolean()
+  @callback guard(term(), Context.t(), event) :: boolean()
 
   @doc """
   Optional callback for defining dynamic delays.
@@ -178,7 +178,7 @@ defmodule Protean do
       end
 
   """
-  @callback delay(term(), State.t(), event) :: non_neg_integer()
+  @callback delay(term(), Context.t(), event) :: non_neg_integer()
 
   @optional_callbacks handle_action: 3, invoke: 3, guard: 3, delay: 3
 
@@ -300,7 +300,7 @@ defmodule Protean do
   `replies` is a (possibly empty) list of replies returned by action callbacks resulting from the
   event.
   """
-  @spec call(server, event, timeout()) :: {State.t(), replies :: [term()]}
+  @spec call(server, event, timeout()) :: {Context.t(), replies :: [term()]}
   def call(protean, event, timeout \\ 5000), do: Server.call(protean, event, timeout)
 
   @doc """
@@ -326,7 +326,7 @@ defmodule Protean do
 
   TODO: Allow optional timeout as with `call/3`.
   """
-  @spec current(server) :: State.t()
+  @spec current(server) :: Context.t()
   def current(protean), do: Server.current(protean)
 
   @doc "TODO"
@@ -388,18 +388,18 @@ defmodule Protean do
       machine |> Protean.current() |> Protean.matches?(descriptor)
 
   """
-  @spec matches?(State.t(), descriptor :: term()) :: boolean()
+  @spec matches?(Context.t(), descriptor :: term()) :: boolean()
   @spec matches?(server, descriptor :: term()) :: boolean()
   def matches?(item, descriptor)
 
-  def matches?(%State{} = state, descriptor) do
-    State.matches?(state, descriptor)
+  def matches?(%Context{} = state, descriptor) do
+    Context.matches?(state, descriptor)
   end
 
   def matches?(%Interpreter{} = interpreter, descriptor) do
     interpreter
     |> Interpreter.state()
-    |> State.matches?(descriptor)
+    |> Context.matches?(descriptor)
   end
 
   def matches?(protean, descriptor) do

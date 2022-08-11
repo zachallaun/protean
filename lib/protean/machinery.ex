@@ -12,11 +12,11 @@ defmodule Protean.Machinery do
 
   alias Protean.MachineConfig
   alias Protean.Node
-  alias Protean.State
+  alias Protean.Context
   alias Protean.Transition
 
   @doc "Transition in response to an event."
-  @spec transition(MachineConfig.t(), State.t(), Protean.event()) :: State.t()
+  @spec transition(MachineConfig.t(), Context.t(), Protean.event()) :: Context.t()
   def transition(config, state, event) do
     with transitions <- select_transitions(config, state, event) do
       take_transitions(config, state, transitions)
@@ -24,7 +24,7 @@ defmodule Protean.Machinery do
   end
 
   @doc "Select any machine transitions that apply to the given event in the current state."
-  @spec select_transitions(MachineConfig.t(), State.t(), Protean.event()) :: [Transition.t()]
+  @spec select_transitions(MachineConfig.t(), Context.t(), Protean.event()) :: [Transition.t()]
   def select_transitions(config, state, event, attribute \\ :transitions) do
     # TODO: Handle conflicting transitions
     # TODO: order nodes correctly (specificity + document order)
@@ -34,7 +34,7 @@ defmodule Protean.Machinery do
     |> List.wrap()
   end
 
-  @spec take_transitions(MachineConfig.t(), State.t(), [Transition.t()]) :: State.t()
+  @spec take_transitions(MachineConfig.t(), Context.t(), [Transition.t()]) :: Context.t()
   def take_transitions(config, state, transitions)
 
   def take_transitions(_config, state, []), do: state
@@ -63,9 +63,9 @@ defmodule Protean.Machinery do
     final_states = final_ancestors(config, value)
 
     state
-    |> State.assign_active(value)
-    |> State.assign_final(final_states)
-    |> State.put_actions(actions)
+    |> Context.assign_active(value)
+    |> Context.assign_final(final_states)
+    |> Context.put_actions(actions)
   end
 
   defp transition_result(config, state, transition) do
@@ -137,7 +137,7 @@ defmodule Protean.Machinery do
   end
 
   # Return the ancestors of the given active leaves that are in a final state
-  @spec final_ancestors(MachineConfig.t(), State.value()) :: MapSet.t(Node.id())
+  @spec final_ancestors(MachineConfig.t(), Context.value()) :: MapSet.t(Node.id())
   defp final_ancestors(config, ids) do
     for id <- ids do
       parent_id = Node.parent_id(id)
@@ -155,7 +155,7 @@ defmodule Protean.Machinery do
     |> MapSet.new()
   end
 
-  @spec in_final_state?(Node.t(), State.value()) :: boolean()
+  @spec in_final_state?(Node.t(), Context.value()) :: boolean()
   defp in_final_state?(%Node{type: :atomic}, _), do: false
 
   defp in_final_state?(%Node{type: :final} = node, value) do

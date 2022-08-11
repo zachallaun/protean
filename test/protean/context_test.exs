@@ -1,9 +1,9 @@
-defmodule Protean.StateTest do
+defmodule Protean.ContextTest do
   use ExUnit.Case
 
-  alias Protean.State
+  alias Protean.Context
 
-  test "State.matches? with explicit node ids" do
+  test "Context.matches? with explicit node ids" do
     [
       {[[]], [], true},
       {[["#"]], [], true},
@@ -18,7 +18,7 @@ defmodule Protean.StateTest do
     |> Enum.each(&matches_test/1)
   end
 
-  test "State.matches? with shorthand" do
+  test "Context.matches? with shorthand" do
     [
       {[[]], "", false},
       {[["#"]], "", true},
@@ -38,8 +38,8 @@ defmodule Protean.StateTest do
   end
 
   defp matches_test({state_value, match_test, expected_result}) do
-    with state <- %State{value: state_value} do
-      assert State.matches?(state, match_test) === expected_result,
+    with state <- %Context{value: state_value} do
+      assert Context.matches?(state, match_test) === expected_result,
              "expected #{inspect(state_value)}" <>
                ((expected_result && " to match ") || " to NOT match ") <>
                "#{inspect(match_test)}"

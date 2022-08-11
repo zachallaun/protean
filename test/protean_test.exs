@@ -64,7 +64,7 @@ defmodule ProteanTest do
     @describetag machine: SimpleMachine
 
     test "call/2", %{machine: machine} do
-      assert {%Protean.State{}, []} = Protean.call(machine, "event")
+      assert {%Protean.Context{}, []} = Protean.call(machine, "event")
     end
 
     test "send/2", %{machine: machine} do
@@ -77,25 +77,25 @@ defmodule ProteanTest do
     end
 
     test "current/1", %{machine: machine} do
-      assert %Protean.State{} = Protean.current(machine)
+      assert %Protean.Context{} = Protean.current(machine)
     end
 
     test "stop/2", %{machine: machine} do
       assert :ok = Protean.stop(machine, :default)
-      assert_receive {:EXIT, ^machine, {:shutdown, %Protean.State{}}}
+      assert_receive {:EXIT, ^machine, {:shutdown, %Protean.Context{}}}
     end
 
     test "subscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
       assert Protean.call(machine, "event")
-      assert_receive {:state, ^ref, {%Protean.State{}, []}}
+      assert_receive {:state, ^ref, {%Protean.Context{}, []}}
     end
 
     test "unsubscribe/2", %{machine: machine} do
       assert ref = Protean.subscribe(machine)
       assert :ok = Protean.unsubscribe(machine, ref)
       assert Protean.call(machine, "event")
-      refute_receive {:state, ^ref, {%Protean.State{}, _}}
+      refute_receive {:state, ^ref, {%Protean.Context{}, _}}
     end
 
     test "matches?/2", %{machine: machine} do

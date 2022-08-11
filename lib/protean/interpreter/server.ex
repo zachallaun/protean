@@ -6,7 +6,7 @@ defmodule Protean.Interpreter.Server do
   use GenServer
 
   alias Protean.Interpreter
-  alias Protean.State
+  alias Protean.Context
 
   @prefix :"$protean"
 
@@ -47,7 +47,7 @@ defmodule Protean.Interpreter.Server do
   def matches?(pid, pattern) do
     pid
     |> current()
-    |> State.matches?(pattern)
+    |> Context.matches?(pattern)
   end
 
   def stop(pid, reason, timeout), do: GenServer.stop(pid, reason, timeout)
