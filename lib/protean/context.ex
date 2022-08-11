@@ -2,8 +2,8 @@ defmodule Protean.Context do
   @moduledoc """
   Snapshot of active states, assigns, and the latest event seen by the machine.
 
-  This module is rarely interacted with directly. Instead, use the API exposed by the top-level
-  `Protean`, such as `Protean.matches?/2`, or actions exposed by `Protean.Action`.
+  Functions in this module should rarely be used directly. Instead, rely on the API exposed by
+  `Protean` and `Protean.Action` to query and modify machine context.
   """
 
   alias __MODULE__
