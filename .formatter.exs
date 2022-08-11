@@ -6,5 +6,5 @@ inputs =
   )
 
 [
-  inputs: inputs -- ["lib/protean/utilities.ex"]
+  inputs: inputs -- ["lib/protean/utils.ex"]
 ]
