@@ -2,7 +2,7 @@ defmodule Protean.MixProject do
   use Mix.Project
 
   @name "Protean"
-  @version "0.1.0-alpha.1"
+  @version "0.1.0-alpha.2"
   @source_url "https://github.com/zachallaun/protean"
 
   def project do
@@ -72,14 +72,21 @@ defmodule Protean.MixProject do
         # Guides: Path.wildcard("docs/guides/*")
       ],
       groups_for_modules: [
-        "Core Concepts": [
-          Protean.MachineConfig,
-          Protean.Context,
-          Protean.Transition,
+        Core: [
           Protean.Action,
-          Protean.Guard
+          Protean.Builder,
+          Protean.Context,
+          Protean.Guard,
+          Protean.MachineConfig,
+          Protean.Transition
         ],
-        Mechanics: [Protean.Interpreter, Protean.Machinery, Protean.Node, Protean.Supervisor]
+        Mechanics: [
+          Protean.Interpreter,
+          Protean.MachineConfig,
+          Protean.Machinery,
+          Protean.Node,
+          Protean.Supervisor
+        ]
       ],
       groups_for_functions: [
         "Callback Actions": &(&1[:type] == :callback_action),
