@@ -4,7 +4,7 @@
 
 ```elixir
 Mix.install([
-  {:protean, git: "https://github.com/zachallaun/protean.git"}
+  {:protean, git: "https://github.com/zachallaun/protean.git", override: true}
 ])
 
 Supervisor.start_link([Protean.Supervisor], strategy: :one_for_one)
@@ -13,7 +13,21 @@ Supervisor.start_link([Protean.Supervisor], strategy: :one_for_one)
 <!-- livebook:{"output":true} -->
 
 ```
-{:ok, #PID<0.211.0>}
+* Getting protean (https://github.com/zachallaun/protean.git)
+remote: Enumerating objects: 2435, done.        
+remote: Counting objects: 100% (268/268), done.        
+remote: Compressing objects: 100% (128/128), done.        
+remote: Total 2435 (delta 161), reused 195 (delta 133), pack-reused 2167        
+origin/HEAD set to main
+==> protean
+Compiling 16 files (.ex)
+Generated protean app
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:ok, #PID<0.378.0>}
 ```
 
 ## Introduction
@@ -34,30 +48,28 @@ defmodule Examples.Debounce do
         }
 
   @machine [
-    initial: "waiting",
+    initial: :waiting,
     assigns: [
       timeout: 1_000
     ],
     states: [
-      waiting: [
+      atomic(:waiting,
         on: [
-          match(_, target: "debouncing")
+          match(_, target: :debouncing)
         ]
-      ],
-      debouncing: [
+      ),
+      atomic(:debouncing,
         after: [
-          delay: :timeout,
-          actions: [:reply_with_latest_event],
-          target: "waiting"
+          delay(:timeout, target: :waiting, actions: :reply_with_latest_event)
         ],
         on: [
-          match(_, target: "debouncing", internal: false)
+          match(_, target: :debouncing, internal: false)
         ]
-      ]
+      )
     ]
   ]
 
-  @impl Protean
+  @impl true
   def delay(:timeout, %{assigns: %{timeout: t}}, _), do: t
 
   @impl true
@@ -111,7 +123,7 @@ Protean.subscribe(debounce, :replies)
 <!-- livebook:{"output":true} -->
 
 ```
-#Reference<0.2612791341.2823290881.154519>
+#Reference<0.2994576954.2563768322.243604>
 ```
 
 Our debouncer is emitting debounced events as answers, so we've subscribed only to them (as opposed to every state transition). This will put messages in our mainbox.
@@ -135,7 +147,7 @@ end
 <!-- livebook:{"output":true} -->
 
 ```
-[event: ~U[2022-08-08 02:39:11.807941Z], now: ~U[2022-08-08 02:39:12.809021Z]]
+[event: ~U[2022-08-12 23:06:59.611777Z], now: ~U[2022-08-12 23:07:00.612862Z]]
 ```
 
 By default, our debouncer is waiting for 1,000ms since the last event before emitting it, but we can control that behavior by providing a different `:timeout` in the machine's assigns.
@@ -148,7 +160,7 @@ Protean.subscribe(debounce_500ms, :replies)
 <!-- livebook:{"output":true} -->
 
 ```
-#Reference<0.2612791341.2823290881.154568>
+#Reference<0.2994576954.2563768322.243643>
 ```
 
 ```elixir
@@ -169,7 +181,7 @@ end
 <!-- livebook:{"output":true} -->
 
 ```
-[event: ~U[2022-08-08 02:39:13.831907Z], now: ~U[2022-08-08 02:39:14.333010Z]]
+[event: ~U[2022-08-12 23:07:10.873782Z], now: ~U[2022-08-12 23:07:11.374867Z]]
 ```
 
 ```elixir
@@ -197,49 +209,44 @@ defmodule Examples.Throttle do
         }
 
   @machine [
-    initial: "waiting",
+    initial: :waiting,
     assigns: [
       timeout: 1_000,
       last_event: nil
     ],
     on: [
-      match(_, actions: [:set_last])
+      match(_, actions: :set_last)
     ],
     states: [
-      waiting: [
-        always: [
-          target: "throttling",
-          guard: :has_event?
-        ]
-      ],
-      throttling: [
-        entry: [:reply_and_clear_last],
+      atomic(:waiting,
+        always: transition(target: :throttling, guard: :has_event?)
+      ),
+      atomic(:throttling,
+        entry: :reply_and_clear_last,
         after: [
-          [
-            delay: :timeout,
+          delay(:timeout,
             guard: :has_event?,
-            target: "throttling",
+            target: :throttling,
             internal: false
-          ],
-          [
-            delay: :timeout,
-            guard: [not: :has_event?],
-            target: "throttling",
+          ),
+          delay(:timeout,
+            guard: {:not, :has_event?},
+            target: :throttling,
             internal: true
-          ]
+          )
         ]
-      ]
+      )
     ]
   ]
 
-  @impl Protean
+  @impl true
   def delay(:timeout, %{assigns: %{timeout: t}}, _), do: t
 
-  @impl Protean
+  @impl true
   def guard(:has_event?, %{assigns: %{last_event: nil}}, _), do: false
   def guard(:has_event?, _, _), do: true
 
-  @impl Protean
+  @impl true
   def handle_action(:set_last, context, event) do
     Action.assign(context, :last_event, event)
   end
@@ -268,7 +275,7 @@ ref = Protean.subscribe(pid, :replies)
 <!-- livebook:{"output":true} -->
 
 ```
-#Reference<0.2612791341.2823290881.155165>
+#Reference<0.2994576954.2563768321.243585>
 ```
 
 ```elixir
@@ -293,10 +300,10 @@ end)
 <!-- livebook:{"output":true} -->
 
 ```
-received: {[~U[2022-08-08 02:39:28.847154Z]], [at: ~U[2022-08-08 02:39:28.847295Z]]}
-received: {[~U[2022-08-08 02:39:29.347916Z]], [at: ~U[2022-08-08 02:39:29.848035Z]]}
-received: {[~U[2022-08-08 02:39:30.349909Z]], [at: ~U[2022-08-08 02:39:30.849084Z]]}
-received: {[~U[2022-08-08 02:39:30.850867Z]], [at: ~U[2022-08-08 02:39:31.850103Z]]}
+received: {[~U[2022-08-12 23:10:55.869569Z]], [at: ~U[2022-08-12 23:10:55.869726Z]]}
+received: {[~U[2022-08-12 23:10:56.369774Z]], [at: ~U[2022-08-12 23:10:56.871015Z]]}
+received: {[~U[2022-08-12 23:10:57.371776Z]], [at: ~U[2022-08-12 23:10:57.871956Z]]}
+received: {[~U[2022-08-12 23:10:57.872757Z]], [at: ~U[2022-08-12 23:10:58.872945Z]]}
 ```
 
 <!-- livebook:{"output":true} -->
@@ -314,7 +321,7 @@ Process.info(self(), :messages)
 ```
 {:messages,
  [
-   {#Reference<0.2612791341.2823356417.155170>, :ok},
-   {:DOWN, #Reference<0.2612791341.2823356417.155170>, :process, #PID<0.242.0>, :normal}
+   {#Reference<0.2994576954.2563833857.243590>, :ok},
+   {:DOWN, #Reference<0.2994576954.2563833857.243590>, :process, #PID<0.621.0>, :normal}
  ]}
 ```
