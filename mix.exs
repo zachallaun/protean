@@ -58,8 +58,8 @@ defmodule Protean.MixProject do
 
   defp description do
     """
-    Protean is a currently-experimental library for managing changes in state and side-effects
-    through the use of finite state machines and statecharts.
+    Library for managing stateful interaction and side-effects with state machines and
+    statecharts.
     """
   end
 
