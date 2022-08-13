@@ -1,5 +1,5 @@
 import Config
 
 config :protean,
-  registry: Registry,
-  supervisor: DynamicSupervisor
+  supervisor: DynamicSupervisor,
+  registry: Registry

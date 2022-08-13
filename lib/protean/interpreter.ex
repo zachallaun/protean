@@ -10,8 +10,10 @@ defmodule Protean.Interpreter do
   alias Protean.MachineConfig
   alias Protean.Machinery
   alias Protean.Transition
+  alias Protean.Utils
 
   defstruct [
+    :id,
     :config,
     :context,
     :parent,
@@ -22,6 +24,7 @@ defmodule Protean.Interpreter do
   ]
 
   @type t :: %Interpreter{
+          id: term(),
           config: MachineConfig.t(),
           context: Context.t(),
           parent: pid(),
@@ -58,6 +61,7 @@ defmodule Protean.Interpreter do
     initial_assigns = Keyword.get(opts, :assigns, %{})
 
     %Interpreter{
+      id: Utils.uuid4(),
       config: config,
       context: Context.assign(context, initial_assigns),
       parent: Keyword.get(opts, :parent)
