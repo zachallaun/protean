@@ -15,7 +15,6 @@ defmodule Protean.Interpreter do
     :config,
     :context,
     :parent,
-    :supervisor,
     running: false,
     internal_queue: :queue.new(),
     invoked: %{},
@@ -26,7 +25,6 @@ defmodule Protean.Interpreter do
           config: MachineConfig.t(),
           context: Context.t(),
           parent: pid(),
-          supervisor: Supervisor.supervisor(),
           running: boolean(),
           internal_queue: :queue.queue(),
           invoked: invoked,
@@ -62,8 +60,7 @@ defmodule Protean.Interpreter do
     %Interpreter{
       config: config,
       context: Context.assign(context, initial_assigns),
-      parent: Keyword.get(opts, :parent),
-      supervisor: Keyword.get(opts, :supervisor)
+      parent: Keyword.get(opts, :parent)
     }
   end
 

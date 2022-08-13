@@ -255,8 +255,6 @@ defmodule Protean do
     * `:parent` - defaults to `self()` - process id of the parent that will receive events from
       the machine if a `Protean.Action.send(..., to: :parent)` action is used or when the machine
       reaches a state with `:type` of `:final`.
-    * `:supervisor` - defaults to `Protean.Supervisor` - name of the supervisor process that will
-      be used to start processes resulting from running the machine.
     * Any option accepted by `GenServer.start_link/3`.
 
   """
@@ -265,8 +263,7 @@ defmodule Protean do
     defaults = [
       machine: opts[:machine] || module.__protean_machine__(),
       module: module,
-      parent: self(),
-      supervisor: Protean.Supervisor
+      parent: self()
     ]
 
     Server.start_link(Keyword.merge(defaults, opts))

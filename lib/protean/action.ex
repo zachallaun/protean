@@ -100,6 +100,7 @@ defmodule Protean.Action do
   import Kernel, except: [send: 2]
 
   alias __MODULE__
+  alias Protean.Application
   alias Protean.Context
   alias Protean.Events
   alias Protean.Guard
@@ -364,7 +365,7 @@ defmodule Protean.Action do
     interpreter =
       case interpreter.invoked[id] do
         %{pid: pid, ref: ref} ->
-          _ = DynamicSupervisor.terminate_child(interpreter.supervisor, pid)
+          _ = Application.supervisor().terminate_child(Protean.Supervisor, pid)
           Process.demonitor(ref, [:flush])
           update_in(interpreter.invoked, &Map.delete(&1, id))
 
@@ -444,8 +445,8 @@ defmodule Protean.Action do
   defp __invoke__(id, child_spec_fun, interpreter, opts) do
     self_alias = :erlang.alias()
 
-    DynamicSupervisor.start_child(
-      interpreter.supervisor,
+    Application.supervisor().start_child(
+      Protean.Supervisor,
       child_spec_fun.(self_alias)
     )
     |> case do
