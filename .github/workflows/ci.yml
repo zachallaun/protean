@@ -4,22 +4,19 @@ on:
   push:
     branches:
       - main
+      - test-ci
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-20.04
     env:
-      MIX_ENV: test
+      MIX_ENV: dev
     strategy:
       fail-fast: false
       matrix:
         include:
           - pair:
               elixir: '1.13'
-              otp: 24.3
-          - pair:
-              elixir: '1.13'
               otp: 25
-            lint: lint
     steps:
       - uses: actions/checkout@v2
 
@@ -47,26 +44,52 @@ jobs:
       - run: mix deps.get
 
       - run: mix format --check-formatted
-        if: ${{ matrix.lint }}
 
       - run: mix deps.unlock --check-unused
-        if: ${{ matrix.lint }}
 
       - run: mix deps.compile
 
       - run: mix compile --warnings-as-errors
-        if: ${{ matrix.lint }}
-
-      - run: mix test
-        if: ${{ ! matrix.lint }}
-
-      - run: mix test --warnings-as-errors
-        if: ${{ matrix.lint }}
 
       - name: Create PLTs
-        if: ${{ matrix.lint }} && steps.plt_cache.outputs.cache-hit != 'true'
+        if: steps.plt_cache.outputs.cache-hit != 'true'
         run: MIX_ENV=dev mix dialyzer --plt
 
       - name: Run Dialyzer
-        if: ${{ matrix.lint }}
         run: MIX_ENV=dev mix dialyzer --format github
+
+  test:
+    runs-on: ubuntu-20.04
+    env:
+      MIX_ENV: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pair:
+              elixir: '1.13'
+              otp: 24.3
+          - pair:
+              elixir: '1.13'
+              otp: 25
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Elixir
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.pair.otp}}
+          elixir-version: ${{matrix.pair.elixir}}
+
+      - name: Deps Cache
+        uses: actions/cache@v2
+        with:
+          path: deps
+          key: mix-deps-${{ hashFiles('**/mix.lock') }}
+
+      - run: mix deps.get
+
+      - run: mix deps.compile
+
+      - run: mix test
