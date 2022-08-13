@@ -6,18 +6,16 @@
 Mix.install([
   {:protean, git: "https://github.com/zachallaun/protean.git", override: true}
 ])
-
-Supervisor.start_link([Protean.Supervisor], strategy: :one_for_one)
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
 * Getting protean (https://github.com/zachallaun/protean.git)
-remote: Enumerating objects: 2435, done.        
-remote: Counting objects: 100% (268/268), done.        
-remote: Compressing objects: 100% (128/128), done.        
-remote: Total 2435 (delta 161), reused 195 (delta 133), pack-reused 2167        
+remote: Enumerating objects: 2435, done.
+remote: Counting objects: 100% (268/268), done.
+remote: Compressing objects: 100% (128/128), done.
+remote: Total 2435 (delta 161), reused 195 (delta 133), pack-reused 2167
 origin/HEAD set to main
 ==> protean
 Compiling 16 files (.ex)

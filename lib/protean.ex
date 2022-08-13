@@ -256,7 +256,7 @@ defmodule Protean do
       the machine if a `Protean.Action.send(..., to: :parent)` action is used or when the machine
       reaches a state with `:type` of `:final`.
     * `:supervisor` - defaults to `Protean.Supervisor` - name of the supervisor process that will
-      be used to start processes resulting from running the machine. See "Supervisor".
+      be used to start processes resulting from running the machine.
     * Any option accepted by `GenServer.start_link/3`.
 
   """

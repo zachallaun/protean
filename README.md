@@ -22,16 +22,6 @@ However, it may be that Elixir/OTP makes these abstractions unnecessary.
 
 ## Example
 
-Add `Protean.Supervisor` under your application supervisor.
-This starts a supervisor that is used by Protean internally to manage subprocesses.
-
-```elixir
-children = [
-  Protean.Supervisor,
-  # ...
-]
-```
-
 This simple statechart has a single state that defines the behavior of a counter with an optional maximum and minimum.
 
 ```elixir
@@ -199,40 +189,6 @@ You can see the individual docs for the functions in this module for details on 
 * `current/1` - Get the current machine context of a running Protean machine.
 * `matches?/2` - Query the currently active state(s) of a machine.
 * `subscribe/2` (and `unsubscribe/2`) - Subscribes the calling process to receive a message on every state transition.
-
-## Protean Supervisor
-
-Protean uses a `DynamicSupervisor` to manage internally spawned processes (often spawned through the use of `:invoke`).
-The simplest thing to do is to add `Protean.Supervisor` in your application supervision tree:
-
-```elixir
-def start(_type, _args) do
-  children = [
-    Protean.Supervisor,
-    # ...
-  ]
-
-  Supervisor.start_link(children, strategy: :one_for_one)
-end
-```
-
-This will start the supervisor under the name `Protean.Supervisor` and no additional configuration will be required.
-
-If you would like to start multiple supervisors, or a different type of supervisor (like a fancy `PartitionSupervisor`), you can pass the new name as an option when starting a machine.
-Here's how that might look using the counter example from before.
-
-```elixir
-# in your supervision tree
-children = [
-  {Protean.Supervisor, name: ProteanSupervisor1},
-  {Protean.Supervisor, name: ProteanSupervisor2}
-]
-
-# starting the counter
-Protean.start_link(Counter, supervisor: ProteanSupervisor1)
-```
-
-In the above example, any processes that are spawned by the Protean interpreter running `Counter` will use `ProteanSupervisor1`.
 
 <!-- MDOC !-->
 
