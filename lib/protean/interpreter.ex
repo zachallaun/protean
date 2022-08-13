@@ -9,6 +9,7 @@ defmodule Protean.Interpreter do
   alias Protean.Events
   alias Protean.MachineConfig
   alias Protean.Machinery
+  alias Protean.Transition
 
   defstruct [
     :config,
@@ -137,8 +138,7 @@ defmodule Protean.Interpreter do
   end
 
   @doc false
-  @spec notify_process_down(t, reason :: term(), ref: reference()) :: t
-  @spec notify_process_down(t, reason :: term(), id: invoked_id) :: t
+  @spec notify_process_down(t, reason :: term(), keyword()) :: t
   def notify_process_down(%Interpreter{} = interpreter, reason, ref: ref) do
     invoked = get_invoked_by_ref(interpreter, ref)
     notify_process_down(interpreter, reason, id: invoked[:id])

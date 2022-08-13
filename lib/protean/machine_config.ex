@@ -84,7 +84,7 @@ defmodule Protean.MachineConfig do
   @doc """
   Compute the full set of active nodes for the given states.
   """
-  @spec active(t, Context.value()) :: MapSet.t(Node.t())
+  @spec active(t, Enumerable.t()) :: MapSet.t(Node.t())
   def active(%MachineConfig{} = config, ids) do
     ids
     |> Enum.map(&fetch!(config, &1))

@@ -243,6 +243,7 @@ Things are changing pretty regularly, however, and some documentation is certain
 
 ## Todo
 
+- [ ] Replace `:invoked` in interpreter with a `Registry` - start a registry + dynamic supervisor when starting `Protean.Supervisor`.
 - [ ] Add `stream` with similar options as `subscribe` so that you can get a stream of `{context, replies}` or just a stream of replies.
 - [ ] Actions
   - [ ] Spawn in assigns

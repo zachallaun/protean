@@ -35,7 +35,7 @@ defmodule Protean.Context do
   @type assigns :: %{any => any}
 
   @opaque private_state :: %{
-            actions: [Action.unresolved()],
+            actions: [Action.t()],
             replies: [term()]
           }
 
@@ -49,9 +49,7 @@ defmodule Protean.Context do
   @doc false
   def get_and_update(context, key, fun), do: Map.get_and_update(context, key, fun)
 
-  @spec matches?(t, Node.id()) :: boolean()
-  @spec matches?(t, String.t()) :: boolean()
-  @spec matches?(t, atom()) :: boolean()
+  @spec matches?(t, Node.id() | String.t() | atom()) :: boolean()
   def matches?(context, descriptor)
 
   def matches?(%Context{value: value}, query) when is_list(query) do
@@ -79,7 +77,7 @@ defmodule Protean.Context do
   end
 
   @doc false
-  @spec assign_active(t, [Node.id(), ...]) :: t
+  @spec assign_active(t, Enumerable.t()) :: t
   def assign_active(context, ids) do
     %{context | value: MapSet.new(ids)}
   end
@@ -100,11 +98,11 @@ defmodule Protean.Context do
   #     merges that map into the context's assigns.
   @doc false
   @spec assign(t, any, any) :: t
-  @spec assign(t, %{any => any}) :: t
-  @spec assign(t, Enumerable.t()) :: t
   def assign(%Context{assigns: assigns} = context, key, value),
     do: %{context | assigns: Map.put(assigns, key, value)}
 
+  @doc false
+  @spec assign(t, Enumerable.t()) :: t
   def assign(%Context{assigns: assigns} = context, updates) when is_map(updates),
     do: %{context | assigns: Map.merge(assigns, updates)}
 

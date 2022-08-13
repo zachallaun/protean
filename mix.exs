@@ -11,12 +11,13 @@ defmodule Protean.MixProject do
       name: @name,
       version: @version,
       source_url: @source_url,
+      package: package(),
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      package: package(),
       docs: docs(),
+      dialyzer: dialyzer(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         coveralls: :test,
@@ -47,6 +48,7 @@ defmodule Protean.MixProject do
     [
       {:credo, "~> 1.6", only: :dev, runtime: false},
       {:ex_doc, "~> 0.28.4", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.2", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test}
     ]
   end
@@ -59,6 +61,17 @@ defmodule Protean.MixProject do
     Protean is a currently-experimental library for managing changes in state and side-effects
     through the use of finite state machines and statecharts.
     """
+  end
+
+  defp dialyzer do
+    [
+      flags: [
+        "-Wunmatched_returns",
+        :underspecs,
+        :extra_return,
+        :missing_return
+      ]
+    ]
   end
 
   defp docs do

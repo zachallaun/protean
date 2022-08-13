@@ -171,19 +171,20 @@ defmodule Protean.Action do
   end
 
   @doc """
-  Attach an action that assigns to a machine's context.
+  Attach an action that assigns a value to a key in a machine's context.
   """
   @doc type: :callback_action
   @spec assign(Context.t(), key :: term(), value :: term()) :: Context.t()
-  @spec assign(Context.t(), assigns :: term()) :: Context.t()
   def assign(%Context{} = context, key, value), do: assign(key, value) |> put_action(context)
-  def assign(%Context{} = context, assigns), do: assign(assigns) |> put_action(context)
 
   @doc """
-  Create an inline action that will assign to machine context.
+  Attach an action that merges the given assigns into a machine's context.
   """
+  @doc type: :callback_action
+  @spec assign(Context.t(), assigns :: Enumerable.t()) :: Context.t()
+  def assign(%Context{} = context, assigns), do: assign(assigns) |> put_action(context)
+
   @doc type: :inline_action
-  @spec assign(key :: term(), value :: term()) :: t
   def assign(key, value) do
     new({:assign, :merge, %{key => value}})
   end
@@ -192,14 +193,13 @@ defmodule Protean.Action do
   Create an inline action that applies a function to or merges assigns into machine context.
   """
   @doc type: :inline_action
-  @spec assign(fun :: function()) :: t
-  @spec assign(assigns :: term()) :: t
+  @spec assign(fun_or_assigns :: function() | Enumerable.t()) :: t
   def assign(fun) when is_function(fun) do
     new({:assign, :update, fun})
   end
 
   def assign(assigns) do
-    new({:assign, :merge, Enum.into(assigns, %{})})
+    new({:assign, :merge, Map.new(assigns)})
   end
 
   @doc """
@@ -218,7 +218,6 @@ defmodule Protean.Action do
   Similar to `put_in/3`.
   """
   @doc type: :inline_action
-  @spec assign_in([term(), ...], function()) :: t
   @spec assign_in([term(), ...], term()) :: t
   def assign_in(path, fun) when is_list(path) and is_function(fun) do
     assign(fn %{assigns: assigns} -> update_in(assigns, path, fun) end)
@@ -365,7 +364,7 @@ defmodule Protean.Action do
     interpreter =
       case interpreter.invoked[id] do
         %{pid: pid, ref: ref} ->
-          Protean.Supervisor.terminate_child(interpreter.supervisor, pid)
+          _ = Protean.Supervisor.terminate_child(interpreter.supervisor, pid)
           Process.demonitor(ref, [:flush])
           update_in(interpreter.invoked, &Map.delete(&1, id))
 

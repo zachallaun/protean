@@ -10,8 +10,6 @@ defmodule Protean.Interpreter.Server do
 
   @prefix :"$protean"
 
-  @type server_options :: [Interpreter.option() | GenServer.option()]
-
   @gen_server_options [:name, :timeout, :debug, :spawn_opt, :hibernate_after]
 
   # Client API

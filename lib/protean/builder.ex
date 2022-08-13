@@ -92,7 +92,8 @@ defmodule Protean.Builder do
 
   @type invokes :: keyword() | [keyword()]
 
-  @type invoke_options ::
+  @type invoke_options :: [invoke_option]
+  @type invoke_option ::
           {:id, String.t()}
           | {:done, transitions}
           | {:error, transitions}

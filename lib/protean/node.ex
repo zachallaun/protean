@@ -48,7 +48,7 @@ defmodule Protean.Node do
   ID encompasses the node and all its ancestors. For example, a node `:child_a`
   defined as a child of a node `:parent_a` might have the id `[:child_a, :parent_a]`
   """
-  @opaque id :: [String.t(), ...]
+  @type id :: [String.t(), ...]
 
   @typedoc """
   An atomic node is a node without child states.
@@ -160,7 +160,7 @@ defmodule Protean.Node do
   def ancestor_ids([_self | parent] = id), do: [id | ancestor_ids(parent)]
 
   @doc "Given a Node id, return its parent's id. Returns nil if the Node is the root."
-  @spec parent_id(id) :: id
+  @spec parent_id(id) :: id | nil
   def parent_id([_]), do: nil
   def parent_id([_ | parent]), do: parent
 
