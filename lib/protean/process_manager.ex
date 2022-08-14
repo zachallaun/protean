@@ -5,28 +5,124 @@ defmodule Protean.ProcessManager do
 
   @compile {:inline, supervisor: 0, registry: 0}
 
+  @type subprocess :: {pid(), reference(), meta :: term()}
+
   @doc """
-  Start a child process under the Protean supervisor.
+  Start a registered and monitored subprocess of the calling process.
+
+  The subprocess will be saved as a `{pid(), ref, meta}` tuple.
   """
-  def start_child(child_spec) do
+  @spec start_subprocess(term(), Supervisor.child_spec(), term()) :: :ok | {:error, term()}
+  def start_subprocess(id, child_spec, meta \\ nil) do
+    with {:ok, pid} <- start_child(child_spec),
+         ref <- Process.monitor(pid),
+         {:ok, _} <- register_subprocess(id, {pid, ref, meta}) do
+      :ok
+    end
+  end
+
+  @doc """
+  Stop and deregister a subprocess of the calling process.
+  """
+  @spec stop_subprocess(term()) :: :ok
+  def stop_subprocess(id) do
+    case subprocess(id) do
+      {:ok, proc} -> stop_subprocesses([{id, proc}])
+      nil -> :ok
+    end
+  end
+
+  @doc """
+  Stop and deregister all subprocesses of the calling process.
+  """
+  @spec stop_all_subprocesses() :: :ok
+  def stop_all_subprocesses do
+    stop_subprocesses(subprocesses())
+  end
+
+  defp stop_subprocesses(subprocesses) do
+    for {id, {pid, ref, _}} <- subprocesses do
+      Process.demonitor(ref, [:flush])
+      terminate_child(pid)
+      unregister_subprocess(id)
+    end
+
+    :ok
+  end
+
+  @doc """
+  Select all registered subprocesses of the calling process.
+  """
+  def subprocesses do
+    {reg_module, reg_name} = registry()
+
+    reg_module.select(reg_name, [
+      {
+        {{:subprocess, :"$1"}, self(), :"$2"},
+        [],
+        [{{:"$1", :"$2"}}]
+      }
+    ])
+  end
+
+  @doc """
+  Look up the subprocess of the calling process registered by `id`.
+  """
+  @spec subprocess(term()) :: {:ok, subprocess} | nil
+  def subprocess(id) do
+    {reg_module, reg_name} = registry()
+
+    reg_module.select(reg_name, [
+      {
+        {{:subprocess, id}, self(), :"$1"},
+        [],
+        [:"$1"]
+      }
+    ])
+    |> case do
+      [proc] -> {:ok, proc}
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Look up the subprocess of the calling process by its monitor `ref`.
+  """
+  @spec subprocess_by_ref(reference()) :: {:ok, {id :: term(), subprocess}} | nil
+  def subprocess_by_ref(ref) do
+    {reg_module, reg_name} = registry()
+
+    reg_module.select(reg_name, [
+      {
+        {{:subprocess, :"$1"}, self(), {:"$2", ref, :"$3"}},
+        [],
+        [{{:"$1", :"$2", :"$3"}}]
+      }
+    ])
+    |> case do
+      [{id, pid, meta}] -> {:ok, {id, {pid, ref, meta}}}
+      _ -> nil
+    end
+  end
+
+  def register_subprocess(id, value) do
+    {reg_module, reg_name} = registry()
+    reg_module.register(reg_name, {:subprocess, id}, value)
+  end
+
+  def unregister_subprocess(id) do
+    {reg_module, reg_name} = registry()
+    reg_module.unregister(reg_name, {:subprocess, id})
+  end
+
+  defp start_child(child_spec) do
     {sup_module, sup_name} = supervisor()
     sup_module.start_child(sup_name, child_spec)
   end
 
-  @doc """
-  Terminate a child process under the Protean supervisor.
-  """
-  def terminate_child(id) do
+  defp terminate_child(pid) do
     {sup_module, sup_name} = supervisor()
-    sup_module.terminate_child(sup_name, id)
-  end
-
-  @doc """
-  Generate a process name using the Protean registry.
-  """
-  def via_registry(id) do
-    {reg_module, reg_name} = registry()
-    {:via, reg_module, {reg_name, id}}
+    sup_module.terminate_child(sup_name, pid)
   end
 
   @impl true

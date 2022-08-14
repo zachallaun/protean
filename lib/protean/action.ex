@@ -362,16 +362,7 @@ defmodule Protean.Action do
   end
 
   def exec_action({:invoke, :cancel, id}, interpreter) do
-    interpreter =
-      case interpreter.invoked[id] do
-        %{pid: pid, ref: ref} ->
-          _ = ProcessManager.terminate_child(pid)
-          Process.demonitor(ref, [:flush])
-          update_in(interpreter.invoked, &Map.delete(&1, id))
-
-        _ ->
-          interpreter
-      end
+    ProcessManager.stop_subprocess(id)
 
     {:cont, interpreter}
   end
@@ -445,26 +436,13 @@ defmodule Protean.Action do
   defp __invoke__(id, child_spec_fun, interpreter, opts) do
     self_alias = :erlang.alias()
 
-    ProcessManager.start_child(child_spec_fun.(self_alias))
-    |> case do
-      {:ok, child} ->
-        ref = Process.monitor(child)
-
-        update_in(
-          interpreter.invoked,
-          &Map.put(&1, id, %{
-            id: id,
-            pid: child,
-            ref: ref,
-            autoforward: Keyword.get(opts, :autoforward, false),
-            interpreter_alias: self_alias
-          })
-        )
+    case ProcessManager.start_subprocess(id, child_spec_fun.(self_alias), opts) do
+      :ok ->
+        {:cont, interpreter}
 
       {:error, reason} ->
-        Interpreter.notify_process_down(interpreter, reason, id: id)
+        {:cont, Interpreter.notify_process_down(interpreter, reason, id: id)}
     end
-    |> then(&{:cont, &1})
   end
 
   defp guard_allows?({_, guard: guard}, interpreter) do
@@ -485,10 +463,12 @@ defmodule Protean.Action do
   defp resolve_recipient(_interpreter, :self), do: self()
   defp resolve_recipient(%{parent: parent}, :parent), do: parent
 
-  defp resolve_recipient(interpreter, name) when is_binary(name),
-    do: interpreter.invoked[name][:pid]
-
-  defp resolve_recipient(_interpreter, to), do: to
+  defp resolve_recipient(_interpreter, maybe_id) do
+    case ProcessManager.subprocess(maybe_id) do
+      {:ok, {pid, _, _}} -> pid
+      _ -> maybe_id
+    end
+  end
 
   defp run_task({m, f, a}), do: apply(m, f, a)
   defp run_task(f) when is_function(f), do: f.()

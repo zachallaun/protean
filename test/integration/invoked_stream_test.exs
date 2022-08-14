@@ -5,19 +5,16 @@ defmodule ProteanIntegration.InvokedStreamTest do
     use Protean
     alias Protean.Action
 
+    @stream Stream.repeatedly(fn -> {:stream_data, 1} end)
+            |> Stream.take(5)
+
     @machine [
       initial: "main",
       assigns: [data: []],
       states: [
         atomic(:main,
           invoke: [
-            invoked(
-              :stream,
-              fn -> {:stream_data, :rand.uniform()} end
-              |> Stream.repeatedly()
-              |> Stream.take(5),
-              done: "stream_consumed"
-            )
+            invoked(:stream, @stream, done: "stream_consumed")
           ],
           on: [
             match({:stream_data, _}, actions: "write_data")

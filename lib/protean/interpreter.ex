@@ -9,40 +9,26 @@ defmodule Protean.Interpreter do
   alias Protean.Events
   alias Protean.MachineConfig
   alias Protean.Machinery
+  alias Protean.ProcessManager
   alias Protean.Transition
-  alias Protean.Utils
 
   defstruct [
-    :id,
     :config,
     :context,
     :parent,
     running: false,
     internal_queue: :queue.new(),
-    invoked: %{},
     subscribers: %{}
   ]
 
   @type t :: %Interpreter{
-          id: term(),
           config: MachineConfig.t(),
           context: Context.t(),
           parent: pid(),
           running: boolean(),
           internal_queue: :queue.queue(),
-          invoked: invoked,
           subscribers: %{reference() => %{pid: pid(), to: :all | :replies}}
         }
-
-  @type invoked :: %{invoked_id => invoked_service}
-  @type invoked_id :: String.t()
-  @opaque invoked_service :: %{
-            id: invoked_id,
-            pid: GenServer.server(),
-            ref: reference(),
-            autoforward: boolean(),
-            interpreter_alias: reference()
-          }
 
   # Partial Access behaviour (not defining `pop/2`)
   @doc false
@@ -61,11 +47,25 @@ defmodule Protean.Interpreter do
     initial_assigns = Keyword.get(opts, :assigns, %{})
 
     %Interpreter{
-      id: Utils.uuid4(),
       config: config,
       context: Context.assign(context, initial_assigns),
       parent: Keyword.get(opts, :parent)
     }
+  end
+
+  @doc false
+  def add_internal(interpreter, event) do
+    update_in(interpreter.internal_queue, &:queue.in(event, &1))
+  end
+
+  @doc false
+  def with_context(interpreter, context) do
+    put_in(interpreter.context, context)
+  end
+
+  @doc false
+  def put_reply(interpreter, reply) do
+    update_in(interpreter.context, &Context.put_reply(&1, reply))
   end
 
   @doc "Whether the interpreter has been started and can accept events."
@@ -96,11 +96,9 @@ defmodule Protean.Interpreter do
   def stop(%Interpreter{running: false} = interpreter), do: interpreter
 
   def stop(interpreter) do
-    interpreter.invoked
-    |> Map.values()
-    |> Enum.each(fn %{pid: pid} -> Process.exit(pid, :shutdown) end)
+    ProcessManager.stop_all_subprocesses()
 
-    %{interpreter | running: false, invoked: []}
+    %{interpreter | running: false}
   end
 
   @doc """
@@ -141,20 +139,18 @@ defmodule Protean.Interpreter do
   @doc false
   @spec notify_process_down(t, reason :: term(), keyword()) :: t
   def notify_process_down(%Interpreter{} = interpreter, reason, ref: ref) do
-    invoked = get_invoked_by_ref(interpreter, ref)
-    notify_process_down(interpreter, reason, id: invoked[:id])
+    case ProcessManager.subprocess_by_ref(ref) do
+      {:ok, {id, _}} -> notify_process_down(interpreter, reason, id: id)
+      nil -> interpreter
+    end
   end
 
   def notify_process_down(%Interpreter{} = interpreter, reason, id: id) do
-    interpreter =
-      if invoke_error?(reason) do
-        add_internal(interpreter, Events.platform(:invoke, :error, id))
-      else
-        interpreter
-      end
-
-    interpreter
-    |> update_in([:invoked], &Map.delete(&1, id))
+    if invoke_error?(reason) do
+      add_internal(interpreter, Events.platform(:invoke, :error, id))
+    else
+      interpreter
+    end
     |> run_interpreter()
   end
 
@@ -162,12 +158,6 @@ defmodule Protean.Interpreter do
   defp invoke_error?(:shutdown), do: false
   defp invoke_error?({:shutdown, _}), do: false
   defp invoke_error?(_other), do: true
-
-  defp get_invoked_by_ref(%{invoked: invoked}, ref) do
-    invoked
-    |> Map.values()
-    |> Enum.find(fn proc -> proc[:ref] === ref end)
-  end
 
   @doc """
   Return the current machine context.
@@ -252,20 +242,12 @@ defmodule Protean.Interpreter do
   end
 
   @spec autoforward_event(t, Protean.event()) :: t
-  defp autoforward_event(%Interpreter{invoked: invoked} = interpreter, event) do
-    invoked
-    |> Map.values()
-    |> Enum.filter(&autoforward?/1)
-    |> Enum.reduce(interpreter, &autoforward_to(&1, event, &2))
-  end
+  defp autoforward_event(interpreter, event) do
+    for {_id, {pid, _ref, opts}} <- ProcessManager.subprocesses(),
+        Keyword.get(opts, :autoforward, false) do
+      Interpreter.Server.send(pid, event)
+    end
 
-  @spec autoforward?(invoked_service) :: boolean()
-  defp autoforward?(%{autoforward: true}), do: true
-  defp autoforward?(_invoke), do: false
-
-  @spec autoforward_to(invoked_service, Protean.event(), t) :: t
-  defp autoforward_to(%{pid: pid}, event, interpreter) do
-    Interpreter.Server.send(pid, event)
     interpreter
   end
 
@@ -298,19 +280,4 @@ defmodule Protean.Interpreter do
   end
 
   defp exec_all(interpreter, []), do: interpreter
-
-  @doc false
-  def add_internal(interpreter, event) do
-    update_in(interpreter.internal_queue, &:queue.in(event, &1))
-  end
-
-  @doc false
-  def with_context(interpreter, context) do
-    put_in(interpreter.context, context)
-  end
-
-  @doc false
-  def put_reply(interpreter, reply) do
-    update_in(interpreter.context, &Context.put_reply(&1, reply))
-  end
 end
