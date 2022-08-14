@@ -30,9 +30,10 @@ defmodule ProteanIntegration.AutoforwardTest do
       states: [
         atomic(:forwarding,
           invoke: [
-            proc: {Child, name: ChildMachine},
-            id: "child",
-            autoforward: true
+            invoked(:proc, {Child, name: ChildMachine},
+              id: "child",
+              autoforward: true
+            )
           ]
         )
       ]

@@ -157,8 +157,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
       states: [
         init: [
           invoke: [
-            task: "my_task",
-            done: "success"
+            invoked("my_task", done: "success")
           ]
         ],
         success: []
@@ -167,7 +166,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     @impl true
     def invoke("my_task", _state, _event) do
-      fn -> :result end
+      {:task, fn -> :result end}
     end
   end
 
@@ -190,8 +189,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
       states: [
         init: [
           invoke: [
-            task: "send_message_to_self",
-            done: "sent"
+            invoked("send_message_to_self", done: "sent")
           ],
           on: [
             cancel: "canceled"
@@ -211,10 +209,11 @@ defmodule ProteanIntegration.InvokedTaskTest do
     def invoke("send_message_to_self", _state, _event) do
       me = self()
 
-      fn ->
-        :timer.sleep(30)
-        Protean.call(me, "message")
-      end
+      {:task,
+       fn ->
+         :timer.sleep(30)
+         Protean.call(me, "message")
+       end}
     end
   end
 
@@ -228,5 +227,49 @@ defmodule ProteanIntegration.InvokedTaskTest do
         matches: "canceled"
       )
     end
+  end
+
+  defmodule ManyTasks do
+    use Protean
+
+    @machine [
+      initial: :how_many,
+      assigns: %{data: MapSet.new()},
+      states: [
+        atomic(:how_many,
+          invoke: [
+            invoked(:one),
+            invoked(:two, done: [actions: :save]),
+            invoked(:task, fn -> :value_three end, done: [actions: :save])
+          ],
+          on: [
+            match({_, _}, actions: :save)
+          ]
+        )
+      ]
+    ]
+
+    @impl true
+    def invoke(:one, _, _) do
+      {:task, fn -> :value_one end}
+    end
+
+    def invoke(:two, _, _) do
+      {:task, fn -> :value_two end}
+    end
+
+    @impl true
+    def handle_action(:save, state, {_, value}) do
+      state
+      |> Protean.Action.assign_in([:data], &MapSet.put(&1, value))
+    end
+  end
+
+  @tag machine: ManyTasks
+  test "tasks can be invoked in many ways", %{machine: machine} do
+    assert_protean(machine,
+      sleep: 200,
+      assigns: [data: MapSet.new([:value_one, :value_two, :value_three])]
+    )
   end
 end

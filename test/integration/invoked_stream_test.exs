@@ -14,7 +14,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
       states: [
         atomic(:main,
           invoke: [
-            invoked(:stream, @stream, done: "stream_consumed")
+            invoked(:stream, @stream, done: :stream_consumed)
           ],
           on: [
             match({:stream_data, _}, actions: "write_data")
@@ -56,8 +56,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
         ),
         atomic(:consuming,
           invoke: [
-            stream: "stream_from_event",
-            done: "waiting"
+            invoked(:stream_from_event, done: :waiting)
           ],
           on: [
             match({:stream_data, _}, actions: "write_data")
@@ -67,8 +66,8 @@ defmodule ProteanIntegration.InvokedStreamTest do
     ]
 
     @impl true
-    def invoke("stream_from_event", _context, {_, stream}) do
-      Stream.map(stream, &{:stream_data, &1})
+    def invoke(:stream_from_event, _context, {_, stream}) do
+      {:stream, Stream.map(stream, &{:stream_data, &1})}
     end
 
     @impl true

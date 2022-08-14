@@ -173,6 +173,7 @@ defmodule Protean.Parser do
   defp invoke_entry_action(config_map, id) do
     {type, to_invoke} =
       case config_map do
+        %{delegate: delegate} -> {:delegate, delegate}
         %{proc: proc} -> {:proc, proc}
         %{task: task} -> {:task, task}
         %{stream: stream} -> {:stream, stream}

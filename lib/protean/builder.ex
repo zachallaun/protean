@@ -335,11 +335,16 @@ defmodule Protean.Builder do
   Invoked processes are subprocesses supervised by Protean that are started when the machine
   enters the state that defines them and exited when the machine exits that state.
 
+    * `type` (optional, defaults to `:delegate`)
+    * `spec` - if `type` is other than `:delegate` this must be a value that can be invoked
+      directly. Otherwise, `c:Protean.invoke/3` will be called to get the type and spec.
+
   ## Invoke types
 
   `invoke_type` determines how the process will be started and the kind of interaction it will
-  have with the machine. It can be one of three values:
+  have with the machine. It can be one of:
 
+    * `:delegate` - delegate to `c:Protean.invoke/3`.
     * `:task` - an asynchronous task that is expected to return a single value, after which any
       specified `:done` transition for the invoke will run. The return value will be available
       as the transition event. The `:error` transition will run if the task crashes.
@@ -350,15 +355,6 @@ defmodule Protean.Builder do
       sent to the machine as an event. The `:done` transition is run after the stream is fully
       consumed. The `:error` transition is run if the stream crashes.
 
-  ## Example
-
-      invoke: [
-        invoked(:task, :some_long_running_task,
-          done: transition(target: :completed, actions: :save_result),
-          error: transition(target: :failed, actions: :log_error)
-        )
-      ]
-
   ## Options
 
     * `:id`
@@ -366,9 +362,49 @@ defmodule Protean.Builder do
     * `:error`
     * `:autoforward`
 
+  ## Example
+
+  Start a task specified by a callback at runtime.
+
+      invoke: [
+        invoked(:some_long_running_task,
+          done: transition(target: :completed, actions: :save_result),
+          error: transition(target: :failed, actions: :log_error)
+        )
+      ]
+
+      # ...
+
+      @impl true
+      def invoke(:some_long_running_task, _, _) do
+        {:task, fn -> ... end}
+      end
+
+  Start a task specified directly.
+
+      invoke: [
+        invoked(:task, fn -> ... end,
+          done: transition(target: :completed, actions: :save_result),
+          error: transition(target: :failed, actions: :log_error)
+        )
+      ]
+
   """
-  @spec invoked(:task | :spec | :proc, term(), invoke_options) :: keyword()
-  def invoked(invoke_type, invoke_spec, opts \\ []) do
-    Keyword.merge(opts, [{invoke_type, invoke_spec}])
-  end
+  @spec invoked(Protean.invoke_type(), term(), invoke_options) :: keyword()
+  def invoked(type, spec, opts)
+
+  def invoked(:proc, spec, opts), do: Keyword.put(opts, :proc, spec)
+  def invoked(:stream, spec, opts), do: Keyword.put(opts, :stream, spec)
+  def invoked(:task, spec, opts), do: Keyword.put(opts, :task, spec)
+  def invoked(:delegate, name, opts), do: Keyword.put(opts, :delegate, name)
+
+  @doc false
+  def invoked(:proc, spec), do: [proc: spec]
+  def invoked(:stream, spec), do: [stream: spec]
+  def invoked(:task, spec), do: [task: spec]
+  def invoked(:delegate, name), do: [delegate: name]
+  def invoked(name, opts), do: invoked(:delegate, name, opts)
+
+  @doc false
+  def invoked(spec), do: [delegate: spec]
 end

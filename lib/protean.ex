@@ -39,6 +39,8 @@ defmodule Protean do
   @typedoc "Option values for `use Protean`."
   @type using_option :: {:callback_module, module()}
 
+  @type invoke_type :: :delegate | :proc | :task | :stream
+
   @protean_options [:machine, :callback_module]
   @protean_options_attr :"$protean.options"
   @protean_machine_attr :"$protean.machine"
@@ -46,7 +48,7 @@ defmodule Protean do
   @doc """
   Optional callback for invoked processes specified during machine execution.
 
-  Should return a value or child specification for the type of process being invoked.
+  Returns a tuple of `{invoke_type, child_spec}`.
 
   ## Example
 
@@ -56,7 +58,7 @@ defmodule Protean do
           # ...
           awaiting_task: [
             invoke: [
-              task: "my_task",
+              delegate: "my_task",
               done: "completed"
             ]
           ],
@@ -68,11 +70,11 @@ defmodule Protean do
 
       @impl true
       def invoke("my_task", _context, event_data) do
-        {__MODULE__, :run_my_task, [event_data]}
+        {:task, {__MODULE__, :run_my_task, [event_data]}}
       end
 
   """
-  @callback invoke(term(), Context.t(), event) :: term()
+  @callback invoke(term(), Context.t(), event) :: {invoke_type, term()}
 
   @doc """
   Optional callback for actions specified in response to a transition.

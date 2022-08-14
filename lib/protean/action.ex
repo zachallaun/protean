@@ -267,6 +267,10 @@ defmodule Protean.Action do
   @doc false
   def invoke(type, to_invoke, id, opts \\ [])
 
+  def invoke(:delegate, value, id, opts) do
+    new({:invoke, :delegate, value, id, opts})
+  end
+
   def invoke(:proc, proc, id, opts) do
     new({:invoke, :proc, proc, id, opts})
   end
@@ -363,8 +367,12 @@ defmodule Protean.Action do
 
   def exec_action({:invoke, :cancel, id}, interpreter) do
     ProcessManager.stop_subprocess(id)
-
     {:cont, interpreter}
+  end
+
+  def exec_action({:invoke, :delegate, name, id, opts}, interpreter) do
+    {type, to_invoke} = run_callback(:invoke, name, interpreter)
+    exec_action({:invoke, type, to_invoke, id, opts}, interpreter)
   end
 
   def exec_action({:invoke, :delayed_send, name, id, opts}, interpreter)
@@ -373,13 +381,7 @@ defmodule Protean.Action do
     exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter)
   end
 
-  def exec_action({:invoke, invoke_type, name, id, opts}, interpreter) when is_binary(name) do
-    to_invoke = run_callback(:invoke, name, interpreter)
-    exec_action({:invoke, invoke_type, to_invoke, id, opts}, interpreter)
-  end
-
-  def exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter)
-      when is_integer(delay) do
+  def exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter) do
     f = fn ->
       :timer.sleep(delay)
       id
