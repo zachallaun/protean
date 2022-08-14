@@ -3,9 +3,9 @@
 # Example: Debounce & Throttle
 
 ```elixir
-Mix.install([
-  {:protean, git: "https://github.com/zachallaun/protean.git", override: true}
-])
+# Mix.install([
+#   {:protean, git: "https://github.com/zachallaun/protean.git", override: true}
+# ])
 ```
 
 <!-- livebook:{"output":true} -->

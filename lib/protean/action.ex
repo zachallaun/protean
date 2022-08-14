@@ -443,6 +443,8 @@ defmodule Protean.Action do
         {:cont, interpreter}
 
       {:error, reason} ->
+        require Logger
+        Logger.warn("Unable to start invoked process, got:\n#{inspect(reason)}")
         {:cont, Interpreter.notify_process_down(interpreter, reason, id: id)}
     end
   end

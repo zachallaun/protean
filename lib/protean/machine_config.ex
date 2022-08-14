@@ -11,6 +11,7 @@ defmodule Protean.MachineConfig do
 
   @enforce_keys [:id, :root, :default_assigns]
 
+  @derive {Inspect, only: [:id, :root, :default_assigns, :callback_module]}
   defstruct [
     :id,
     :root,

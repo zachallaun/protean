@@ -80,11 +80,7 @@ defmodule Protean.Interpreter.Server do
   @impl true
   def init(opts) do
     Process.flag(:trap_exit, true)
-
-    {:ok,
-     opts
-     |> Interpreter.new()
-     |> Interpreter.start()}
+    {:ok, Interpreter.new(opts), {:continue, {@prefix, :start}}}
   end
 
   @impl true
@@ -136,6 +132,10 @@ defmodule Protean.Interpreter.Server do
     else
       {:stop, {:shutdown, Interpreter.context(interpreter)}, interpreter}
     end
+  end
+
+  def handle_continue({@prefix, :start}, interpreter) do
+    {:noreply, Interpreter.start(interpreter)}
   end
 
   @impl true

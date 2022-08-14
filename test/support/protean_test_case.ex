@@ -153,7 +153,8 @@ defmodule Protean.TestCase do
   end
 
   defp setup_machine({module, opts}) do
-    {:ok, pid} = module.start_link(opts)
+    {:ok, name} = Protean.start_machine(module, opts)
+    pid = GenServer.whereis(name)
     ref = Process.monitor(pid)
     :ok = Protean.ping(pid)
 

@@ -105,6 +105,11 @@ defmodule Protean.ProcessManager do
     end
   end
 
+  def via_registry(name) do
+    {reg_module, reg_name} = registry()
+    {:via, reg_module, {reg_name, name}}
+  end
+
   def register_subprocess(id, value) do
     {reg_module, reg_name} = registry()
     reg_module.register(reg_name, {:subprocess, id}, value)
@@ -115,12 +120,12 @@ defmodule Protean.ProcessManager do
     reg_module.unregister(reg_name, {:subprocess, id})
   end
 
-  defp start_child(child_spec) do
+  def start_child(child_spec) do
     {sup_module, sup_name} = supervisor()
     sup_module.start_child(sup_name, child_spec)
   end
 
-  defp terminate_child(pid) do
+  def terminate_child(pid) do
     {sup_module, sup_name} = supervisor()
     sup_module.terminate_child(sup_name, pid)
   end

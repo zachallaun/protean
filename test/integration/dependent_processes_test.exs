@@ -27,9 +27,9 @@ defmodule ProteanIntegration.DependentProcessesTest do
 
   @tag machine: Parent
   test "child machines exit when their spawning process exits", %{machine: machine} do
-    assert length(DynamicSupervisor.which_children(Protean.ProcessManager.Supervisor)) == 1
+    n = length(DynamicSupervisor.which_children(Protean.ProcessManager.Supervisor))
     :ok = Protean.stop(machine)
     :timer.sleep(50)
-    assert length(DynamicSupervisor.which_children(Protean.ProcessManager.Supervisor)) == 0
+    assert length(DynamicSupervisor.which_children(Protean.ProcessManager.Supervisor)) == n - 2
   end
 end

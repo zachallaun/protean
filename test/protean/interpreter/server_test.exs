@@ -21,15 +21,15 @@ defmodule Protean.Interpreter.ServerTest do
   end
 
   test "server can be started and stopped" do
-    Process.flag(:trap_exit, true)
-    {:ok, pid} = TestMachine.start_link()
-    assert Server.matches?(pid, :a)
-    assert :ok = Server.stop(pid, :normal, :infinity)
-    assert_receive {:EXIT, _pid, :normal}
+    {:ok, name} = Protean.start_machine(TestMachine)
+    pid = GenServer.whereis(name)
+    assert Server.matches?(name, :a)
+    assert :ok = Server.stop(name, :normal, :infinity)
+    refute Process.alive?(pid)
   end
 
-  @tag machine: {TestMachine, name: NamedMachine}
   test "server can be started with a name" do
+    {:ok, _} = Protean.start_machine(TestMachine, name: NamedMachine)
     assert %Context{} = Server.current(NamedMachine)
   end
 

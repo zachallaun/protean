@@ -7,10 +7,12 @@ defmodule Protean do
 
   import Kernel, except: [send: 2]
 
+  alias Protean.Context
   alias Protean.Interpreter
   alias Protean.Interpreter.Server
   alias Protean.MachineConfig
-  alias Protean.Context
+  alias Protean.ProcessManager
+  alias Protean.Utils
 
   @typedoc "A running Protean machine process."
   @type server :: GenServer.server()
@@ -20,6 +22,9 @@ defmodule Protean do
 
   @typedoc "Option values for `start*` functions."
   @type start_option :: machine_option | GenServer.option()
+
+  @typedoc "Return values of `start_machine/2`"
+  @type on_start :: {:ok, server} | :ignore | {:error, {:already_started, server} | term()}
 
   @typedoc "Option values for Protean machines."
   @type machine_option ::
@@ -240,18 +245,14 @@ defmodule Protean do
   end
 
   @doc """
-  Start a Protean machine linked to the current process.
+  Start a Protean machine linked to Protean's supervisor.
 
-  This is often used to start the machine as part of a supervision tree. See
-  `GenServer.start_link/3` for description of return value.
-
-  The semantics are similar to `GenServer.start_link/3` and accepts the same options, with the
-  addition of some specific to Protean.
+  By default, machines will be registered and named using Protean's process management registry.
 
   ## Options
 
     * `:assigns` - assigns map that will be merged into the default machine context.
-    * `:machine` - defaults to `module` - module used for machine definition.
+    * `:machine` - defaults to the machine defined in `module` - machine configuration.
     * `:module` - defaults to `module` - callback module used for actions, guards, invoke,
       etc. See "Callbacks".
     * `:parent` - defaults to `self()` - process id of the parent that will receive events from
@@ -260,15 +261,29 @@ defmodule Protean do
     * Any option accepted by `GenServer.start_link/3`.
 
   """
-  @spec start_link(module(), [start_option]) :: GenServer.on_start()
-  def start_link(module, opts \\ []) do
+  @spec start_machine(module(), [start_option]) :: on_start
+  def start_machine(module, opts \\ []) do
+    name = ProcessManager.via_registry({module, Utils.uuid4()})
+
+    module
+    |> child_spec(Keyword.put_new(opts, :name, name))
+    |> Supervisor.child_spec(id: name, restart: :transient)
+    |> ProcessManager.start_child()
+    |> case do
+      {:ok, _} -> {:ok, name}
+      other -> other
+    end
+  end
+
+  @doc false
+  def child_spec(module, opts) do
     defaults = [
       machine: opts[:machine] || module.__protean_machine__(),
       module: module,
       parent: self()
     ]
 
-    Server.start_link(Keyword.merge(defaults, opts))
+    %{id: module, start: {Server, :start_link, [Keyword.merge(defaults, opts)]}}
   end
 
   @doc """
@@ -404,21 +419,10 @@ defmodule Protean do
   defp def_default_otp do
     quote generated: true, location: :keep do
       def child_spec(opts) do
-        {id, opts} = Keyword.pop(opts, :id, __MODULE__)
-
-        spec = %{
-          id: id,
-          start: {__MODULE__, :start_link, [opts]}
-        }
-
-        Supervisor.child_spec(spec, [])
+        Protean.child_spec(__MODULE__, opts)
       end
 
-      def start_link(opts \\ []) do
-        Protean.start_link(__MODULE__, opts)
-      end
-
-      defoverridable child_spec: 1, start_link: 1
+      defoverridable child_spec: 1
     end
   end
 end

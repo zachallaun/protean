@@ -82,7 +82,7 @@ defmodule ProteanIntegration.FinalStatesTest do
       )
 
       assert not Process.alive?(machine)
-      assert_received {:EXIT, _pid, {:shutdown, %Protean.Context{}}}
+      assert_received {:DOWN, _ref, :process, _pid, {:shutdown, %Protean.Context{}}}
     end
   end
 end

@@ -49,7 +49,7 @@ defmodule ProteanTest do
 
     test "stop/2", %{machine: machine} do
       assert :ok = Protean.stop(machine, :default)
-      assert_receive {:EXIT, ^machine, {:shutdown, %Protean.Context{}}}
+      assert_receive {:DOWN, _ref, :process, ^machine, {:shutdown, %Protean.Context{}}}
     end
 
     test "subscribe/2", %{machine: machine} do
@@ -110,17 +110,17 @@ defmodule ProteanTest do
 
   describe "machines with assigns:" do
     test "started with default assigns" do
-      {:ok, pid} = DefaultAssigns.start_link()
+      {:ok, pid} = Protean.start_machine(DefaultAssigns)
       assert Protean.current(pid).assigns == %{data: :foo}
     end
 
     test "started with replacement assigns" do
-      {:ok, pid} = DefaultAssigns.start_link(assigns: %{data: :bar})
+      {:ok, pid} = Protean.start_machine(DefaultAssigns, assigns: %{data: :bar})
       assert Protean.current(pid).assigns == %{data: :bar}
     end
 
     test "started with added assigns" do
-      {:ok, pid} = DefaultAssigns.start_link(assigns: %{bar: :baz})
+      {:ok, pid} = Protean.start_machine(DefaultAssigns, assigns: %{bar: :baz})
       assert Protean.current(pid).assigns == %{data: :foo, bar: :baz}
     end
   end

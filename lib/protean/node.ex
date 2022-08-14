@@ -9,6 +9,7 @@ defmodule Protean.Node do
 
   @enforce_keys [:id, :type]
 
+  @derive {Inspect, only: [:id, :type, :initial, :order, :states]}
   defstruct [
     :id,
     :type,
