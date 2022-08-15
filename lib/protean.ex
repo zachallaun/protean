@@ -8,7 +8,6 @@ defmodule Protean do
   import Kernel, except: [send: 2]
 
   alias Protean.Context
-  alias Protean.Interpreter
   alias Protean.Interpreter.Server
   alias Protean.MachineConfig
   alias Protean.ProcessManager
@@ -399,12 +398,6 @@ defmodule Protean do
 
   def matches?(%Context{} = context, descriptor) do
     Context.matches?(context, descriptor)
-  end
-
-  def matches?(%Interpreter{} = interpreter, descriptor) do
-    interpreter
-    |> Interpreter.context()
-    |> Context.matches?(descriptor)
   end
 
   def matches?(protean, descriptor) do
