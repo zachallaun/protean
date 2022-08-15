@@ -22,7 +22,9 @@ defmodule ProteanIntegration.InvokedStreamTest do
             match({:stream_data, _}, actions: "write_data")
           ]
         ),
-        atomic(:stream_consumed)
+        atomic(:stream_consumed,
+          entry: Trigger.action(InvokedStreamTrigger, :stream_consumed)
+        )
       ]
     ]
 
@@ -35,12 +37,9 @@ defmodule ProteanIntegration.InvokedStreamTest do
 
   @tag machine: StreamMachine1
   test "invoked streams emit events until consumed", %{machine: machine} do
-    :timer.sleep(50)
-
-    %{assigns: assigns} = context = Protean.current(machine)
-
+    Trigger.await(InvokedStreamTrigger, :stream_consumed)
+    %{assigns: assigns} = Protean.current(machine)
     assert length(assigns[:data]) == 5
-    assert Protean.matches?(context, "stream_consumed")
   end
 
   defmodule StreamMachine2 do

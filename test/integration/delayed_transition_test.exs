@@ -71,7 +71,7 @@ defmodule ProteanIntegration.DelayedTransitionTest do
 
     test "short-circuited transitions don't still send event", %{machine: machine} do
       Protean.call(machine, :goto_c)
-      :timer.sleep(50)
+      :timer.sleep(20)
       refute Trigger.triggered?(DelayedTransitionTrigger, :a_after)
     end
   end
