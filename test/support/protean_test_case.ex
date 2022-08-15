@@ -63,12 +63,16 @@ defmodule Protean.TestCase do
     end
   end
 
-  setup assigns do
+  setup context do
+    if trigger = context[:trigger] do
+      {:ok, _} = start_supervised({Trigger, name: trigger})
+    end
+
     Process.flag(:trap_exit, true)
-    setup_assigns(assigns)
+    setup_context(context)
   end
 
-  defp setup_assigns(%{machines: machines}) when is_list(machines) do
+  defp setup_context(%{machines: machines}) when is_list(machines) do
     {all_machines, exit_funs} =
       machines
       |> Enum.map(&setup_machine/1)
@@ -79,7 +83,7 @@ defmodule Protean.TestCase do
     [machines: all_machines]
   end
 
-  defp setup_assigns(%{machine: machine}) do
+  defp setup_context(%{machine: machine}) do
     {assigns_to_add, exit_fun} = setup_machine(machine)
 
     on_exit(exit_fun)
@@ -87,7 +91,7 @@ defmodule Protean.TestCase do
     assigns_to_add
   end
 
-  defp setup_assigns(_other), do: :ok
+  defp setup_context(_other), do: :ok
 
   @doc """
   Runs through a list of instructions in order, sending events to and making assertions on the

@@ -1,10 +1,7 @@
 defmodule ProteanIntegration.DelayedTransitionTest do
   use Protean.TestCase, async: true
 
-  setup do
-    {:ok, _} = start_supervised({Trigger, name: DelayedTransitionTrigger})
-    :ok
-  end
+  @moduletag trigger: DelayedTransitionTrigger
 
   defmodule TestMachine do
     use Protean

@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.HigherOrderGuardTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule HigherOrderGuardMachine1 do
     use Protean

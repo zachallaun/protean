@@ -1,5 +1,7 @@
 defmodule ProteanIntegration.InvokedMachineTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
+
+  @moduletag trigger: InvokedMachineTrigger
 
   import ExUnit.CaptureLog
 
@@ -19,7 +21,9 @@ defmodule ProteanIntegration.InvokedMachineTest do
             match({:child_grown, _}, "relax")
           ]
         ),
-        atomic(:relax)
+        atomic(:relax,
+          entry: Trigger.action(InvokedMachineTrigger, :relax)
+        )
       ]
     ]
   end
@@ -50,11 +54,8 @@ defmodule ProteanIntegration.InvokedMachineTest do
     @describetag machine: Parent
 
     test "sending events between parent/child", %{machine: parent} do
-      assert_protean(parent,
-        call: :grow_it,
-        sleep: 30,
-        matches: "relax"
-      )
+      Protean.send(parent, :grow_it)
+      assert Trigger.await(InvokedMachineTrigger, :relax)
     end
   end
 
@@ -102,7 +103,9 @@ defmodule ProteanIntegration.InvokedMachineTest do
             ]
           ]
         ],
-        invoke_crashed: []
+        invoke_crashed: [
+          entry: Trigger.action(InvokedMachineTrigger, :crashed)
+        ]
       ]
     ]
 
@@ -118,11 +121,8 @@ defmodule ProteanIntegration.InvokedMachineTest do
     test "trigger error transition", %{machine: machine} do
       error_message =
         capture_log(fn ->
-          assert_protean(machine,
-            call: :make_it_crash,
-            sleep: 30,
-            matches: "invoke_crashed"
-          )
+          Protean.send(machine, :make_it_crash)
+          assert Trigger.await(InvokedMachineTrigger, :crashed)
         end)
 
       assert error_message =~ "boom"
@@ -164,7 +164,9 @@ defmodule ProteanIntegration.InvokedMachineTest do
             )
           ]
         ],
-        invoke_crashed: []
+        invoke_crashed: [
+          entry: Trigger.action(InvokedMachineTrigger, :crashed_immediately)
+        ]
       ]
     ]
   end
@@ -172,12 +174,9 @@ defmodule ProteanIntegration.InvokedMachineTest do
   describe "invoked machine immediately crashes" do
     @describetag machine: InvokeImmediatelyCrashes
 
-    test "trigger error transition", %{machine: machine} do
+    test "trigger error transition" do
       capture_log(fn ->
-        assert_protean(machine,
-          sleep: 30,
-          matches: "invoke_crashed"
-        )
+        assert Trigger.await(InvokedMachineTrigger, :crashed_immediately)
       end)
     end
   end

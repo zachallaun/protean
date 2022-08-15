@@ -1,6 +1,8 @@
 defmodule ProteanIntegration.InvokedTaskTest do
   use Protean.TestCase, async: true
 
+  @moduletag trigger: InvokedTaskTrigger
+
   defmodule AnonymousFunctionTasks do
     use Protean
     alias Protean.Action
@@ -13,7 +15,11 @@ defmodule ProteanIntegration.InvokedTaskTest do
       states: [
         atomic(:a,
           invoke: [
-            invoked(:task, fn -> :task_result end,
+            invoked(
+              :task,
+              fn ->
+                :task_result
+              end,
               done: [
                 actions: ["save_result"],
                 target: "b"
@@ -22,13 +28,18 @@ defmodule ProteanIntegration.InvokedTaskTest do
           ]
         ),
         atomic(:b,
+          entry: Trigger.action(InvokedTaskTrigger, :b),
           on: [
             goto_c: "c"
           ]
         ),
         atomic(:c,
           invoke: [
-            invoked(:task, fn -> :second_task_result end,
+            invoked(
+              :task,
+              fn ->
+                :second_task_result
+              end,
               done: [
                 actions: ["save_result"],
                 target: "d"
@@ -36,7 +47,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
             )
           ]
         ),
-        atomic(:d)
+        atomic(:d, entry: Trigger.action(InvokedTaskTrigger, :d))
       ]
     ]
 
@@ -50,21 +61,17 @@ defmodule ProteanIntegration.InvokedTaskTest do
     @describetag machine: AnonymousFunctionTasks
 
     test "anonymous function task invoked from initial state", %{machine: machine} do
+      assert Trigger.await(InvokedTaskTrigger, :b)
+
       assert_protean(machine,
-        sleep: 50,
-        matches: "b",
         assigns: [result: :task_result]
       )
     end
 
     test "anonymous function task invoked after transition", %{machine: machine} do
-      assert_protean(machine,
-        sleep: 30,
-        call: :goto_c,
-        sleep: 30,
-        matches: "d",
-        assigns: [result: :second_task_result]
-      )
+      assert Trigger.await(InvokedTaskTrigger, :b)
+      Protean.send(machine, :goto_c)
+      assert Trigger.await(InvokedTaskTrigger, :d)
     end
   end
 
@@ -85,7 +92,9 @@ defmodule ProteanIntegration.InvokedTaskTest do
             ]
           ]
         ],
-        b: []
+        b: [
+          entry: Trigger.action(InvokedTaskTrigger, :b)
+        ]
       ]
     ]
 
@@ -103,11 +112,8 @@ defmodule ProteanIntegration.InvokedTaskTest do
     @describetag machine: MFATasks
 
     test "MFA task invoked in initial state", %{machine: machine} do
-      assert_protean(machine,
-        sleep: 30,
-        matches: "b",
-        assigns: [result: {:task_return, :arg}]
-      )
+      assert Trigger.await(InvokedTaskTrigger, :b)
+      assert %{result: {:task_return, :arg}} = Protean.current(machine).assigns
     end
   end
 
@@ -124,8 +130,12 @@ defmodule ProteanIntegration.InvokedTaskTest do
             error: "failure"
           ]
         ],
-        success: [],
-        failure: []
+        success: [
+          entry: Trigger.action(InvokedTaskTrigger, :success)
+        ],
+        failure: [
+          entry: Trigger.action(InvokedTaskTrigger, :failure)
+        ]
       ]
     ]
 
@@ -139,12 +149,10 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     @describetag machine: ErrorRaisingTasks
 
-    test "Error transition taken when task raises", %{machine: machine} do
+    test "Error transition taken when task raises" do
       capture_log(fn ->
-        assert_protean(machine,
-          sleep: 100,
-          matches: "failure"
-        )
+        assert :ok = Trigger.await(InvokedTaskTrigger, :failure)
+        refute Trigger.triggered?(InvokedTaskTrigger, :success)
       end)
     end
   end
@@ -160,7 +168,9 @@ defmodule ProteanIntegration.InvokedTaskTest do
             invoked("my_task", done: "success")
           ]
         ],
-        success: []
+        success: [
+          entry: Trigger.action(InvokedTaskTrigger, :success)
+        ]
       ]
     ]
 
@@ -173,11 +183,8 @@ defmodule ProteanIntegration.InvokedTaskTest do
   describe "ResolvedTaskInvoke:" do
     @describetag machine: ResolvedTaskInvoke
 
-    test "tasks can be resolved by callback module", %{machine: machine} do
-      assert_protean(machine,
-        sleep: 30,
-        matches: "success"
-      )
+    test "tasks can be resolved by callback module" do
+      assert Trigger.await(InvokedTaskTrigger, :success)
     end
   end
 
@@ -196,12 +203,15 @@ defmodule ProteanIntegration.InvokedTaskTest do
           ]
         ],
         canceled: [
+          entry: Trigger.action(InvokedTaskTrigger, :canceled),
           on: [
             message: "sent"
           ]
         ],
         # shouldn't get here
-        sent: []
+        sent: [
+          entry: Trigger.action(InvokedTaskTrigger, :sent)
+        ]
       ]
     ]
 
@@ -221,11 +231,9 @@ defmodule ProteanIntegration.InvokedTaskTest do
     @describetag machine: CanceledTask
 
     test "transitioning out of invoking state should cancel task", %{machine: machine} do
-      assert_protean(machine,
-        call: :cancel,
-        sleep: 50,
-        matches: "canceled"
-      )
+      Protean.send(machine, :cancel)
+      assert :ok = Trigger.await(InvokedTaskTrigger, :canceled)
+      refute Trigger.triggered?(InvokedTaskTrigger, :sent)
     end
   end
 
@@ -240,7 +248,14 @@ defmodule ProteanIntegration.InvokedTaskTest do
           invoke: [
             invoked(:one),
             invoked(:two, done: [actions: :save]),
-            invoked(:task, fn -> :value_three end, done: [actions: :save])
+            invoked(
+              :task,
+              fn ->
+                Trigger.trigger(InvokedTaskTrigger, :three)
+                :value_three
+              end,
+              done: [actions: :save]
+            )
           ],
           on: [
             match({_, _}, actions: :save)
@@ -251,11 +266,19 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     @impl true
     def invoke(:one, _, _) do
-      {:task, fn -> :value_one end}
+      {:task,
+       fn ->
+         Trigger.trigger(InvokedTaskTrigger, :one)
+         :value_one
+       end}
     end
 
     def invoke(:two, _, _) do
-      {:task, fn -> :value_two end}
+      {:task,
+       fn ->
+         Trigger.trigger(InvokedTaskTrigger, :two)
+         :value_two
+       end}
     end
 
     @impl true
@@ -267,9 +290,12 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
   @tag machine: ManyTasks
   test "tasks can be invoked in many ways", %{machine: machine} do
-    assert_protean(machine,
-      sleep: 200,
-      assigns: [data: MapSet.new([:value_one, :value_two, :value_three])]
-    )
+    Trigger.await(InvokedTaskTrigger, :one)
+    Trigger.await(InvokedTaskTrigger, :two)
+    Trigger.await(InvokedTaskTrigger, :three)
+    :timer.sleep(5)
+
+    expected = MapSet.new([:value_one, :value_two, :value_three])
+    assert %{data: ^expected} = Protean.current(machine).assigns
   end
 end

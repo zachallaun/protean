@@ -1,6 +1,8 @@
 defmodule ProteanIntegration.InvokedStreamTest do
   use Protean.TestCase, async: true
 
+  @moduletag trigger: InvokedStreamTrigger
+
   defmodule StreamMachine1 do
     use Protean
     alias Protean.Action
@@ -56,7 +58,12 @@ defmodule ProteanIntegration.InvokedStreamTest do
         ),
         atomic(:consuming,
           invoke: [
-            invoked(:stream_from_event, done: :waiting)
+            invoked(:stream_from_event,
+              done: [
+                target: :waiting,
+                actions: Trigger.action(InvokedStreamTrigger, :stream_done)
+              ]
+            )
           ],
           on: [
             match({:stream_data, _}, actions: "write_data")
@@ -79,11 +86,9 @@ defmodule ProteanIntegration.InvokedStreamTest do
 
   @tag machine: StreamMachine2
   test "invoked streams can be resolved by callback module", %{machine: machine} do
-    assert_protean(machine,
-      call: {:stream, Stream.repeatedly(fn -> 1 end) |> Stream.take(5)},
-      sleep: 50,
-      matches: "waiting",
-      assigns: [data: [1, 1, 1, 1, 1]]
-    )
+    Protean.send(machine, {:stream, Stream.repeatedly(fn -> 1 end) |> Stream.take(5)})
+    assert Trigger.await(InvokedStreamTrigger, :stream_done)
+    assert Protean.matches?(machine, :waiting)
+    assert %{data: [1, 1, 1, 1, 1]} = Protean.current(machine).assigns
   end
 end

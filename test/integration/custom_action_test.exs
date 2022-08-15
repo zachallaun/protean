@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.CustomActionTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule CustomAction do
     @behaviour Protean.Action

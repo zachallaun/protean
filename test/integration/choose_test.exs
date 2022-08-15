@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.ChooseTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule Choosey do
     use Protean

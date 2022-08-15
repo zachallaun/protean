@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.AutoforwardTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule Child do
     use Protean
