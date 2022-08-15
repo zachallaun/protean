@@ -156,6 +156,18 @@ defmodule Protean.Action do
     |> exec(interpreter)
   end
 
+  @doc false
+  @spec exec_all(Interpreter.t(), [t | term()]) :: Interpreter.t()
+  def exec_all(interpreter, [action | rest]) do
+    case exec(action, interpreter) do
+      {:halt, interpreter} -> interpreter
+      {:cont, interpreter} -> exec_all(interpreter, rest)
+      {:cont, interpreter, actions} -> exec_all(interpreter, actions ++ rest)
+    end
+  end
+
+  def exec_all(interpreter, []), do: interpreter
+
   @doc """
   Attach a custom action that implements the `Protean.Action` behaviour.
   """

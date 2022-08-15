@@ -267,17 +267,7 @@ defmodule Protean.Interpreter do
     |> Enum.map(&Events.platform(:done, &1))
     |> Enum.reduce(interpreter, &add_internal(&2, &1))
     |> with_context(context)
-    |> exec_all(actions)
+    |> Action.exec_all(actions)
     |> then(&if config.root.id in context.final, do: stop(&1), else: &1)
   end
-
-  defp exec_all(interpreter, [action | rest]) do
-    case Action.exec(action, interpreter) do
-      {:halt, interpreter} -> interpreter
-      {:cont, interpreter} -> exec_all(interpreter, rest)
-      {:cont, interpreter, actions} -> exec_all(interpreter, actions ++ rest)
-    end
-  end
-
-  defp exec_all(interpreter, []), do: interpreter
 end
