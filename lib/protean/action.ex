@@ -54,10 +54,10 @@ defmodule Protean.Action do
 
       def handle_action(:update_data, context, {:data_updated, changes}) do
         context
-        |> Action.assign_in([:data], &Map.merge(&1, changes))
+        |> Action.update_in([:data], &Map.merge(&1, changes))
       end
 
-  In this case, `assign_in/3` is being used to update some data in the machine `:assigns`.
+  In this case, `update_in/3` is being used to update some data in the machine `:assigns`.
   But, we could perform additional actions if we wish, such as:
 
       def handle_action(:update_data, context, {:data_updated, changes}) do
@@ -97,7 +97,7 @@ defmodule Protean.Action do
   delayed transitions using `:after`.
   """
 
-  import Kernel, except: [send: 2]
+  import Kernel, except: [send: 2, update_in: 2, update_in: 3]
 
   alias __MODULE__
   alias Protean.Context
@@ -188,7 +188,7 @@ defmodule Protean.Action do
   """
   @doc type: :callback_action
   @spec assign(Context.t(), key :: term(), value :: term()) :: Context.t()
-  def assign(%Context{} = context, key, value), do: assign(key, value) |> put_action(context)
+  def assign(%Context{} = context, key, value), do: assign([{key, value}]) |> put_action(context)
 
   @doc """
   Attach an action that merges the given assigns into a machine's context.
@@ -197,20 +197,11 @@ defmodule Protean.Action do
   @spec assign(Context.t(), assigns :: Enumerable.t()) :: Context.t()
   def assign(%Context{} = context, assigns), do: assign(assigns) |> put_action(context)
 
-  @doc type: :inline_action
-  def assign(key, value) do
-    new({:assign, :merge, %{key => value}})
-  end
-
   @doc """
-  Create an inline action that applies a function to or merges assigns into machine context.
+  Create an inline action that merges assigns into machine context.
   """
   @doc type: :inline_action
-  @spec assign(fun_or_assigns :: function() | Enumerable.t()) :: t
-  def assign(fun) when is_function(fun) do
-    new({:assign, :update, fun})
-  end
-
+  @spec assign(Enumerable.t()) :: t
   def assign(assigns) do
     new({:assign, :merge, Map.new(assigns)})
   end
@@ -218,7 +209,7 @@ defmodule Protean.Action do
   @doc """
   Attach an action that assigns into a machine's context.
 
-  Similar to `put_in/3`.
+  Similar to `Kernel.put_in/3`.
   """
   @doc type: :callback_action
   @spec assign_in(Context.t(), [term(), ...], term()) :: Context.t()
@@ -228,16 +219,47 @@ defmodule Protean.Action do
   @doc """
   Create an inline action that will assign into machine context.
 
-  Similar to `put_in/3`.
+  Similar to `Kernel.put_in/3`.
   """
   @doc type: :inline_action
   @spec assign_in([term(), ...], term()) :: t
-  def assign_in(path, fun) when is_list(path) and is_function(fun) do
-    assign(fn %{assigns: assigns} -> update_in(assigns, path, fun) end)
+  def assign_in(path, value) when is_list(path) do
+    update(fn %{assigns: assigns} -> put_in(assigns, path, value) end)
   end
 
-  def assign_in(path, value) when is_list(path) do
-    assign(fn %{assigns: assigns} -> put_in(assigns, path, value) end)
+  @doc """
+  Attach an action that applies an update function to a machine's context.
+  """
+  @doc type: :callback_action
+  def update(%Context{} = context, fun), do: update(fun) |> put_action(context)
+
+  @doc """
+  Create an inline action that applies an update function to machine context.
+  """
+  def update(fun) when is_function(fun) do
+    new({:assign, :update, fun})
+  end
+
+  @doc """
+  Attach an action that applies an update function into a machine's context.
+
+  Similar to `Kernel.update_in/3`.
+  """
+  @doc type: :callback_action
+  @spec update_in(Context.t(), [term(), ...], function()) :: Context.t()
+  def update_in(%Context{} = context, path, fun) do
+    update_in(path, fun) |> put_action(context)
+  end
+
+  @doc """
+  Create an inline action that will update into machine context.
+
+  Similar to `Kernel.update_in/3`.
+  """
+  @doc type: :inline_action
+  @spec update_in([term(), ...], function()) :: t
+  def update_in(path, fun) when is_list(path) and is_function(fun) do
+    update(fn %{assigns: assigns} -> Kernel.update_in(assigns, path, fun) end)
   end
 
   @doc """

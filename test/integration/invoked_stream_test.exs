@@ -31,7 +31,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
     @impl true
     def handle_action("write_data", context, {_, value}) do
       context
-      |> Action.assign_in([:data], &[value | &1])
+      |> Action.update_in([:data], &[value | &1])
     end
   end
 
@@ -79,7 +79,7 @@ defmodule ProteanIntegration.InvokedStreamTest do
     @impl true
     def handle_action("write_data", context, {_, value}) do
       context
-      |> Action.assign_in([:data], &[value | &1])
+      |> Action.update_in([:data], &[value | &1])
     end
   end
 

@@ -284,7 +284,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     @impl true
     def handle_action(:save, state, {_, value}) do
       state
-      |> Protean.Action.assign_in([:data], &MapSet.put(&1, value))
+      |> Protean.Action.update_in([:data], &MapSet.put(&1, value))
     end
   end
 
