@@ -151,7 +151,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     test "Error transition taken when task raises" do
       capture_log(fn ->
-        assert :ok = Trigger.await(InvokedTaskTrigger, :failure)
+        assert Trigger.await(InvokedTaskTrigger, :failure)
         refute Trigger.triggered?(InvokedTaskTrigger, :success)
       end)
     end
@@ -232,7 +232,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     test "transitioning out of invoking state should cancel task", %{machine: machine} do
       Protean.send(machine, :cancel)
-      assert :ok = Trigger.await(InvokedTaskTrigger, :canceled)
+      assert Trigger.await(InvokedTaskTrigger, :canceled)
       refute Trigger.triggered?(InvokedTaskTrigger, :sent)
     end
   end

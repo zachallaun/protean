@@ -101,6 +101,6 @@ defmodule ProteanIntegration.DelayedTransitionTest do
   @tag machine: DynamicDelay
   test "delays defined by callback", %{machine: machine} do
     assert Protean.matches?(machine, :will_transition)
-    assert :ok = Trigger.await(DelayedTransitionTrigger, :new_state)
+    assert Trigger.await(DelayedTransitionTrigger, :new_state)
   end
 end
