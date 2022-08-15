@@ -35,26 +35,38 @@ defmodule ProteanTest do
     ]
   end
 
-  describe "naming" do
-    test "start_machine/2 with same name should return error" do
+  describe "start_machine/2" do
+    test "should return error if name already started" do
       assert {:ok, _} = Protean.start_machine(SimpleMachine, name: Machine)
       assert {:error, {:already_started, _}} = Protean.start_machine(SimpleMachine, name: Machine)
 
-      Protean.stop(Machine)
+      Protean.stop(Machine, :normal, 10)
     end
 
-    test "start_machine/2 returns pid if name provided" do
+    test "should return pid if name supplied" do
       assert {:ok, pid} = Protean.start_machine(SimpleMachine, name: Machine)
       assert is_pid(pid)
 
       Protean.stop(Machine)
     end
 
-    test "start_machine/2 returns :via tuple if name not provided" do
+    test "should return :via tuple if name not supplied" do
       assert {:ok, name} = Protean.start_machine(SimpleMachine)
       assert {:via, _, _} = name
 
       Protean.stop(name)
+    end
+  end
+
+  describe "stop_machine/3" do
+    test "should accept an optional reason" do
+      assert {:ok, name} = Protean.start_machine(SimpleMachine)
+      assert :ok = Protean.stop(name, :normal)
+    end
+
+    test "should accept an optional reason and timeout" do
+      assert {:ok, name} = Protean.start_machine(SimpleMachine)
+      assert :ok = Protean.stop(name, :normal, 50)
     end
   end
 
