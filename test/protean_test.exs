@@ -110,17 +110,17 @@ defmodule ProteanTest do
 
   describe "machines with assigns:" do
     test "started with default assigns" do
-      {:ok, pid} = Protean.start_machine(DefaultAssigns)
+      {:ok, pid} = start_supervised(DefaultAssigns)
       assert Protean.current(pid).assigns == %{data: :foo}
     end
 
     test "started with replacement assigns" do
-      {:ok, pid} = Protean.start_machine(DefaultAssigns, assigns: %{data: :bar})
+      {:ok, pid} = start_supervised({DefaultAssigns, assigns: %{data: :bar}})
       assert Protean.current(pid).assigns == %{data: :bar}
     end
 
     test "started with added assigns" do
-      {:ok, pid} = Protean.start_machine(DefaultAssigns, assigns: %{bar: :baz})
+      {:ok, pid} = start_supervised({DefaultAssigns, assigns: %{bar: :baz}})
       assert Protean.current(pid).assigns == %{data: :foo, bar: :baz}
     end
   end

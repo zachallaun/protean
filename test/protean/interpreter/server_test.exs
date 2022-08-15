@@ -21,15 +21,14 @@ defmodule Protean.Interpreter.ServerTest do
   end
 
   test "server can be started and stopped" do
-    {:ok, name} = Protean.start_machine(TestMachine)
-    pid = GenServer.whereis(name)
-    assert Server.matches?(name, :a)
-    assert :ok = Server.stop(name, :normal, :infinity)
+    {:ok, pid} = start_supervised(TestMachine)
+    assert Server.matches?(pid, :a)
+    assert :ok = Server.stop(pid, :normal, :infinity)
     refute Process.alive?(pid)
   end
 
   test "server can be started with a name" do
-    {:ok, _} = Protean.start_machine(TestMachine, name: NamedMachine)
+    {:ok, _} = start_supervised({TestMachine, name: NamedMachine})
     assert %Context{} = Server.current(NamedMachine)
   end
 
