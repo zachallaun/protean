@@ -39,6 +39,19 @@ defmodule Trigger do
     GenServer.call(server, {:await, value}, timeout)
   end
 
+  # Protean Action helpers
+  @behaviour Protean.Action
+
+  def action(name, value) do
+    Protean.Action.new(__MODULE__, {:trigger, name, value})
+  end
+
+  @impl true
+  def exec_action({:trigger, name, value}, interpreter) do
+    trigger(name, value)
+    {:cont, interpreter}
+  end
+
   # Server callbacks
 
   @impl true
