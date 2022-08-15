@@ -82,10 +82,10 @@ defmodule Counter do
 end
 ```
 
-It can be started under a supervisor, but we'll start it directly.
+It can be started under a supervisor, but we'll start it directly using Protean's built-in `DynamicSupervisor`.
 
 ```elixir
-{:ok, pid} = Protean.start_link(Counter)
+{:ok, pid} = Protean.start_machine(Counter)
 
 Protean.current(pid).assigns
 # %{count: 0, min: nil, max: nil}
@@ -141,8 +141,16 @@ end
 
 ## Starting supervised machines
 
-Just like `GenServer`, Protean machines will be most often started under a supervision tree.
-Invoking `use Protean` will automatically define a `child_spec/1` function that allows you to start the process directly under a supervisor.
+Since state machines typically model structured interactions with a defined beginning and end, they will generally be started under a `DynamicSupervisor`.
+Protean starts one (as well as a `Registry`) by default, in order to manage subprocesses that are started during machine execution through the use of `Protean.Builder.invoked/3`.
+
+Machines can be started under this supervisor using `Protean.start_machine/2`.
+
+```elixir
+{:ok, machine} = Protean.start_machine(MyMachine)
+```
+
+Similar to `GenServer`, calling `use Protean` will also define a `child_spec/1` that allows you to start a machine in a standard supervision tree, if you wish:
 
 ```elixir
 children = [
@@ -150,27 +158,6 @@ children = [
 ]
 
 Supervisor.start_link(children, strategy: :one_for_one)
-```
-
-Protean machines also accept the same options as `Protean.start_link/2`.
-See those docs for more details.
-
-For instance, here's how you could start the `Counter` with a custom name:
-
-```elixir
-children = [
-  # Start the Counter machine
-  {Counter, name: MyCounter}
-]
-
-Supervisor.start_link(children, strategy: :one_for_one)
-
-Protean.current(MyCounter)
-# %Protean.Context{
-#   assigns: %{count: 0, max: nil, min: nil},
-#   event: "$protean.init",
-#   value: MapSet.new([["active", "#"]])
-# }
 ```
 
 ## Interacting with Protean machines
