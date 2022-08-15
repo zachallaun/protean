@@ -263,15 +263,27 @@ defmodule Protean do
   """
   @spec start_machine(module(), [start_option]) :: on_start
   def start_machine(module, opts \\ []) do
-    name = ProcessManager.via_registry({module, Utils.uuid4()})
+    supplied_name? = Keyword.has_key?(opts, :name)
+
+    {name, opts} =
+      Keyword.pop_lazy(opts, :name, fn ->
+        ProcessManager.via_registry({module, Utils.uuid4()})
+      end)
 
     module
-    |> child_spec(Keyword.put_new(opts, :name, name))
+    |> child_spec(Keyword.put(opts, :name, name))
     |> Supervisor.child_spec(id: name, restart: :transient)
     |> ProcessManager.start_child()
     |> case do
-      {:ok, _} -> {:ok, name}
-      other -> other
+      {:ok, pid} ->
+        if supplied_name? do
+          {:ok, pid}
+        else
+          {:ok, name}
+        end
+
+      other ->
+        other
     end
   end
 
