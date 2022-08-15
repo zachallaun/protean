@@ -1,6 +1,29 @@
 defmodule ProteanTest do
   use Protean.TestCase
 
+  import ExUnit.CaptureLog
+
+  test "should warn if unknown options are given to `use Protean`" do
+    moduledef =
+      quote do
+        defmodule ShouldWarn do
+          use Protean, unknown: :option
+
+          @machine [
+            initial: :init,
+            states: [atomic(:init)]
+          ]
+        end
+      end
+
+    warning =
+      capture_log(fn ->
+        Code.eval_quoted(moduledef)
+      end)
+
+    assert warning =~ "unknown options"
+  end
+
   defmodule SimpleMachine do
     use Protean
 
@@ -8,21 +31,6 @@ defmodule ProteanTest do
       initial: :init,
       states: [
         atomic(:init)
-      ]
-    ]
-  end
-
-  defmodule TimerMachine do
-    use Protean
-
-    @machine [
-      initial: :init,
-      states: [
-        atomic(:init,
-          invoke: [
-            task: {:timer, :sleep, [100]}
-          ]
-        )
       ]
     ]
   end
