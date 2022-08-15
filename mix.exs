@@ -18,8 +18,10 @@ defmodule Protean.MixProject do
       deps: deps(),
       docs: docs(),
       dialyzer: dialyzer(),
+      aliases: aliases(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
+        t: :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
@@ -56,6 +58,12 @@ defmodule Protean.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  def aliases do
+    [
+      t: "coveralls"
+    ]
+  end
 
   defp description do
     """
