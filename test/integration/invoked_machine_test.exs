@@ -79,7 +79,6 @@ defmodule ProteanIntegration.InvokedMachineTest do
   describe "multiple machines" do
     @describetag machines: [Parent, Parent]
 
-    @tag here: true
     test "can use same ids for child processes", %{machines: machines} do
       [%{machine: m1, pid: p1}, %{machine: m2, pid: p2}] = machines
 

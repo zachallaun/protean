@@ -30,10 +30,19 @@ defmodule Protean.MixProject do
     ]
   end
 
-  def application do
+  def application, do: application(Mix.env())
+
+  defp application(:prod) do
     [
       mod: {Protean.Application, []},
       extra_applications: [:logger, :crypto]
+    ]
+  end
+
+  defp application(_) do
+    [
+      mod: {Protean.Application, []},
+      extra_applications: [:logger, :crypto, :phoenix_pubsub]
     ]
   end
 
@@ -49,7 +58,7 @@ defmodule Protean.MixProject do
 
   defp deps do
     [
-      {:phoenix_pubsub, "~> 2.0"},
+      {:phoenix_pubsub, "~> 2.0", optional: true},
 
       # dev/test
       {:credo, "~> 1.6", only: :dev, runtime: false},

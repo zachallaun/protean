@@ -5,7 +5,7 @@ defmodule Protean.Application do
   def start(_type, _args) do
     children = [
       Protean.ProcessManager,
-      {Phoenix.PubSub, name: Protean.PubSub.name()}
+      Protean.PubSub
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)

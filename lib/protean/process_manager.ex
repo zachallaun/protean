@@ -5,6 +5,9 @@ defmodule Protean.ProcessManager do
 
   @compile {:inline, supervisor: 0, registry: 0, subprocess_key: 1}
 
+  @supervisor Module.concat(__MODULE__, Supervisor)
+  @registry Module.concat(__MODULE__, Registry)
+
   @type subprocess :: {pid(), reference(), meta :: term()}
 
   @doc """
@@ -72,9 +75,7 @@ defmodule Protean.ProcessManager do
   Select all registered subprocesses of the calling process.
   """
   def subprocesses do
-    {reg_module, reg_name} = registry()
-
-    reg_module.select(reg_name, [
+    registry().select(@registry, [
       {
         {subprocess_key(:"$1"), self(), :"$2"},
         [],
@@ -88,9 +89,7 @@ defmodule Protean.ProcessManager do
   """
   @spec fetch_subprocess(term()) :: {:ok, subprocess} | :error
   def fetch_subprocess(id) do
-    {reg_module, reg_name} = registry()
-
-    case reg_module.lookup(reg_name, subprocess_key(id)) do
+    case registry().lookup(@registry, subprocess_key(id)) do
       [{_, proc}] -> {:ok, proc}
       [] -> :error
     end
@@ -101,9 +100,7 @@ defmodule Protean.ProcessManager do
   """
   @spec subprocess_by_ref(reference()) :: {:ok, {id :: term(), subprocess}} | nil
   def subprocess_by_ref(ref) do
-    {reg_module, reg_name} = registry()
-
-    reg_module.select(reg_name, [
+    registry().select(@registry, [
       {
         {subprocess_key(:"$1"), self(), {:"$2", ref, :"$3"}},
         [],
@@ -118,44 +115,37 @@ defmodule Protean.ProcessManager do
 
   @doc false
   def via_registry(name) do
-    {reg_module, reg_name} = registry()
-    {:via, reg_module, {reg_name, name}}
+    {:via, registry(), {@registry, name}}
   end
 
   @doc false
   def register_subprocess(id, value) do
-    {reg_module, reg_name} = registry()
-    reg_module.register(reg_name, subprocess_key(id), value)
+    registry().register(@registry, subprocess_key(id), value)
   end
 
   @doc false
   def unregister_subprocess(id) do
-    {reg_module, reg_name} = registry()
-    reg_module.unregister(reg_name, subprocess_key(id))
+    registry().unregister(@registry, subprocess_key(id))
   end
 
   @doc false
   def start_child(child_spec) do
-    {sup_module, sup_name} = supervisor()
-    sup_module.start_child(sup_name, child_spec)
+    supervisor().start_child(@supervisor, child_spec)
   end
 
   @doc false
   def terminate_child(pid) do
-    {sup_module, sup_name} = supervisor()
-    sup_module.terminate_child(sup_name, pid)
+    supervisor().terminate_child(@supervisor, pid)
   end
 
   @doc false
   def which_children do
-    {sup_module, sup_name} = supervisor()
-    sup_module.which_children(sup_name)
+    supervisor().which_children(@supervisor)
   end
 
   @doc false
   def count_registered do
-    {reg_module, reg_name} = registry()
-    reg_module.count(reg_name)
+    registry().count(@registry)
   end
 
   defp subprocess_key(id) do
@@ -172,34 +162,31 @@ defmodule Protean.ProcessManager do
   def init(_arg) do
     configure!()
 
-    {sup_module, sup_name} = supervisor()
-    {reg_module, reg_name} = registry()
-
     children = [
-      {sup_module, name: sup_name, strategy: :one_for_one},
-      {reg_module, name: reg_name, keys: :unique}
+      {supervisor(), name: @supervisor, strategy: :one_for_one},
+      {registry(), name: @registry, keys: :unique}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
 
   defp supervisor do
-    :persistent_term.get({__MODULE__, :supervisor})
+    :persistent_term.get(@supervisor)
   end
 
   defp registry do
-    :persistent_term.get({__MODULE__, :registry})
+    :persistent_term.get(@registry)
   end
 
   defp configure! do
     :persistent_term.put(
-      {__MODULE__, :supervisor},
-      {Application.fetch_env!(:protean, :supervisor), Module.concat(__MODULE__, Supervisor)}
+      @supervisor,
+      Application.get_env(:protean, :supervisor, DynamicSupervisor)
     )
 
     :persistent_term.put(
-      {__MODULE__, :registry},
-      {Application.fetch_env!(:protean, :registry), Module.concat(__MODULE__, Registry)}
+      @registry,
+      Application.get_env(:protean, :registry, Registry)
     )
   end
 end

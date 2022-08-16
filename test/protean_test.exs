@@ -168,4 +168,15 @@ defmodule ProteanTest do
       assert Protean.current(pid).assigns == %{data: :foo, bar: :baz}
     end
   end
+
+  test "Phoenix.PubSub is optional" do
+    {stdout, 0} =
+      System.cmd("mix", ["deps.compile", "--force"],
+        cd: "./test/support/dependent_project",
+        stderr_to_stdout: true
+      )
+
+    refute stdout =~ "warning: Phoenix.PubSub"
+    refute stdout =~ "warning: "
+  end
 end
