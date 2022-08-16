@@ -30,12 +30,6 @@ defmodule Protean.Interpreter do
           subscribers: %{reference() => %{pid: pid(), to: :all | :replies}}
         }
 
-  # Partial Access behaviour (not defining `pop/2`)
-  @doc false
-  def fetch(interpreter, key), do: Map.fetch(interpreter, key)
-  @doc false
-  def get_and_update(interpreter, key, fun), do: Map.get_and_update(interpreter, key, fun)
-
   @doc """
   Create a new `Interpreter`. The returned interpreter will still need to be started, which could
   result in additional side-effects. See `start/1`.
