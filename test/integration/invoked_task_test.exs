@@ -3,6 +3,31 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
   @moduletag trigger: InvokedTaskTrigger
 
+  defmodule OneOffTask do
+    use Protean
+
+    @machine [
+      initial: :init,
+      states: [
+        atomic(:init,
+          invoke: [
+            invoked(:task, fn ->
+              Trigger.trigger(InvokedTaskTrigger, :ran_task)
+            end)
+          ]
+        )
+      ]
+    ]
+  end
+
+  describe "OneOffTask:" do
+    @describetag machine: OneOffTask
+
+    test "should run" do
+      assert Trigger.await(InvokedTaskTrigger, :ran_task)
+    end
+  end
+
   defmodule AnonymousFunctionTasks do
     use Protean
     alias Protean.Action
