@@ -22,10 +22,17 @@ defmodule ProteanIntegration.InvokedMachineTest do
           ]
         ),
         atomic(:relax,
-          entry: Trigger.action(InvokedMachineTrigger, :relax)
+          entry: :trigger
         )
       ]
     ]
+
+    @impl true
+    def handle_action(:trigger, state, _) do
+      Trigger.trigger(InvokedMachineTrigger, {:relax, self()})
+
+      state
+    end
   end
 
   defmodule Child do
@@ -55,7 +62,27 @@ defmodule ProteanIntegration.InvokedMachineTest do
 
     test "sending events between parent/child", %{machine: parent} do
       Protean.send(parent, :grow_it)
-      assert Trigger.await(InvokedMachineTrigger, :relax)
+      assert Trigger.await(InvokedMachineTrigger, {:relax, parent})
+    end
+  end
+
+  describe "multiple machines" do
+    @describetag machines: [Parent, Parent]
+
+    @tag here: true
+    test "can use same ids for child processes", %{machines: machines} do
+      [%{machine: m1}, %{machine: m2}] = machines
+
+      Protean.send(m1, :grow_it)
+      Trigger.await(InvokedMachineTrigger, {:relax, m1})
+
+      assert Protean.matches?(m1, :relax)
+      refute Protean.matches?(m2, :relax)
+
+      Protean.call(m2, :grow_it)
+      Trigger.await(InvokedMachineTrigger, {:relax, m2})
+
+      assert Protean.matches?(m2, :relax)
     end
   end
 

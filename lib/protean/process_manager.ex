@@ -3,7 +3,7 @@ defmodule Protean.ProcessManager do
 
   use Supervisor
 
-  @compile {:inline, supervisor: 0, registry: 0}
+  @compile {:inline, supervisor: 0, registry: 0, subprocess_key: 1}
 
   @type subprocess :: {pid(), reference(), meta :: term()}
 
@@ -58,7 +58,7 @@ defmodule Protean.ProcessManager do
 
     reg_module.select(reg_name, [
       {
-        {{:subprocess, :"$1"}, self(), :"$2"},
+        {subprocess_key(:"$1"), self(), :"$2"},
         [],
         [{{:"$1", :"$2"}}]
       }
@@ -74,7 +74,7 @@ defmodule Protean.ProcessManager do
 
     reg_module.select(reg_name, [
       {
-        {{:subprocess, id}, self(), :"$1"},
+        {subprocess_key(id), self(), :"$1"},
         [],
         [:"$1"]
       }
@@ -94,7 +94,7 @@ defmodule Protean.ProcessManager do
 
     reg_module.select(reg_name, [
       {
-        {{:subprocess, :"$1"}, self(), {:"$2", ref, :"$3"}},
+        {subprocess_key(:"$1"), self(), {:"$2", ref, :"$3"}},
         [],
         [{{:"$1", :"$2", :"$3"}}]
       }
@@ -114,13 +114,13 @@ defmodule Protean.ProcessManager do
   @doc false
   def register_subprocess(id, value) do
     {reg_module, reg_name} = registry()
-    reg_module.register(reg_name, {:subprocess, id}, value)
+    reg_module.register(reg_name, subprocess_key(id), value)
   end
 
   @doc false
   def unregister_subprocess(id) do
     {reg_module, reg_name} = registry()
-    reg_module.unregister(reg_name, {:subprocess, id})
+    reg_module.unregister(reg_name, subprocess_key(id))
   end
 
   @doc false
@@ -145,6 +145,10 @@ defmodule Protean.ProcessManager do
   def count_registered do
     {reg_module, reg_name} = registry()
     reg_module.count(reg_name)
+  end
+
+  defp subprocess_key(id) do
+    {:subprocess, self(), id}
   end
 
   @impl true
