@@ -74,10 +74,6 @@ defmodule Protean.Transition do
     Guard.allows?(guard, context, event, module)
   end
 
-  defp with_domain(%Transition{target_ids: []} = t) do
-    %{t | domain: nil}
-  end
-
   defp with_domain(%Transition{target_ids: target_ids, source_id: source_id} = t) do
     if t.internal && all_descendants_of?(source_id, target_ids) do
       %{t | domain: source_id}

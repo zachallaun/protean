@@ -17,6 +17,11 @@ defmodule Protean.InterpreterTest do
       assert interpreter |> Interpreter.start() |> Interpreter.running?()
     end
 
+    test "can be started twice to no effect", %{machine: machine} do
+      interpreter = Interpreter.new(machine: machine)
+      assert interpreter |> Interpreter.start() |> Interpreter.start() |> Interpreter.running?()
+    end
+
     test "executes initial entry actions on start", %{interpreter: interpreter} do
       assert Enum.count(Context.actions(interpreter.context)) == 1
 

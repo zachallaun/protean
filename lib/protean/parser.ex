@@ -29,9 +29,6 @@ defmodule Protean.Parser do
   defp set_order(%{states: nil} = node, order),
     do: {%Node{node | order: order}, order + 1}
 
-  defp set_order(%{states: []} = node, order),
-    do: {%Node{node | order: order}, order + 1}
-
   defp set_order(%{states: children} = node, order) do
     node = %Node{node | order: order}
 

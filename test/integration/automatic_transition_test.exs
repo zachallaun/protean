@@ -1,7 +1,7 @@
 defmodule ProteanIntegration.AutomaticTransitionTest do
   use Protean.TestCase, async: true
 
-  defmodule TestMachine do
+  defmodule AutoTransitionMachine do
     use Protean
     alias Protean.Action
 
@@ -59,33 +59,54 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
     def guard("allow?", %{assigns: %{allow: true}}, _event), do: true
   end
 
-  @moduletag machine: TestMachine
+  describe "AutoTransitionMachine:" do
+    @describetag machine: AutoTransitionMachine
 
-  test "automatic transitions trigger actions in correct order", %{machine: machine} do
-    assert_protean(machine,
-      call: :goto_b,
-      matches: "d",
-      assigns: [acc: ["auto_to_d", "auto_to_c"]]
-    )
+    test "automatic transitions trigger actions in correct order", %{machine: machine} do
+      assert_protean(machine,
+        call: :goto_b,
+        matches: "d",
+        assigns: [acc: ["auto_to_d", "auto_to_c"]]
+      )
+    end
+
+    test "normal transitions take precedence even if auto condition is true", %{machine: machine} do
+      assert_protean(machine,
+        call: :goto_b,
+        call: :allow,
+        matches: "e",
+        call: :goto_a,
+        call: :goto_b,
+        matches: "a"
+      )
+    end
+
+    test "auto transition triggered when condition is met", %{machine: machine} do
+      assert_protean(machine,
+        call: :goto_b,
+        matches: "d",
+        call: :outer_allow,
+        matches: "a"
+      )
+    end
   end
 
-  test "normal transitions take precedence even if auto condition is true", %{machine: machine} do
-    assert_protean(machine,
-      call: :goto_b,
-      call: :allow,
-      matches: "e",
-      call: :goto_a,
-      call: :goto_b,
-      matches: "a"
-    )
+  defmodule ImmediateTransitionMachine do
+    use Protean
+
+    @machine [
+      initial: :init,
+      states: [
+        atomic(:init,
+          always: :next
+        ),
+        atomic(:next)
+      ]
+    ]
   end
 
-  test "auto transition triggered when condition is met", %{machine: machine} do
-    assert_protean(machine,
-      call: :goto_b,
-      matches: "d",
-      call: :outer_allow,
-      matches: "a"
-    )
+  @tag machine: ImmediateTransitionMachine
+  test "machine can immediately transition", %{machine: machine} do
+    assert Protean.matches?(machine, :next)
   end
 end

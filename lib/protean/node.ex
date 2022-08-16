@@ -153,8 +153,6 @@ defmodule Protean.Node do
   def leaf?(%Node{type: :final}), do: true
   def leaf?(_), do: false
 
-  def complex?(node), do: !leaf?(node)
-
   @doc "Given a Node id, return a list containing that id and all of its ancestors."
   @spec ancestor_ids(id) :: [id]
   def ancestor_ids([]), do: []
@@ -188,9 +186,6 @@ defmodule Protean.Node do
   end
 
   @spec common_ancestor_id(id, id) :: id
-  def common_ancestor_id([self | rest], [self | rest]),
-    do: List.wrap(rest)
-
   def common_ancestor_id(id1, id2) do
     [id1, id2]
     |> Enum.map(&Enum.reverse/1)
