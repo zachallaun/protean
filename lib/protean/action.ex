@@ -198,7 +198,7 @@ defmodule Protean.Action do
   def assign(%Context{} = context, assigns), do: assign(assigns) |> put_action(context)
 
   @doc """
-  Create an inline action that merges assigns into machine context.
+  Same as `assign/2` but used inline in machine configuration.
   """
   @doc type: :inline_action
   @spec assign(Enumerable.t()) :: t
@@ -217,25 +217,25 @@ defmodule Protean.Action do
     do: assign_in(path, value) |> put_action(context)
 
   @doc """
-  Create an inline action that will assign into machine context.
-
-  Similar to `Kernel.put_in/3`.
+  Same as `assign_in/3` but used inline in machine configuration.
   """
   @doc type: :inline_action
   @spec assign_in([term(), ...], term()) :: t
   def assign_in(path, value) when is_list(path) do
-    update(fn %{assigns: assigns} -> put_in(assigns, path, value) end)
+    update(fn assigns -> put_in(assigns, path, value) end)
   end
 
   @doc """
-  Attach an action that applies an update function to a machine's context.
+  Attach an action that calls a function with a machine's context and merges the result into
+  assigns.
   """
   @doc type: :callback_action
   def update(%Context{} = context, fun), do: update(fun) |> put_action(context)
 
   @doc """
-  Create an inline action that applies an update function to machine context.
+  Same as `update/2`, but inserted inline in machine config.
   """
+  @doc type: :inline_action
   def update(fun) when is_function(fun) do
     new({:assign, :update, fun})
   end
@@ -252,14 +252,12 @@ defmodule Protean.Action do
   end
 
   @doc """
-  Create an inline action that will update into machine context.
-
-  Similar to `Kernel.update_in/3`.
+  Same as `update_in/3` but used inline in machine configuration.
   """
   @doc type: :inline_action
   @spec update_in([term(), ...], function()) :: t
   def update_in(path, fun) when is_list(path) and is_function(fun) do
-    update(fn %{assigns: assigns} -> Kernel.update_in(assigns, path, fun) end)
+    update(fn assigns -> Kernel.update_in(assigns, path, fun) end)
   end
 
   @doc """
@@ -272,7 +270,7 @@ defmodule Protean.Action do
   end
 
   @doc """
-  Create an inline action that will send a message to a process.
+  Same as `send/3` but used inline in machine configuration.
   """
   @doc type: :inline_action
   @spec send(event :: term(), [term()]) :: t
@@ -291,7 +289,7 @@ defmodule Protean.Action do
   def choose(%Context{} = context, actions), do: choose(actions) |> put_action(context)
 
   @doc """
-  Create an inline action that will execute the first of a list of actions whose guard is truthy.
+  Same as `choose/2` but used inline in machine configuration.
   """
   @doc type: :inline_action
   def choose(actions) when is_list(actions) do
@@ -366,16 +364,8 @@ defmodule Protean.Action do
   end
 
   def exec_action({:assign, :update, fun}, interpreter) do
-    %{context: context} = interpreter
-
-    assigns =
-      case Function.info(fun, :arity) do
-        {_, 0} -> fun.()
-        {_, 1} -> fun.(context)
-        {_, 2} -> fun.(context, context.event)
-      end
-
-    exec_action({:assign, :merge, assigns}, interpreter)
+    assigns = interpreter.context.assigns
+    exec_action({:assign, :merge, fun.(assigns)}, interpreter)
   end
 
   def exec_action({:send, event, to}, interpreter) do
