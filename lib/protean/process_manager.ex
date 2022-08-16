@@ -14,10 +14,28 @@ defmodule Protean.ProcessManager do
   """
   @spec start_subprocess(term(), Supervisor.child_spec(), term()) :: :ok | {:error, term()}
   def start_subprocess(id, child_spec, meta \\ nil) do
-    with {:ok, pid} <- start_child(child_spec),
+    with :error <- fetch_subprocess(id),
+         {:ok, pid} <- start_child(child_spec),
          ref <- Process.monitor(pid),
          {:ok, _} <- register_subprocess(id, {pid, ref, meta}) do
       :ok
+    else
+      {:ok, {pid, _ref, _meta}} ->
+        {:error, {:already_started, pid}}
+
+      {:error, {:already_started, pid}} ->
+        terminate_child(pid)
+
+        require Logger
+
+        Logger.warn(
+          "possible race condition occurred; terminated process #{pid} should not have started"
+        )
+
+        {:error, {:already_started, pid}}
+
+      other ->
+        other
     end
   end
 
@@ -26,9 +44,9 @@ defmodule Protean.ProcessManager do
   """
   @spec stop_subprocess(term()) :: :ok
   def stop_subprocess(id) do
-    case subprocess(id) do
+    case fetch_subprocess(id) do
       {:ok, proc} -> stop_subprocesses([{id, proc}])
-      nil -> :ok
+      :error -> :ok
     end
   end
 
@@ -68,20 +86,13 @@ defmodule Protean.ProcessManager do
   @doc """
   Look up the subprocess of the calling process registered by `id`.
   """
-  @spec subprocess(term()) :: {:ok, subprocess} | nil
-  def subprocess(id) do
+  @spec fetch_subprocess(term()) :: {:ok, subprocess} | :error
+  def fetch_subprocess(id) do
     {reg_module, reg_name} = registry()
 
-    reg_module.select(reg_name, [
-      {
-        {subprocess_key(id), self(), :"$1"},
-        [],
-        [:"$1"]
-      }
-    ])
-    |> case do
-      [proc] -> {:ok, proc}
-      _ -> nil
+    case reg_module.lookup(reg_name, subprocess_key(id)) do
+      [{_, proc}] -> {:ok, proc}
+      [] -> :error
     end
   end
 
