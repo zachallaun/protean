@@ -3,29 +3,32 @@
 # Example: Debounce & Throttle
 
 ```elixir
-# Mix.install([
-#   {:protean, git: "https://github.com/zachallaun/protean.git", override: true}
-# ])
+Mix.install([
+  {:protean, path: "./"},
+  :phoenix_pubsub
+])
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-* Getting protean (https://github.com/zachallaun/protean.git)
-remote: Enumerating objects: 2435, done.
-remote: Counting objects: 100% (268/268), done.
-remote: Compressing objects: 100% (128/128), done.
-remote: Total 2435 (delta 161), reused 195 (delta 133), pack-reused 2167
-origin/HEAD set to main
+Resolving Hex dependencies...
+Dependency resolution completed:
+New:
+  phoenix_pubsub 2.1.1
+* Getting phoenix_pubsub (Hex package)
+==> phoenix_pubsub
+Compiling 11 files (.ex)
+Generated phoenix_pubsub app
 ==> protean
-Compiling 16 files (.ex)
+Compiling 18 files (.ex)
 Generated protean app
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-{:ok, #PID<0.378.0>}
+:ok
 ```
 
 ## Introduction
@@ -80,7 +83,7 @@ end
 <!-- livebook:{"output":true} -->
 
 ```
-{:module, Examples.Debounce, <<70, 79, 82, 49, 0, 0, 39, ...>>, {:handle_action, 3}}
+{:module, Examples.Debounce, <<70, 79, 82, 49, 0, 0, 36, ...>>, {:handle_action, 3}}
 ```
 
 Our debounce machine relies on delayed- and self-transitions.
@@ -114,14 +117,14 @@ debouncing: [
 Let's spin one up and give it a whirl.
 
 ```elixir
-{:ok, debounce} = Examples.Debounce.start_link()
-Protean.subscribe(debounce, :replies)
+{:ok, debounce, id} = Protean.start_machine(Examples.Debounce)
+Protean.subscribe(id, filter: :replies)
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-#Reference<0.2994576954.2563768322.243604>
+:ok
 ```
 
 Our debouncer is emitting debounced events as answers, so we've subscribed only to them (as opposed to every state transition). This will put messages in our mainbox.
@@ -135,7 +138,7 @@ Enum.each(1..5, fn _ ->
 end)
 
 receive do
-  {:state, _, {_, [event]}} ->
+  {_id, _context, [event]} ->
     [event: event, now: DateTime.utc_now()]
 after
   5_000 -> IO.inspect(:nothing)
@@ -145,20 +148,22 @@ end
 <!-- livebook:{"output":true} -->
 
 ```
-[event: ~U[2022-08-12 23:06:59.611777Z], now: ~U[2022-08-12 23:07:00.612862Z]]
+[event: ~U[2022-08-16 18:13:06.768085Z], now: ~U[2022-08-16 18:13:07.769273Z]]
 ```
 
 By default, our debouncer is waiting for 1,000ms since the last event before emitting it, but we can control that behavior by providing a different `:timeout` in the machine's assigns.
 
 ```elixir
-{:ok, debounce_500ms} = Examples.Debounce.start_link(assigns: %{timeout: 500})
-Protean.subscribe(debounce_500ms, :replies)
+{:ok, debounce_500ms, id_500ms} =
+  Protean.start_machine(Examples.Debounce, assigns: %{timeout: 500})
+
+Protean.subscribe(id_500ms, filter: :replies)
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-#Reference<0.2994576954.2563768322.243643>
+:ok
 ```
 
 ```elixir
@@ -169,7 +174,7 @@ Enum.each(1..5, fn _ ->
 end)
 
 receive do
-  {:state, _, {_, [event]}} ->
+  {_id, _context, [event]} ->
     [event: event, now: DateTime.utc_now()]
 after
   5_000 -> IO.inspect(:nothing)
@@ -179,20 +184,10 @@ end
 <!-- livebook:{"output":true} -->
 
 ```
-[event: ~U[2022-08-12 23:07:10.873782Z], now: ~U[2022-08-12 23:07:11.374867Z]]
+[event: ~U[2022-08-16 18:13:52.028072Z], now: ~U[2022-08-16 18:13:52.529290Z]]
 ```
 
-```elixir
-Process.info(self(), :messages)
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-{:messages, []}
-```
-
-## Throttle
+## Throttle (WIP)
 
 Throttle works a bit differently, emitting a constant stream of events, but no more frequently than specified by `:timeout`. This means we should receive an event immediately, and then the latest event every `:timeout` milliseconds.
 
