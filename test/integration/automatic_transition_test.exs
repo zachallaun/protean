@@ -25,8 +25,7 @@ defmodule ProteanIntegration.AutomaticTransitionTest do
         ),
         atomic(:c,
           always: [
-            target: "d",
-            actions: ["auto_to_d"]
+            transition(target: :d, actions: "auto_to_d")
           ]
         ),
         atomic(:d,

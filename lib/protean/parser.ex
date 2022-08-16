@@ -232,7 +232,7 @@ defmodule Protean.Parser do
     if Keyword.keyword?(transitions) do
       parse_transitions([{nil, transitions}], id)
     else
-      parse_transitions(transitions, id)
+      parse_transitions(Enum.map(transitions, &{nil, &1}), id)
     end
   end
 
