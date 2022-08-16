@@ -48,16 +48,19 @@ defmodule Protean.Interpreter do
   end
 
   @doc false
+  @spec add_internal(t, term()) :: t
   def add_internal(interpreter, event) do
     update_in(interpreter.internal_queue, &:queue.in(event, &1))
   end
 
   @doc false
+  @spec with_context(t, map()) :: t
   def with_context(interpreter, context) do
     put_in(interpreter.context, context)
   end
 
   @doc false
+  @spec put_reply(t, term()) :: t
   def put_reply(interpreter, reply) do
     update_in(interpreter.context, &Context.put_reply(&1, reply))
   end
@@ -117,15 +120,18 @@ defmodule Protean.Interpreter do
 
   def handle_event(interpreter, _event), do: {interpreter, []}
 
+  @spec pop_replies(t) :: {t, [term()]}
   defp pop_replies(%Interpreter{context: context} = interpreter) do
     {replies, context} = Context.pop_replies(context)
     {with_context(interpreter, context), replies}
   end
 
+  @spec subscribe(t, map()) :: t
   def subscribe(interpreter, %{pid: pid, ref: ref, to: to}) do
     put_in(interpreter.subscribers[ref], %{pid: pid, to: to})
   end
 
+  @spec unsubscribe(t, reference()) :: t
   def unsubscribe(interpreter, ref) do
     update_in(interpreter.subscribers, &Map.delete(&1, ref))
   end
@@ -160,7 +166,8 @@ defmodule Protean.Interpreter do
   def context(%Interpreter{context: context}), do: context
 
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
-  # internal events are processed before awaiting an external event.
+  # internal events are processed before processing any external events.
+  @spec run_interpreter(t) :: t
   defp run_interpreter(%Interpreter{running: true} = interpreter) do
     interpreter
     |> run_automatic_transitions()
