@@ -43,6 +43,9 @@ defmodule Protean.Context do
   @spec new(Enumerable.t()) :: t
   def new(value), do: %Context{value: MapSet.new(value)}
 
+  @doc """
+  See `Protean.matches?/2`.
+  """
   @spec matches?(t, Node.id() | String.t() | atom()) :: boolean()
   def matches?(context, descriptor)
 

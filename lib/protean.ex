@@ -346,15 +346,24 @@ defmodule Protean do
 
     * `id` - id of the machine to subscribe to.
 
-  Options:
+  _Note:_ Subscriptions depend on `Phoenix.Pubsub`, an optional dependency.
+
+  ## Options
 
     * `:filter` - if set to `:replies`, the caller will only be sent messages with replies.
 
-  Messages are sent in the shape:
+  ## Examples
 
-      {id, context, replies}
+      Protean.subscribe(machine_id)
+      Protean.send(machine, :some_event)
+      # receive: {^machine_id, context, []}
 
-  Subscriptions depend on `Phoenix.PubSub`, an optional dependency.
+  You can also subscribe to only receive messages if replies are non-empty:
+
+      Protean.subscribe(machine_id, filter: :replies)
+      Protean.send(machine, :reply_triggering_event)
+      # receive: {^machine_id, context, [reply, ...]}
+
   """
   @spec subscribe(id, [{:filter, :replies}]) :: :ok | {:error, term()}
   def subscribe(id, opts \\ []) when is_list(opts) do

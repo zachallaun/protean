@@ -177,6 +177,23 @@ You can see the individual docs for the functions in this module for details on 
 * `matches?/2` - Query the currently active state(s) of a machine.
 * `subscribe/2` (and `unsubscribe/2`) - Subscribes the calling process to receive a message on every state transition.
 
+## Subscriptions
+
+You can subscribe to a Protean machine to receive messages when the machine transitions.
+This functionality depends on the optional dependency `:phoenix_pubsub`.
+To use it, add the following to `deps` in your `mix.exs`:
+
+```elixir
+defp deps do
+  [
+    :phoenix_pubsub
+    # ...
+  ]
+end
+```
+
+For usage, see `subscribe/2`.
+
 <!-- MDOC !-->
 
 ## Documentation
