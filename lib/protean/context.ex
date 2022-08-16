@@ -43,12 +43,6 @@ defmodule Protean.Context do
   @spec new(Enumerable.t()) :: t
   def new(value), do: %Context{value: MapSet.new(value)}
 
-  # Partial Access behaviour (not defining `pop/2`)
-  @doc false
-  def fetch(context, key), do: Map.fetch(context, key)
-  @doc false
-  def get_and_update(context, key, fun), do: Map.get_and_update(context, key, fun)
-
   @spec matches?(t, Node.id() | String.t() | atom()) :: boolean()
   def matches?(context, descriptor)
 
