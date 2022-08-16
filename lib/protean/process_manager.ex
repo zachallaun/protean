@@ -162,6 +162,12 @@ defmodule Protean.ProcessManager do
     {:subprocess, self(), id}
   end
 
+  # Supervisor
+
+  def start_link(_) do
+    Supervisor.start_link(__MODULE__, :ok, name: __MODULE__)
+  end
+
   @impl true
   def init(_arg) do
     configure!()

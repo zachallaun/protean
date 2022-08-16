@@ -50,25 +50,6 @@ defmodule Protean.Interpreter.Server do
 
   def stop(pid, reason, timeout), do: GenServer.stop(pid, reason, timeout)
 
-  def subscribe(server, subscribe_to, monitor: monitor) do
-    ref =
-      if monitor do
-        server
-        |> resolve_server_to_pid()
-        |> Process.monitor()
-      else
-        make_ref()
-      end
-
-    GenServer.cast(server, {@prefix, :subscribe, self(), ref, subscribe_to})
-
-    ref
-  end
-
-  def unsubscribe(server, ref) do
-    GenServer.cast(server, {@prefix, :unsubscribe, ref})
-  end
-
   @doc false
   def ping(pid), do: GenServer.call(pid, {@prefix, :ping})
 
@@ -98,16 +79,6 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_cast({@prefix, :subscribe, pid, ref, to}, interpreter) do
-    interpreter = Interpreter.subscribe(interpreter, %{pid: pid, ref: ref, to: to})
-    {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
-  end
-
-  def handle_cast({@prefix, :unsubscribe, ref}, interpreter) do
-    interpreter = Interpreter.unsubscribe(interpreter, ref)
-    {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
-  end
-
   def handle_cast(event, interpreter) do
     {interpreter, _response} = run_event(interpreter, event)
     {:noreply, interpreter, {:continue, {@prefix, :check_running}}}

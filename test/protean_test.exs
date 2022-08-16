@@ -37,21 +37,22 @@ defmodule ProteanTest do
 
   describe "start_machine/2" do
     test "should return error if name already started" do
-      assert {:ok, _} = Protean.start_machine(SimpleMachine, name: Machine)
+      assert {:ok, _, _} = Protean.start_machine(SimpleMachine, name: Machine)
       assert {:error, {:already_started, _}} = Protean.start_machine(SimpleMachine, name: Machine)
 
       Protean.stop(Machine, :normal, 10)
     end
 
     test "should return pid if name supplied" do
-      assert {:ok, pid} = Protean.start_machine(SimpleMachine, name: Machine)
+      assert {:ok, pid, _} = Protean.start_machine(SimpleMachine, name: Machine)
       assert is_pid(pid)
 
       Protean.stop(Machine)
     end
 
+    @tag here: true
     test "should return :via tuple if name not supplied" do
-      assert {:ok, name} = Protean.start_machine(SimpleMachine)
+      assert {:ok, name, _} = Protean.start_machine(SimpleMachine)
       assert {:via, _, _} = name
 
       Protean.stop(name)
@@ -60,12 +61,12 @@ defmodule ProteanTest do
 
   describe "stop_machine/3" do
     test "should accept an optional reason" do
-      assert {:ok, name} = Protean.start_machine(SimpleMachine)
+      assert {:ok, name, _} = Protean.start_machine(SimpleMachine)
       assert :ok = Protean.stop(name, :normal)
     end
 
     test "should accept an optional reason and timeout" do
-      assert {:ok, name} = Protean.start_machine(SimpleMachine)
+      assert {:ok, name, _} = Protean.start_machine(SimpleMachine)
       assert :ok = Protean.stop(name, :normal, 50)
     end
   end
@@ -78,7 +79,7 @@ defmodule ProteanTest do
     end
 
     test "send/2", %{machine: machine} do
-      assert :ok = Protean.send(machine, "event")
+      :ok = Protean.send(machine, "event")
     end
 
     test "send_after/3", %{machine: machine} do
@@ -90,22 +91,22 @@ defmodule ProteanTest do
       assert %Protean.Context{} = Protean.current(machine)
     end
 
-    test "stop/2", %{machine: machine} do
-      assert :ok = Protean.stop(machine, :default)
-      assert_receive {:DOWN, _ref, :process, ^machine, {:shutdown, %Protean.Context{}}}
+    test "stop/2", %{machine: machine, ref: ref} do
+      :ok = Protean.stop(machine, :default)
+      assert_receive {:DOWN, ^ref, :process, _, {:shutdown, %Protean.Context{}}}
     end
 
-    test "subscribe/2", %{machine: machine} do
-      assert ref = Protean.subscribe(machine)
+    test "subscribe/2", %{machine: machine, id: id} do
+      :ok = Protean.subscribe(id)
       assert Protean.call(machine, "event")
-      assert_receive {:state, ^ref, {%Protean.Context{}, []}}
+      assert_receive {^id, %Protean.Context{}, []}
     end
 
-    test "unsubscribe/2", %{machine: machine} do
-      assert ref = Protean.subscribe(machine)
-      assert :ok = Protean.unsubscribe(machine, ref)
+    test "unsubscribe/2", %{machine: machine, id: id} do
+      :ok = Protean.subscribe(id)
+      :ok = Protean.unsubscribe(id)
       assert Protean.call(machine, "event")
-      refute_receive {:state, ^ref, {%Protean.Context{}, _}}
+      refute_receive {^id, _, _}
     end
 
     test "matches?/2", %{machine: machine} do

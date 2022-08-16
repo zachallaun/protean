@@ -49,6 +49,9 @@ defmodule Protean.MixProject do
 
   defp deps do
     [
+      {:phoenix_pubsub, "~> 2.0"},
+
+      # dev/test
       {:credo, "~> 1.6", only: :dev, runtime: false},
       {:ex_doc, "~> 0.28.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},

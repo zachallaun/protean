@@ -10,39 +10,45 @@ defmodule Protean.Interpreter do
   alias Protean.MachineConfig
   alias Protean.Machinery
   alias Protean.ProcessManager
+  alias Protean.PubSub
   alias Protean.Transition
 
   defstruct [
+    :id,
     :config,
     :context,
     :parent,
     running: false,
-    internal_queue: :queue.new(),
-    subscribers: %{}
+    internal_queue: :queue.new()
   ]
 
   @type t :: %Interpreter{
+          id: Protean.id(),
           config: MachineConfig.t(),
           context: Context.t(),
           parent: pid(),
           running: boolean(),
-          internal_queue: :queue.queue(),
-          subscribers: %{reference() => %{pid: pid(), to: :all | :replies}}
+          internal_queue: :queue.queue()
         }
 
   @doc """
   Create a new `Interpreter`. The returned interpreter will still need to be started, which could
   result in additional side-effects. See `start/1`.
   """
-  @spec new([Protean.machine_option()]) :: Interpreter.t()
+  @spec new(keyword()) :: Interpreter.t()
   def new(opts) do
     config = Keyword.fetch!(opts, :machine)
-    context = MachineConfig.initial_context(config)
     initial_assigns = Keyword.get(opts, :assigns, %{})
 
+    context =
+      config
+      |> MachineConfig.initial_context()
+      |> Context.assign(initial_assigns)
+
     %Interpreter{
+      id: Keyword.get(opts, :id),
       config: config,
-      context: Context.assign(context, initial_assigns),
+      context: context,
       parent: Keyword.get(opts, :parent)
     }
   end
@@ -126,16 +132,6 @@ defmodule Protean.Interpreter do
     {with_context(interpreter, context), replies}
   end
 
-  @spec subscribe(t, map()) :: t
-  def subscribe(interpreter, %{pid: pid, ref: ref, to: to}) do
-    put_in(interpreter.subscribers[ref], %{pid: pid, to: to})
-  end
-
-  @spec unsubscribe(t, reference()) :: t
-  def unsubscribe(interpreter, ref) do
-    update_in(interpreter.subscribers, &Map.delete(&1, ref))
-  end
-
   @doc false
   @spec notify_process_down(t, reason :: term(), keyword()) :: t
   def notify_process_down(%Interpreter{} = interpreter, reason, ref: ref) do
@@ -206,27 +202,25 @@ defmodule Protean.Interpreter do
     transitions
     |> microstep(if external?, do: interpreter_with_event, else: interpreter)
     |> run_interpreter()
-    |> notify_subscribers()
+    |> broadcast_transition()
   end
 
-  defp notify_subscribers(interpreter) do
-    context = context(interpreter)
-    replies = Context.get_replies(context)
-
-    interpreter.subscribers
-    |> Enum.filter(fn {_ref, subscriber} ->
-      should_notify?(subscriber, !Enum.empty?(replies))
-    end)
-    |> Enum.each(fn {ref, %{pid: pid}} ->
-      send(pid, {:state, ref, {context, replies}})
-    end)
-
+  defp broadcast_transition(%Interpreter{id: nil} = interpreter) do
     interpreter
   end
 
-  defp should_notify?(subscriber, has_replies?)
-  defp should_notify?(%{to: :replies}, false), do: false
-  defp should_notify?(_, _), do: true
+  defp broadcast_transition(%Interpreter{id: id, context: context} = interpreter) do
+    replies = Context.get_replies(context)
+    message = {id, context, replies}
+
+    if Enum.empty?(replies) do
+      PubSub.broadcast(id, message, nil)
+    else
+      PubSub.broadcast(id, message, :replies)
+    end
+
+    interpreter
+  end
 
   defp set_event(interpreter, event) do
     put_in(interpreter.context.event, event)

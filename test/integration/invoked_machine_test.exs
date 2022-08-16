@@ -70,9 +70,9 @@ defmodule ProteanIntegration.InvokedMachineTest do
   describe "the parent/child relationship" do
     @describetag machine: Parent
 
-    test "sending events between parent/child", %{machine: parent} do
+    test "sending events between parent/child", %{machine: parent, pid: pid} do
       Protean.send(parent, :grow_it)
-      assert Trigger.await(InvokedMachineTrigger, {:relax, parent})
+      assert Trigger.await(InvokedMachineTrigger, {:relax, pid})
     end
   end
 
@@ -81,16 +81,16 @@ defmodule ProteanIntegration.InvokedMachineTest do
 
     @tag here: true
     test "can use same ids for child processes", %{machines: machines} do
-      [%{machine: m1}, %{machine: m2}] = machines
+      [%{machine: m1, pid: p1}, %{machine: m2, pid: p2}] = machines
 
       Protean.send(m1, :grow_it)
-      Trigger.await(InvokedMachineTrigger, {:relax, m1})
+      Trigger.await(InvokedMachineTrigger, {:relax, p1})
 
       assert Protean.matches?(m1, :relax)
       refute Protean.matches?(m2, :relax)
 
       Protean.call(m2, :grow_it)
-      Trigger.await(InvokedMachineTrigger, {:relax, m2})
+      Trigger.await(InvokedMachineTrigger, {:relax, p2})
 
       assert Protean.matches?(m2, :relax)
     end

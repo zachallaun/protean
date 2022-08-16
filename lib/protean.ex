@@ -11,10 +11,14 @@ defmodule Protean do
   alias Protean.Interpreter.Server
   alias Protean.MachineConfig
   alias Protean.ProcessManager
+  alias Protean.PubSub
   alias Protean.Utils
 
   @typedoc "A running Protean machine process."
   @type server :: GenServer.server()
+
+  @typedoc "Unique identifier for a Protean machine process."
+  @type id :: binary()
 
   @typedoc "Any message sent to a Protean machine."
   @type event :: term()
@@ -23,7 +27,7 @@ defmodule Protean do
   @type start_option :: machine_option | GenServer.option()
 
   @typedoc "Return values of `start_machine/2`"
-  @type on_start :: {:ok, server} | :ignore | {:error, {:already_started, server} | term()}
+  @type on_start :: {:ok, server, id} | :ignore | {:error, {:already_started, server} | term()}
 
   @typedoc "Option values for Protean machines."
   @type machine_option ::
@@ -32,13 +36,6 @@ defmodule Protean do
           | {:machine, MachineConfig.t()}
           | {:module, module()}
           | {:parent, server | pid()}
-
-  @typedoc "Option values for `subscribe/2`."
-  @type subscribe_option ::
-          {:monitor, boolean()}
-          | {:to, subscribe_to_option}
-
-  @type subscribe_to_option :: :all | :answer
 
   @typedoc "Option values for `use Protean`."
   @type using_option :: {:callback_module, module()}
@@ -262,23 +259,24 @@ defmodule Protean do
   """
   @spec start_machine(module(), [start_option]) :: on_start
   def start_machine(module, opts \\ []) do
+    id = Utils.uuid4()
     supplied_name? = Keyword.has_key?(opts, :name)
 
-    {name, opts} =
-      Keyword.pop_lazy(opts, :name, fn ->
-        ProcessManager.via_registry({module, Utils.uuid4()})
-      end)
+    opts =
+      opts
+      |> Keyword.put(:id, id)
+      |> Keyword.put_new(:name, ProcessManager.via_registry({module, id}))
 
     module
-    |> child_spec(Keyword.put(opts, :name, name))
-    |> Supervisor.child_spec(id: name, restart: :transient)
+    |> child_spec(opts)
+    |> Supervisor.child_spec(id: opts[:name], restart: :transient)
     |> ProcessManager.start_child()
     |> case do
       {:ok, pid} ->
         if supplied_name? do
-          {:ok, pid}
+          {:ok, pid, id}
         else
-          {:ok, name}
+          {:ok, opts[:name], id}
         end
 
       other ->
@@ -344,44 +342,33 @@ defmodule Protean do
   def stop(protean, reason, timeout), do: Server.stop(protean, reason, timeout)
 
   @doc """
-  Subscribes the caller to a running machine, returning a reference.
+  Subscribes the caller to receive messages when a machine transitions.
 
-  Subscribers will receive messages whenever the machine transitions, as well as a `:DOWN`
-  message when the machine exits. (This can be controlled with the `:monitor` option.)
+    * `id` - id of the machine to subscribe to.
 
-  Messages are sent in the shape of:
+  Options:
 
-      {:state, ref, {context, replies}}
+    * `:filter` - if set to `:replies`, the caller will only be sent messages with replies.
 
-  where:
+  Messages are sent in the shape:
 
-    * `ref` is a monitor reference returned by the subscription;
-    * `context` is the machine context resulting from the transition;
-    * `replies` is a (possibly empty) list of replies resulting from actions on transition.
-
-  If the process is already dead when subscribing, a `:DOWN` message is delivered immediately.
-
-  ## Arguments
-
-    * `server` - machine to subscribe the caller to;
-    * `subscribe_to` - one of `:all` (default) or `:replies`, in which case messages will only be
-      sent to the caller if the `replies` list is non-empty;
-    * `options`:
-      * `:monitor` - whether to receive a `:DOWN` message on receive exit (defaults to `true`).
+      {id, context, replies}
 
   """
-  @spec subscribe(server, subscribe_to :: term(), [subscribe_option]) :: reference()
-  def subscribe(protean, subscribe_to \\ :all, opts \\ []) when is_atom(subscribe_to) do
-    opts = Keyword.put_new(opts, :monitor, true)
-    Server.subscribe(protean, subscribe_to, opts)
+  @spec subscribe(id, [{:filter, :replies}]) :: :ok | {:error, term()}
+  def subscribe(id, opts \\ []) when is_list(opts) do
+    case Keyword.fetch(opts, :filter) do
+      :error -> PubSub.subscribe(id)
+      {:ok, :replies} -> PubSub.subscribe(id, :replies)
+      {:ok, other} -> raise "unknown filter #{inspect(other)}"
+    end
   end
 
-  @doc "Unsubscribes the caller from the machine."
-  @spec unsubscribe(server, reference()) :: :ok
-  def unsubscribe(protean, ref), do: Server.unsubscribe(protean, ref)
-
-  @doc false
-  defdelegate ping(pid), to: Server
+  @doc """
+  Unsubscribes the caller from machine transition messages.
+  """
+  @spec unsubscribe(id) :: :ok
+  def unsubscribe(id), do: PubSub.unsubscribe(id)
 
   @doc """
   Returns true if the machine is currently in the given state.
@@ -403,6 +390,9 @@ defmodule Protean do
   def matches?(protean, descriptor) do
     Server.matches?(protean, descriptor)
   end
+
+  @doc false
+  defdelegate ping(pid), to: Server
 
   # Internal helpers
 

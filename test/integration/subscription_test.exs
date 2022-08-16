@@ -29,41 +29,43 @@ defmodule ProteanIntegration.SubscriptionTest do
   describe "subscribed processes" do
     @describetag machine: TestMachine
 
-    test "receive updates on transition", %{machine: machine} do
-      ref = Protean.subscribe(machine)
+    test "should receive updates on transition", %{machine: machine, id: id} do
+      :ok = Protean.subscribe(id)
 
       Protean.call(machine, "b")
-      assert_receive {:state, ^ref, {%Protean.Context{}, _}}
+      assert_receive {^id, %Protean.Context{}, _}
 
       Protean.call(machine, "b")
-      assert_receive {:state, ^ref, {%Protean.Context{}, _}}
+      assert_receive {^id, %Protean.Context{}, _}
 
-      Protean.unsubscribe(machine, ref)
+      Protean.unsubscribe(id)
 
       Protean.call(machine, "a")
-      refute_receive {:state, ^ref, _}
+      refute_receive {^id, %Protean.Context{}, _}
     end
 
-    test "can subscribe only to transitions with replies", %{machine: machine} do
-      ref = Protean.subscribe(machine, :replies)
+    test "can subscribe only to transitions with replies", %{machine: machine, id: id} do
+      :ok = Protean.subscribe(id, filter: :replies)
 
       Protean.call(machine, "b")
-      assert_receive {:state, ^ref, {_, [:answer]}}
+      assert_receive {^id, _, [:answer]}
 
       Protean.call(machine, "a")
-      refute_receive {:state, ^ref, _}
+      refute_receive {^id, _, _}
     end
 
-    test "receive :DOWN when machine terminates", %{machine: machine} do
-      ref = Protean.subscribe(machine)
-      :ok = Protean.stop(machine)
-      assert_receive {:DOWN, ^ref, :process, _, _}
-    end
+    test "should receive two updates when subscribed twice", %{machine: machine, id: id} do
+      :ok = Protean.subscribe(id)
+      :ok = Protean.subscribe(id)
 
-    test "receive :DOWN immediately when subscribing to a dead process", %{machine: machine} do
-      ref = Protean.subscribe(machine)
-      :ok = Protean.stop(machine)
-      assert_receive {:DOWN, ^ref, :process, _, _}
+      Protean.call(machine, "b")
+      assert_receive {^id, _, _}
+      assert_receive {^id, _, _}
+
+      :ok = Protean.unsubscribe(id)
+
+      Protean.call(machine, "b")
+      refute_receive {^id, _, _}
     end
   end
 end

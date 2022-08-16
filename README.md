@@ -85,7 +85,7 @@ end
 It can be started under a supervisor, but we'll start it directly using Protean's built-in `DynamicSupervisor`.
 
 ```elixir
-{:ok, pid} = Protean.start_machine(Counter)
+{:ok, pid, _id} = Protean.start_machine(Counter)
 
 Protean.current(pid).assigns
 # %{count: 0, min: nil, max: nil}
@@ -147,7 +147,7 @@ Protean starts one (as well as a `Registry`) by default, in order to manage subp
 Machines can be started under this supervisor using `Protean.start_machine/2`.
 
 ```elixir
-{:ok, machine} = Protean.start_machine(MyMachine)
+{:ok, machine, id} = Protean.start_machine(MyMachine)
 ```
 
 Similar to `GenServer`, calling `use Protean` will also define a `child_spec/1` that allows you to start a machine in a standard supervision tree, if you wish:

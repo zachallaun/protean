@@ -81,8 +81,7 @@ defmodule ProteanIntegration.FinalStatesTest do
         call: :all_done
       )
 
-      assert not Process.alive?(machine)
-      assert_received {:DOWN, _ref, :process, _pid, {:shutdown, %Protean.Context{}}}
+      assert_receive {:DOWN, _ref, :process, _pid, {:shutdown, %Protean.Context{}}}
     end
   end
 end
