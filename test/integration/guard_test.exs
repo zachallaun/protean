@@ -1,4 +1,4 @@
-defmodule ProteanIntegration.HigherOrderGuardTest do
+defmodule ProteanIntegration.GuardTest do
   use Protean.TestCase, async: true
 
   defmodule HigherOrderGuardMachine1 do
@@ -39,12 +39,12 @@ defmodule ProteanIntegration.HigherOrderGuardTest do
         {:goto_a, target: ".a", guard: [:not, in: "d"]},
         {:goto_b, target: ".b", guard: [in: "a"]},
         {:goto_c, target: ".c", guard: [:or, in: "d", in: "b"]},
-        match({:goto_d, _}, target: ".d", guard: ["asked_nicely", in: "c"])
+        match({:goto_d, _}, target: ".d", guard: [:asked_nicely, in: "c"])
       ]
     ]
 
     @impl true
-    def guard("asked_nicely", _context, {_, :please}), do: true
+    def guard(:asked_nicely, _context, {_, :please}), do: true
   end
 
   @tag machine: HigherOrderGuardMachine1
@@ -77,6 +77,32 @@ defmodule ProteanIntegration.HigherOrderGuardTest do
       matches: "c",
       call: :goto_a,
       matches: "a"
+    )
+  end
+
+  defmodule FunctionGuards do
+    use Protean
+
+    @machine [
+      initial: :a,
+      states: [
+        atomic(:a,
+          on: [
+            match({:goto_b, _}, guard: fn _, {_, val} -> val == :please end, target: :b)
+          ]
+        ),
+        atomic(:b)
+      ]
+    ]
+  end
+
+  @tag machine: FunctionGuards
+  test "inline functions should be allowed as guards", %{machine: machine} do
+    assert_protean(machine,
+      call: {:goto_b, :hmm},
+      matches: :a,
+      call: {:goto_b, :please},
+      matches: :b
     )
   end
 end
