@@ -2,7 +2,7 @@ defmodule Protean.MixProject do
   use Mix.Project
 
   @name "Protean"
-  @version "0.1.0-alpha.2"
+  @version "0.1.0-alpha.3"
   @source_url "https://github.com/zachallaun/protean"
 
   def project do
