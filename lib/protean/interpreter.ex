@@ -23,7 +23,7 @@ defmodule Protean.Interpreter do
   ]
 
   @type t :: %Interpreter{
-          id: Protean.id(),
+          id: Protean.id() | nil,
           config: MachineConfig.t(),
           context: Context.t(),
           parent: pid(),
@@ -217,6 +217,14 @@ defmodule Protean.Interpreter do
       PubSub.broadcast(id, message, nil)
     else
       PubSub.broadcast(id, message, :replies)
+    end
+    |> case do
+      :ok ->
+        :ok
+
+      {:error, error} ->
+        require Logger
+        Logger.warn("PubSub broadcast error: #{inspect(error)}")
     end
 
     interpreter

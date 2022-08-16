@@ -354,6 +354,7 @@ defmodule Protean do
 
       {id, context, replies}
 
+  Subscriptions depend on `Phoenix.PubSub`, an optional dependency.
   """
   @spec subscribe(id, [{:filter, :replies}]) :: :ok | {:error, term()}
   def subscribe(id, opts \\ []) when is_list(opts) do

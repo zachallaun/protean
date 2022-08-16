@@ -26,14 +26,13 @@ defmodule Protean.PubSub do
       Phoenix.PubSub.Supervisor.start_link(name: @pubsub)
     end
 
-    @spec subscribe(binary()) :: :ok | {:error, term()}
-    def subscribe(topic) do
-      Phoenix.PubSub.subscribe(@pubsub, topic)
-    end
-
-    @spec subscribe(binary(), term()) :: :ok | {:error, term()}
+    @spec subscribe(binary(), term()) :: :ok | {:error, {:already_registered, pid()}}
     def subscribe(topic, filter) do
       Phoenix.PubSub.subscribe(@pubsub, topic, metadata: {:filter, filter})
+    end
+
+    def subscribe(topic) do
+      Phoenix.PubSub.subscribe(@pubsub, topic)
     end
 
     @spec unsubscribe(binary()) :: :ok
