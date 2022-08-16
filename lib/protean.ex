@@ -15,7 +15,7 @@ defmodule Protean do
   alias Protean.Utils
 
   @typedoc "A running Protean machine process."
-  @type server :: GenServer.server()
+  @type machine :: GenServer.server()
 
   @typedoc "Unique identifier for a Protean machine process."
   @type id :: binary()
@@ -27,7 +27,7 @@ defmodule Protean do
   @type start_option :: machine_option | GenServer.option()
 
   @typedoc "Return values of `start_machine/2`"
-  @type on_start :: {:ok, server, id} | :ignore | {:error, {:already_started, server} | term()}
+  @type on_start :: {:ok, machine, id} | :ignore | {:error, {:already_started, machine} | term()}
 
   @typedoc "Option values for Protean machines."
   @type machine_option ::
@@ -35,7 +35,7 @@ defmodule Protean do
           | {:supervisor, Supervisor.name()}
           | {:machine, MachineConfig.t()}
           | {:module, module()}
-          | {:parent, server | pid()}
+          | {:parent, machine | pid()}
 
   @typedoc "Option values for `use Protean`."
   @type using_option :: {:callback_module, module()}
@@ -302,25 +302,25 @@ defmodule Protean do
   `replies` is a (possibly empty) list of replies returned by action callbacks resulting from the
   event.
   """
-  @spec call(server, event, timeout()) :: {Context.t(), replies :: [term()]}
-  def call(protean, event, timeout \\ 5000), do: Server.call(protean, event, timeout)
+  @spec call(machine, event, timeout()) :: {Context.t(), replies :: [term()]}
+  def call(machine, event, timeout \\ 5000), do: Server.call(machine, event, timeout)
 
   @doc """
   Sends an asynchronous event to the machine.
 
   Shares semantics with `GenServer.cast/2`.
   """
-  @spec send(server, event) :: :ok
-  def send(protean, event), do: Server.send(protean, event)
+  @spec send(machine, event) :: :ok
+  def send(machine, event), do: Server.send(machine, event)
 
   @doc """
   Sends an event to the machine after `time` in milliseconds has passed.
 
   Returns a timer reference that can be canceled with `Process.cancel_timer/1`.
   """
-  @spec send_after(server, event, non_neg_integer()) :: reference()
-  def send_after(protean, event, time) when is_integer(time) and time >= 0 do
-    Server.send_after(protean, event, time)
+  @spec send_after(machine, event, non_neg_integer()) :: reference()
+  def send_after(machine, event, time) when is_integer(time) and time >= 0 do
+    Server.send_after(machine, event, time)
   end
 
   @doc """
@@ -328,18 +328,18 @@ defmodule Protean do
 
   TODO: Allow optional timeout as with `call/3`.
   """
-  @spec current(server) :: Context.t()
-  def current(protean), do: Server.current(protean)
+  @spec current(machine) :: Context.t()
+  def current(machine), do: Server.current(machine)
 
   @doc "TODO"
-  @spec stop(server, reason :: term(), timeout()) :: :ok
-  def stop(protean, reason \\ :default, timeout \\ :infinity)
+  @spec stop(machine, reason :: term(), timeout()) :: :ok
+  def stop(machine, reason \\ :default, timeout \\ :infinity)
 
-  def stop(protean, :default, timeout) do
-    Server.stop(protean, {:shutdown, Protean.current(protean)}, timeout)
+  def stop(machine, :default, timeout) do
+    Server.stop(machine, {:shutdown, Protean.current(machine)}, timeout)
   end
 
-  def stop(protean, reason, timeout), do: Server.stop(protean, reason, timeout)
+  def stop(machine, reason, timeout), do: Server.stop(machine, reason, timeout)
 
   @doc """
   Subscribes the caller to receive messages when a machine transitions.
@@ -390,15 +390,17 @@ defmodule Protean do
 
   """
   @spec matches?(Context.t(), descriptor :: term()) :: boolean()
-  @spec matches?(server, descriptor :: term()) :: boolean()
+  @spec matches?(machine, descriptor :: term()) :: boolean()
   def matches?(item, descriptor)
 
   def matches?(%Context{} = context, descriptor) do
     Context.matches?(context, descriptor)
   end
 
-  def matches?(protean, descriptor) do
-    Server.matches?(protean, descriptor)
+  def matches?(machine, descriptor) do
+    machine
+    |> current()
+    |> matches?(descriptor)
   end
 
   @doc false

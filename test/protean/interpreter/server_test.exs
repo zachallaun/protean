@@ -22,7 +22,7 @@ defmodule Protean.Interpreter.ServerTest do
 
   test "server can be started and stopped" do
     {:ok, pid} = start_supervised(TestMachine)
-    assert Server.matches?(pid, :a)
+    assert Protean.matches?(pid, :a)
     assert :ok = Server.stop(pid, :normal, :infinity)
     refute Process.alive?(pid)
   end
@@ -41,14 +41,14 @@ defmodule Protean.Interpreter.ServerTest do
   @tag machine: TestMachine
   test "send/2", %{machine: server} do
     assert :ok = Server.send(server, :goto_b)
-    assert Server.matches?(server, :b)
+    assert Protean.matches?(server, :b)
   end
 
   @tag machine: TestMachine
   test "send_after/3", %{machine: server} do
     Server.send_after(server, :goto_b, 10)
     :timer.sleep(20)
-    assert Server.matches?(server, :b)
+    assert Protean.matches?(server, :b)
   end
 
   @tag machine: TestMachine
@@ -56,6 +56,6 @@ defmodule Protean.Interpreter.ServerTest do
     timer = Server.send_after(server, :goto_b, 10)
     Process.cancel_timer(timer)
     :timer.sleep(20)
-    assert Server.matches?(server, :a)
+    assert Protean.matches?(server, :a)
   end
 end
