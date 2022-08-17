@@ -23,7 +23,8 @@ defmodule Protean.Transition do
     :guard,
     :domain,
     internal: false,
-    actions: []
+    actions: [],
+    _meta: %{}
   ]
 
   @type t :: %Transition{
@@ -33,12 +34,13 @@ defmodule Protean.Transition do
           guard: Guard.t(),
           internal: boolean(),
           actions: [Action.t()],
-          domain: Node.id()
+          domain: Node.id(),
+          _meta: map()
         }
 
   def new(opts \\ []) do
     opts
-    |> Keyword.take([:source_id, :target_ids, :match?, :guard, :internal, :actions])
+    |> Keyword.take([:source_id, :target_ids, :match?, :guard, :internal, :actions, :_meta])
     |> then(&struct(Transition, &1))
     |> with_domain()
   end

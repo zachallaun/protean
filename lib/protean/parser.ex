@@ -249,7 +249,8 @@ defmodule Protean.Parser do
       target_ids: target_ids,
       match?: matcher,
       actions: parse_actions(transition[:actions]),
-      guard: parse_guard(transition[:guard])
+      guard: parse_guard(transition[:guard]),
+      _meta: transition[:_meta]
     ]
     |> add_internal(transition[:internal])
     |> Transition.new()

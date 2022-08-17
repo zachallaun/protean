@@ -310,9 +310,11 @@ defmodule Protean.Builder do
 
   """
   defmacro match(pattern, opts) do
+    opts = if is_list(opts), do: opts, else: [target: opts]
+
     {
       quote(do: fn expr -> match?(unquote(pattern), expr) end),
-      opts
+      Keyword.put(opts, :_meta, Macro.escape(%{expr: pattern}))
     }
   end
 
