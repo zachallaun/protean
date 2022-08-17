@@ -1,4 +1,5 @@
-[![Docs](https://img.shields.io/badge/hexdocs.pm-Docs-informational)](https://hexdocs.pm/protean/) [![CI](https://github.com/zachallaun/protean/actions/workflows/ci.yml/badge.svg)](https://github.com/zachallaun/protean/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/hex.pm-docs-8e7ce6.svg)](https://hexdocs.pm/protean)
+[![CI](https://github.com/zachallaun/protean/actions/workflows/ci.yml/badge.svg)](https://github.com/zachallaun/protean/actions/workflows/ci.yml)
 
 <!-- MDOC !-->
 
