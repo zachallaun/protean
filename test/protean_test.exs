@@ -31,8 +31,16 @@ defmodule ProteanTest do
       initial: :init,
       states: [
         atomic(:init)
+      ],
+      on: [
+        match(:reply, actions: :reply)
       ]
     ]
+
+    @impl true
+    def handle_action(:reply, state, _) do
+      {:reply, :ok, state}
+    end
   end
 
   describe "start_machine/2" do
@@ -120,22 +128,42 @@ defmodule ProteanTest do
       assert_receive {:DOWN, ^ref, :process, _, {:shutdown, %Protean.Context{}}}
     end
 
-    test "subscribe/2", %{machine: machine, id: id} do
+    test "matches?/2", %{machine: machine} do
+      assert Protean.matches?(machine, "init")
+      assert Protean.current(machine) |> Protean.matches?("init")
+    end
+  end
+
+  describe "subscribe/2" do
+    @describetag machine: SimpleMachine
+
+    test "should subscribe caller to transitions", %{machine: machine, id: id} do
       :ok = Protean.subscribe(id)
-      assert Protean.call(machine, "event")
+      Protean.call(machine, "event")
       assert_receive {^id, %Protean.Context{}, []}
     end
 
-    test "unsubscribe/2", %{machine: machine, id: id} do
+    test "can subscribe caller to only replies", %{machine: machine, id: id} do
+      :ok = Protean.subscribe(id, filter: :replies)
+      Protean.call(machine, "event")
+      refute_receive {^id, _, _}
+      Protean.call(machine, :reply)
+      assert_receive {^id, _, [:ok]}
+    end
+
+    test "should raise if given a bad filter", %{id: id} do
+      assert_raise ArgumentError, fn -> Protean.subscribe(id, filter: :bad) end
+    end
+  end
+
+  describe "unsubscribe/1" do
+    @describetag machine: SimpleMachine
+
+    test "should unsubscribe calling process from transition", %{machine: machine, id: id} do
       :ok = Protean.subscribe(id)
       :ok = Protean.unsubscribe(id)
       assert Protean.call(machine, "event")
       refute_receive {^id, _, _}
-    end
-
-    test "matches?/2", %{machine: machine} do
-      assert Protean.matches?(machine, "init")
-      assert Protean.current(machine) |> Protean.matches?("init")
     end
   end
 

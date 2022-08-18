@@ -372,7 +372,7 @@ defmodule Protean do
     case Keyword.fetch(opts, :filter) do
       :error -> PubSub.subscribe(id)
       {:ok, :replies} -> PubSub.subscribe(id, :replies)
-      {:ok, other} -> raise "unknown filter #{inspect(other)}"
+      {:ok, other} -> raise ArgumentError, "unknown filter #{inspect(other)}"
     end
   end
 
