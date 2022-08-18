@@ -35,8 +35,8 @@ defmodule ProteanIntegration.RepliesTest do
       assert {_, [:one, :two]} = Protean.call(machine, :two_replies)
     end
 
-    test "subscriptions can be to transitions with replies only", %{machine: machine, id: id} do
-      :ok = Protean.subscribe(id, filter: :replies)
+    test "subscriptions can be to transitions with replies only", %{machine: machine} do
+      {:ok, id} = Protean.subscribe(machine, filter: :replies)
 
       Protean.call(machine, :one_reply)
       assert_receive {^id, _, [:one]}

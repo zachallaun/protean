@@ -27,7 +27,7 @@ defmodule Protean do
   @type start_option :: machine_option | GenServer.option()
 
   @typedoc "Return values of `start_machine/2`"
-  @type on_start :: {:ok, machine, id} | {:error, {:already_started, machine} | term()}
+  @type on_start :: {:ok, machine} | {:error, {:already_started, machine} | term()}
 
   @typedoc "Option values for Protean machines."
   @type machine_option ::
@@ -264,16 +264,12 @@ defmodule Protean do
     opts =
       opts
       |> Keyword.put(:id, id)
-      |> Keyword.put_new(:name, ProcessManager.via_registry(id))
+      |> Keyword.put_new(:name, ProcessManager.via_registry({module, id}))
 
     module
     |> child_spec(opts)
     |> Supervisor.child_spec(id: opts[:name], restart: :transient)
     |> ProcessManager.start_child()
-    |> case do
-      {:ok, pid} -> {:ok, pid, id}
-      other -> other
-    end
   end
 
   @doc false
@@ -286,16 +282,6 @@ defmodule Protean do
 
     %{id: module, start: {Server, :start_link, [Keyword.merge(defaults, opts)]}}
   end
-
-  @doc """
-  Returns `{:ok, machine}` of a Protean machine started with `start_machine/2`, `:error`
-  otherwise.
-
-  Note there is no guarantee the returned machine is alive, as it could terminate immediately
-  after being looked up.
-  """
-  @spec resolve(id) :: {:ok, machine} | :error
-  def resolve(id) when is_binary(id), do: ProcessManager.whereis(id)
 
   @doc """
   Makes a synchronous call to the machine, awaiting any transitions that result.
@@ -346,7 +332,8 @@ defmodule Protean do
   @doc """
   Subscribes the caller to receive messages when a machine transitions.
 
-    * `id` - id of the machine to subscribe to.
+  Returns `{:ok, id}` where `id` is a unique identifier for the machine process, or
+  `{:error, error}` if subscription is unsuccessful.
 
   _Note:_ Subscriptions depend on `Phoenix.Pubsub`, an optional dependency.
 
@@ -356,31 +343,46 @@ defmodule Protean do
 
   ## Examples
 
-      Protean.subscribe(machine_id)
+      {:ok, id} = Protean.subscribe(machine)
       Protean.send(machine, :some_event)
-      # receive: {^machine_id, context, []}
+      # receive: {^id, context, []}
 
   You can also subscribe to only receive messages if replies are non-empty:
 
-      Protean.subscribe(machine_id, filter: :replies)
+      {:ok, id} = Protean.subscribe(machine, filter: :replies)
       Protean.send(machine, :reply_triggering_event)
-      # receive: {^machine_id, context, [reply, ...]}
+      # receive: {^id, context, [reply, ...]}
 
   """
-  @spec subscribe(id, [{:filter, :replies}]) :: :ok | {:error, term()}
-  def subscribe(id, opts \\ []) when is_list(opts) do
-    case Keyword.fetch(opts, :filter) do
-      :error -> PubSub.subscribe(id)
-      {:ok, :replies} -> PubSub.subscribe(id, :replies)
-      {:ok, other} -> raise ArgumentError, "unknown filter #{inspect(other)}"
+  @spec subscribe(machine, [{:filter, :replies}]) :: {:ok, id} | {:error, term()}
+  def subscribe(machine, opts \\ []) when is_list(opts) do
+    filter =
+      case Keyword.fetch(opts, :filter) do
+        :error -> nil
+        {:ok, :replies} -> :replies
+        {:ok, other} -> raise ArgumentError, "unknown filter #{inspect(other)}"
+      end
+
+    with {:ok, id} <- Protean.fetch_id(machine),
+         :ok <- PubSub.subscribe(id, filter) do
+      {:ok, id}
     end
   end
+
+  @doc false
+  @spec fetch_id(machine) :: {:ok, id} | {:error, term()}
+  def fetch_id(machine), do: Server.fetch_id(machine)
 
   @doc """
   Unsubscribes the caller from machine transition messages.
   """
-  @spec unsubscribe(id) :: :ok
-  def unsubscribe(id), do: PubSub.unsubscribe(id)
+  @spec unsubscribe(machine) :: :ok
+  def unsubscribe(machine) do
+    case fetch_id(machine) do
+      {:ok, id} -> PubSub.unsubscribe(id)
+      _ -> :ok
+    end
+  end
 
   @doc """
   Returns true if the machine is currently in the given state.

@@ -29,8 +29,8 @@ defmodule ProteanIntegration.SubscriptionTest do
   describe "subscribed processes" do
     @describetag machine: TestMachine
 
-    test "should receive updates on transition", %{machine: machine, id: id} do
-      :ok = Protean.subscribe(id)
+    test "should receive updates on transition", %{machine: machine} do
+      {:ok, id} = Protean.subscribe(machine)
 
       Protean.call(machine, "b")
       assert_receive {^id, %Protean.Context{}, _}
@@ -38,14 +38,14 @@ defmodule ProteanIntegration.SubscriptionTest do
       Protean.call(machine, "b")
       assert_receive {^id, %Protean.Context{}, _}
 
-      Protean.unsubscribe(id)
+      Protean.unsubscribe(machine)
 
       Protean.call(machine, "a")
       refute_receive {^id, %Protean.Context{}, _}
     end
 
-    test "can subscribe only to transitions with replies", %{machine: machine, id: id} do
-      :ok = Protean.subscribe(id, filter: :replies)
+    test "can subscribe only to transitions with replies", %{machine: machine} do
+      {:ok, id} = Protean.subscribe(machine, filter: :replies)
 
       Protean.call(machine, "b")
       assert_receive {^id, _, [:answer]}
@@ -54,15 +54,15 @@ defmodule ProteanIntegration.SubscriptionTest do
       refute_receive {^id, _, _}
     end
 
-    test "should receive two updates when subscribed twice", %{machine: machine, id: id} do
-      :ok = Protean.subscribe(id)
-      :ok = Protean.subscribe(id)
+    test "should receive two updates when subscribed twice", %{machine: machine} do
+      {:ok, id} = Protean.subscribe(machine)
+      {:ok, ^id} = Protean.subscribe(machine)
 
       Protean.call(machine, "b")
       assert_receive {^id, _, _}
       assert_receive {^id, _, _}
 
-      :ok = Protean.unsubscribe(id)
+      :ok = Protean.unsubscribe(machine)
 
       Protean.call(machine, "b")
       refute_receive {^id, _, _}

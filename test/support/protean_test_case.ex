@@ -157,11 +157,11 @@ defmodule Protean.TestCase do
   end
 
   defp setup_machine({module, opts}) do
-    {:ok, pid, id} = Protean.start_machine(module, opts)
+    {:ok, pid} = Protean.start_machine(module, opts)
     ref = Process.monitor(pid)
     :ok = Protean.ping(pid)
 
-    {%{machine: pid, ref: ref, id: id}, fn -> Process.exit(pid, :normal) end}
+    {%{machine: pid, ref: ref}, fn -> Process.exit(pid, :normal) end}
   end
 
   defp setup_machine(module), do: setup_machine({module, []})

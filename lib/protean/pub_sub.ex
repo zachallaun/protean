@@ -14,8 +14,8 @@ defmodule Protean.PubSub do
   def dispatch(subscribers, :none, {message, filter}) do
     Enum.each(subscribers, fn
       {pid, {:filter, ^filter}} -> send(pid, message)
-      {_pid, {:filter, _}} -> :ok
-      {pid, _} -> send(pid, message)
+      {pid, {:filter, nil}} -> send(pid, message)
+      _ -> :ok
     end)
 
     :ok

@@ -45,60 +45,35 @@ defmodule ProteanTest do
 
   describe "start_machine/2" do
     test "should return error if name already started" do
-      {:ok, _, _} = Protean.start_machine(SimpleMachine, name: Machine)
+      {:ok, _} = Protean.start_machine(SimpleMachine, name: Machine)
       assert {:error, {:already_started, _}} = Protean.start_machine(SimpleMachine, name: Machine)
 
       Protean.stop(Machine, :normal, 10)
     end
 
     test "should return pid if name supplied" do
-      {:ok, pid, _} = Protean.start_machine(SimpleMachine, name: Machine)
+      {:ok, pid} = Protean.start_machine(SimpleMachine, name: Machine)
       assert is_pid(pid)
 
       Protean.stop(Machine)
     end
 
     test "should return pid if name not supplied" do
-      {:ok, pid, _} = Protean.start_machine(SimpleMachine)
+      {:ok, pid} = Protean.start_machine(SimpleMachine)
       assert is_pid(pid)
 
       Protean.stop(pid)
-    end
-  end
-
-  describe "resolve/1" do
-    @tag here: true
-    test "should return pid if given a machine id" do
-      {:ok, _, id} = Protean.start_machine(SimpleMachine)
-      {:ok, pid} = Protean.resolve(id)
-      assert is_pid(pid)
-
-      Protean.stop(pid)
-    end
-
-    test "should return error if machine is stopped" do
-      {:ok, pid, id} = Protean.start_machine(SimpleMachine)
-      Protean.stop(pid)
-      :error = Protean.resolve(id)
-    end
-
-    test "should return error if machine was never started" do
-      :error = Protean.resolve("not-started")
-    end
-
-    test "should raise if an invalid id is given" do
-      assert_raise FunctionClauseError, fn -> Protean.resolve(:foo) end
     end
   end
 
   describe "stop_machine/3" do
     test "should accept an optional reason" do
-      assert {:ok, name, _} = Protean.start_machine(SimpleMachine)
+      assert {:ok, name} = Protean.start_machine(SimpleMachine)
       assert :ok = Protean.stop(name, :normal)
     end
 
     test "should accept an optional reason and timeout" do
-      assert {:ok, name, _} = Protean.start_machine(SimpleMachine)
+      assert {:ok, name} = Protean.start_machine(SimpleMachine)
       assert :ok = Protean.stop(name, :normal, 50)
     end
   end
@@ -137,31 +112,33 @@ defmodule ProteanTest do
   describe "subscribe/2" do
     @describetag machine: SimpleMachine
 
-    test "should subscribe caller to transitions", %{machine: machine, id: id} do
-      :ok = Protean.subscribe(id)
+    test "should subscribe caller to transitions", %{machine: machine} do
+      {:ok, id} = Protean.subscribe(machine)
       Protean.call(machine, "event")
       assert_receive {^id, %Protean.Context{}, []}
     end
 
-    test "can subscribe caller to only replies", %{machine: machine, id: id} do
-      :ok = Protean.subscribe(id, filter: :replies)
+    test "can subscribe caller to only replies", %{machine: machine} do
+      {:ok, id} = Protean.subscribe(machine, filter: :replies)
+
       Protean.call(machine, "event")
       refute_receive {^id, _, _}
+
       Protean.call(machine, :reply)
       assert_receive {^id, _, [:ok]}
     end
 
-    test "should raise if given a bad filter", %{id: id} do
-      assert_raise ArgumentError, fn -> Protean.subscribe(id, filter: :bad) end
+    test "should raise if given a bad filter", %{machine: machine} do
+      assert_raise ArgumentError, fn -> Protean.subscribe(machine, filter: :bad) end
     end
   end
 
   describe "unsubscribe/1" do
     @describetag machine: SimpleMachine
 
-    test "should unsubscribe calling process from transition", %{machine: machine, id: id} do
-      :ok = Protean.subscribe(id)
-      :ok = Protean.unsubscribe(id)
+    test "should unsubscribe calling process from transition", %{machine: machine} do
+      {:ok, id} = Protean.subscribe(machine)
+      :ok = Protean.unsubscribe(machine)
       assert Protean.call(machine, "event")
       refute_receive {^id, _, _}
     end
