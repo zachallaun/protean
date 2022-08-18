@@ -8,22 +8,22 @@ defmodule Protean.ProcessManager do
   @supervisor Module.concat(__MODULE__, Supervisor)
   @registry Module.concat(__MODULE__, Registry)
 
-  @type subprocess :: {pid(), reference(), meta :: term()}
+  @type subprocess :: {id :: term(), pid(), reference(), meta :: term()}
 
   @doc """
   Start a registered and monitored subprocess of the calling process.
 
-  The subprocess will be saved as a `{pid(), ref, meta}` tuple.
+  The subprocess will be saved as a `{id, pid, ref, meta}` tuple.
   """
   @spec start_subprocess(term(), Supervisor.child_spec(), term()) :: :ok | {:error, term()}
   def start_subprocess(id, child_spec, meta \\ nil) do
     with :error <- fetch_subprocess(id),
          {:ok, pid} <- start_child(child_spec),
          ref <- Process.monitor(pid),
-         {:ok, _} <- register_subprocess(id, {pid, ref, meta}) do
+         {:ok, _} <- register_subprocess({id, pid, ref, meta}) do
       :ok
     else
-      {:ok, {pid, _ref, _meta}} ->
+      {:ok, {_id, pid, _ref, _meta}} ->
         {:error, {:already_started, pid}}
 
       {:error, {:already_started, pid}} ->
@@ -48,7 +48,7 @@ defmodule Protean.ProcessManager do
   @spec stop_subprocess(term()) :: :ok
   def stop_subprocess(id) do
     case fetch_subprocess(id) do
-      {:ok, proc} -> stop_subprocesses([{id, proc}])
+      {:ok, proc} -> stop_subprocesses([proc])
       :error -> :ok
     end
   end
@@ -62,7 +62,7 @@ defmodule Protean.ProcessManager do
   end
 
   defp stop_subprocesses(subprocesses) do
-    for {id, {pid, ref, _}} <- subprocesses do
+    for {id, pid, ref, _} <- subprocesses do
       Process.demonitor(ref, [:flush])
       terminate_child(pid)
       unregister_subprocess(id)
@@ -77,9 +77,9 @@ defmodule Protean.ProcessManager do
   def subprocesses do
     registry().select(@registry, [
       {
-        {subprocess_key(:"$1"), self(), :"$2"},
+        {subprocess_key(:_), self(), :"$1"},
         [],
-        [{{:"$1", :"$2"}}]
+        [:"$1"]
       }
     ])
   end
@@ -98,17 +98,17 @@ defmodule Protean.ProcessManager do
   @doc """
   Look up the subprocess of the calling process by its monitor `ref`.
   """
-  @spec subprocess_by_ref(reference()) :: {:ok, {id :: term(), subprocess}} | nil
+  @spec subprocess_by_ref(reference()) :: {:ok, subprocess} | nil
   def subprocess_by_ref(ref) do
     registry().select(@registry, [
       {
-        {subprocess_key(:"$1"), self(), {:"$2", ref, :"$3"}},
+        {subprocess_key(:_), self(), {:"$1", :"$2", ref, :"$3"}},
         [],
         [{{:"$1", :"$2", :"$3"}}]
       }
     ])
     |> case do
-      [{id, pid, meta}] -> {:ok, {id, {pid, ref, meta}}}
+      [{id, pid, meta}] -> {:ok, {id, pid, ref, meta}}
       _ -> nil
     end
   end
@@ -124,7 +124,7 @@ defmodule Protean.ProcessManager do
     {:via, registry(), {@registry, id}}
   end
 
-  def register_subprocess(id, value) do
+  def register_subprocess({id, _, _, _} = value) do
     registry().register(@registry, subprocess_key(id), value)
   end
 

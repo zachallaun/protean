@@ -493,7 +493,7 @@ defmodule Protean.Action do
 
   defp resolve_recipient(_interpreter, maybe_id) do
     case ProcessManager.fetch_subprocess(maybe_id) do
-      {:ok, {pid, _, _}} -> pid
+      {:ok, {_, pid, _, _}} -> pid
       :error -> maybe_id
     end
   end

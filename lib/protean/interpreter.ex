@@ -136,7 +136,7 @@ defmodule Protean.Interpreter do
   @spec notify_process_down(t, reason :: term(), keyword()) :: t
   def notify_process_down(%Interpreter{} = interpreter, reason, ref: ref) do
     case ProcessManager.subprocess_by_ref(ref) do
-      {:ok, {id, _}} -> notify_process_down(interpreter, reason, id: id)
+      {:ok, {id, _, _, _}} -> notify_process_down(interpreter, reason, id: id)
       nil -> interpreter
     end
   end
@@ -246,7 +246,7 @@ defmodule Protean.Interpreter do
 
   @spec autoforward_event(t, Protean.event()) :: t
   defp autoforward_event(interpreter, event) do
-    for {_id, {pid, _ref, opts}} <- ProcessManager.subprocesses(),
+    for {_id, pid, _ref, opts} <- ProcessManager.subprocesses(),
         Keyword.get(opts, :autoforward, false) do
       Interpreter.Server.send(pid, event)
     end
