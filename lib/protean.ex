@@ -27,7 +27,7 @@ defmodule Protean do
   @type start_option :: machine_option | GenServer.option()
 
   @typedoc "Return values of `start_machine/2`"
-  @type on_start :: {:ok, machine, id} | :ignore | {:error, {:already_started, machine} | term()}
+  @type on_start :: {:ok, machine, id} | {:error, {:already_started, machine} | term()}
 
   @typedoc "Option values for Protean machines."
   @type machine_option ::
@@ -260,27 +260,19 @@ defmodule Protean do
   @spec start_machine(module(), [start_option]) :: on_start
   def start_machine(module, opts \\ []) do
     id = Utils.uuid4()
-    supplied_name? = Keyword.has_key?(opts, :name)
 
     opts =
       opts
       |> Keyword.put(:id, id)
-      |> Keyword.put_new(:name, ProcessManager.via_registry({module, id}))
+      |> Keyword.put_new(:name, ProcessManager.via_registry(id))
 
     module
     |> child_spec(opts)
     |> Supervisor.child_spec(id: opts[:name], restart: :transient)
     |> ProcessManager.start_child()
     |> case do
-      {:ok, pid} ->
-        if supplied_name? do
-          {:ok, pid, id}
-        else
-          {:ok, opts[:name], id}
-        end
-
-      other ->
-        other
+      {:ok, pid} -> {:ok, pid, id}
+      other -> other
     end
   end
 
@@ -294,6 +286,16 @@ defmodule Protean do
 
     %{id: module, start: {Server, :start_link, [Keyword.merge(defaults, opts)]}}
   end
+
+  @doc """
+  Returns `{:ok, machine}` of a Protean machine started with `start_machine/2`, `:error`
+  otherwise.
+
+  Note there is no guarantee the returned machine is alive, as it could terminate immediately
+  after being looked up.
+  """
+  @spec resolve(id) :: {:ok, machine} | :error
+  def resolve(id) when is_binary(id), do: ProcessManager.whereis(id)
 
   @doc """
   Makes a synchronous call to the machine, awaiting any transitions that result.

@@ -37,25 +37,49 @@ defmodule ProteanTest do
 
   describe "start_machine/2" do
     test "should return error if name already started" do
-      assert {:ok, _, _} = Protean.start_machine(SimpleMachine, name: Machine)
+      {:ok, _, _} = Protean.start_machine(SimpleMachine, name: Machine)
       assert {:error, {:already_started, _}} = Protean.start_machine(SimpleMachine, name: Machine)
 
       Protean.stop(Machine, :normal, 10)
     end
 
     test "should return pid if name supplied" do
-      assert {:ok, pid, _} = Protean.start_machine(SimpleMachine, name: Machine)
+      {:ok, pid, _} = Protean.start_machine(SimpleMachine, name: Machine)
       assert is_pid(pid)
 
       Protean.stop(Machine)
     end
 
-    @tag here: true
-    test "should return :via tuple if name not supplied" do
-      assert {:ok, name, _} = Protean.start_machine(SimpleMachine)
-      assert {:via, _, _} = name
+    test "should return pid if name not supplied" do
+      {:ok, pid, _} = Protean.start_machine(SimpleMachine)
+      assert is_pid(pid)
 
-      Protean.stop(name)
+      Protean.stop(pid)
+    end
+  end
+
+  describe "resolve/1" do
+    @tag here: true
+    test "should return pid if given a machine id" do
+      {:ok, _, id} = Protean.start_machine(SimpleMachine)
+      {:ok, pid} = Protean.resolve(id)
+      assert is_pid(pid)
+
+      Protean.stop(pid)
+    end
+
+    test "should return error if machine is stopped" do
+      {:ok, pid, id} = Protean.start_machine(SimpleMachine)
+      Protean.stop(pid)
+      :error = Protean.resolve(id)
+    end
+
+    test "should return error if machine was never started" do
+      :error = Protean.resolve("not-started")
+    end
+
+    test "should raise if an invalid id is given" do
+      assert_raise FunctionClauseError, fn -> Protean.resolve(:foo) end
     end
   end
 

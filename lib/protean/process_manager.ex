@@ -113,37 +113,37 @@ defmodule Protean.ProcessManager do
     end
   end
 
-  @doc false
-  def via_registry(name) do
-    {:via, registry(), {@registry, name}}
+  def whereis(id) do
+    case GenServer.whereis(via_registry(id)) do
+      nil -> :error
+      pid -> {:ok, pid}
+    end
   end
 
-  @doc false
+  def via_registry(id) do
+    {:via, registry(), {@registry, id}}
+  end
+
   def register_subprocess(id, value) do
     registry().register(@registry, subprocess_key(id), value)
   end
 
-  @doc false
   def unregister_subprocess(id) do
     registry().unregister(@registry, subprocess_key(id))
   end
 
-  @doc false
   def start_child(child_spec) do
     supervisor().start_child(@supervisor, child_spec)
   end
 
-  @doc false
   def terminate_child(pid) do
     supervisor().terminate_child(@supervisor, pid)
   end
 
-  @doc false
   def which_children do
     supervisor().which_children(@supervisor)
   end
 
-  @doc false
   def count_registered do
     registry().count(@registry)
   end
