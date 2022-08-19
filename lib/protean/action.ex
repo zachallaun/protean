@@ -93,7 +93,7 @@ defmodule Protean.Action do
   delegates to the callback module associated with the machine. This is how
   `c:Protean.handle_action/3` is called.
 
-  Many of features features boil down to syntax sugar over actions, including `:invoke` and
+  Many of features features boil down to syntax sugar over actions, including `:spawn` and
   delayed transitions using `:after`.
   """
 
@@ -105,6 +105,8 @@ defmodule Protean.Action do
   alias Protean.Guard
   alias Protean.Interpreter
   alias Protean.ProcessManager
+
+  require Logger
 
   @enforce_keys [:module, :arg]
   defstruct [:module, :arg]
@@ -297,31 +299,27 @@ defmodule Protean.Action do
   end
 
   @doc false
-  def invoke(type, to_invoke, id, opts \\ [])
+  def spawn(type, to_spawn, id, opts \\ [])
 
-  def invoke(:delegate, value, id, opts) do
-    new({:invoke, :delegate, value, id, opts})
+  def spawn(:proc, proc, id, opts) do
+    new({:spawn, :proc, proc, id, opts})
   end
 
-  def invoke(:proc, proc, id, opts) do
-    new({:invoke, :proc, proc, id, opts})
+  def spawn(:task, task, id, opts) do
+    new({:spawn, :task, task, id, opts})
   end
 
-  def invoke(:task, task, id, opts) do
-    new({:invoke, :task, task, id, opts})
+  def spawn(:delayed_send, delay, id, opts) do
+    new({:spawn, :delayed_send, delay, id, opts})
   end
 
-  def invoke(:delayed_send, delay, id, opts) do
-    new({:invoke, :delayed_send, delay, id, opts})
-  end
-
-  def invoke(:stream, stream, id, opts) do
-    new({:invoke, :stream, stream, id, opts})
+  def spawn(:stream, stream, id, opts) do
+    new({:spawn, :stream, stream, id, opts})
   end
 
   @doc false
-  def invoke(:cancel, id) do
-    new({:invoke, :cancel, id})
+  def spawn(:cancel, id) do
+    new({:spawn, :cancel, id})
   end
 
   # Action callbacks
@@ -341,8 +339,6 @@ defmodule Protean.Action do
         {:cont, interpreter, Context.actions(context)}
 
       other ->
-        require Logger
-
         Logger.error("""
         Received invalid return value from action callback. Expected one of:
 
@@ -389,88 +385,84 @@ defmodule Protean.Action do
     {:cont, interpreter, List.wrap(choice)}
   end
 
-  def exec_action({:invoke, :cancel, id}, interpreter) do
+  def exec_action({:spawn, :cancel, id}, interpreter) do
     ProcessManager.stop_subprocess(id)
     {:cont, interpreter}
   end
 
-  def exec_action({:invoke, :delegate, name, id, opts}, interpreter) do
-    {type, to_invoke} = run_callback(:invoke, name, interpreter)
-    exec_action({:invoke, type, to_invoke, id, opts}, interpreter)
+  def exec_action({:spawn, :delayed_send, delay, id, _opts}, interpreter) do
+    delay =
+      case delay do
+        delay when is_integer(delay) -> delay
+        other -> run_callback(:delay, [other], interpreter)
+      end
+
+    f = fn -> :timer.sleep(delay) end
+
+    spawn_task(interpreter, id, f)
   end
 
-  def exec_action({:invoke, :delayed_send, name, id, opts}, interpreter)
-      when not is_integer(name) do
-    delay = run_callback(:delay, name, interpreter)
-    exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter)
-  end
+  def exec_action({:spawn, :stream, stream, id, _opts}, interpreter) do
+    stream =
+      case stream do
+        name when is_atom(name) or is_binary(name) ->
+          run_callback(:spawn, [:stream, name], interpreter)
 
-  def exec_action({:invoke, :delayed_send, delay, id, opts}, interpreter) do
-    f = fn ->
-      :timer.sleep(delay)
-      id
+        stream ->
+          stream
+      end
+
+    self = self()
+
+    task = fn ->
+      for event <- stream, do: Kernel.send(self, event)
+      :ok
     end
 
-    exec_action({:invoke, :function, f, id, opts}, interpreter)
+    spawn_task(interpreter, id, task)
   end
 
-  def exec_action({:invoke, :proc, proc, id, opts}, interpreter) do
-    child_spec_fun = fn pid ->
-      defaults = [parent: pid]
+  def exec_action({:spawn, :task, task, id, _opts}, interpreter) do
+    task =
+      case task do
+        {_m, _f, _a} = mfa -> mfa
+        f when is_function(f) -> f
+        other -> run_callback(:spawn, [:task, other], interpreter)
+      end
 
+    spawn_task(interpreter, id, task)
+  end
+
+  def exec_action({:spawn, :proc, proc, id, opts}, interpreter) do
+    proc =
       case proc do
-        {mod, arg} -> {mod, Keyword.merge(defaults, arg)}
-        mod -> {mod, defaults}
+        {mod, arg} -> {mod, Keyword.put_new(arg, :parent, self())}
+        mod -> {mod, parent: self()}
       end
       |> Supervisor.child_spec(restart: :temporary)
-    end
 
-    __invoke__(id, child_spec_fun, interpreter, opts)
+    spawn_proc(interpreter, id, proc, opts)
   end
 
-  def exec_action({:invoke, :task, task, id, opts}, interpreter) do
-    on_done = Events.platform(:invoke, :done, id)
-
-    child_spec_fun = fn pid ->
-      Task.child_spec(fn -> Kernel.send(pid, {on_done, run_task(task)}) end)
+  defp spawn_proc(interpreter, id, proc, opts) do
+    with :ok <- ProcessManager.start_subprocess(id, proc, opts) do
+      {:cont, interpreter}
+    else
+      error -> spawn_error(interpreter, id, proc, error)
     end
-
-    __invoke__(id, child_spec_fun, interpreter, opts)
   end
 
-  def exec_action({:invoke, :stream, stream, id, opts}, interpreter) do
-    on_done = Events.platform(:invoke, :done, id)
-
-    child_spec_fun = fn pid ->
-      Task.child_spec(fn ->
-        for event <- stream, do: Kernel.send(pid, event)
-        Kernel.send(pid, {on_done, nil})
-      end)
+  defp spawn_task(interpreter, id, task) do
+    with :ok <- ProcessManager.start_task(id, task) do
+      {:cont, interpreter}
+    else
+      error -> spawn_error(interpreter, id, task, error)
     end
-
-    __invoke__(id, child_spec_fun, interpreter, opts)
   end
 
-  def exec_action({:invoke, :function, f, id, opts}, interpreter) when is_function(f) do
-    child_spec_fun = fn pid ->
-      Task.child_spec(fn -> Kernel.send(pid, f.()) end)
-    end
-
-    __invoke__(id, child_spec_fun, interpreter, opts)
-  end
-
-  defp __invoke__(id, child_spec_fun, interpreter, opts) do
-    self_alias = :erlang.alias()
-
-    case ProcessManager.start_subprocess(id, child_spec_fun.(self_alias), opts) do
-      :ok ->
-        {:cont, interpreter}
-
-      {:error, reason} ->
-        require Logger
-        Logger.warn("Unable to start invoked process, got:\n#{inspect(reason)}")
-        {:cont, Interpreter.notify_process_down(interpreter, reason, id: id)}
-    end
+  defp spawn_error(interpreter, id, spawned, error) do
+    Logger.warn("spawn #{inspect(spawned)} failed to start with error #{inspect(error)}")
+    {:cont, Interpreter.add_internal(interpreter, Events.platform(:spawn, :error, id))}
   end
 
   defp guard_allows?({_, guard: guard}, interpreter) do
@@ -498,12 +490,9 @@ defmodule Protean.Action do
     end
   end
 
-  defp run_task({m, f, a}), do: apply(m, f, a)
-  defp run_task(f) when is_function(f), do: f.()
-
-  defp run_callback(callback_name, arg, interpreter) do
+  defp run_callback(callback_name, args, interpreter) when is_list(args) do
     %{context: context, config: config} = interpreter
 
-    apply(config.callback_module, callback_name, [arg, context, context.event])
+    apply(config.callback_module, callback_name, args ++ [context, context.event])
   end
 end

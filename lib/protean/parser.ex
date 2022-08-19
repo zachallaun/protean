@@ -14,7 +14,7 @@ defmodule Protean.Parser do
   Parses machine config into a `Node`.
   """
   def parse!(config) do
-    assigns = Keyword.get(config, :assigns, %{})
+    {assigns, config} = Keyword.pop(config, :assigns, %{})
 
     {root, _order} =
       config
@@ -41,21 +41,18 @@ defmodule Protean.Parser do
     {%Node{node | states: Enum.reverse(children)}, order}
   end
 
-  defp node_type(config) do
-    cond do
-      type = config[:type] -> type
-      config[:initial] -> :compound
-      true -> :atomic
-    end
-  end
-
   @doc false
   def parse_node(config), do: parse_node(config, @root_id)
 
   defp parse_node(config, id) do
-    config
-    |> node_type()
-    |> parse_node(config, id)
+    {type, config} =
+      cond do
+        Keyword.has_key?(config, :type) -> Keyword.pop(config, :type)
+        config[:initial] -> {:compound, config}
+        true -> {:atomic, config}
+      end
+
+    parse_node(type, config, id)
   end
 
   defp parse_node(type, config, id)
@@ -67,7 +64,7 @@ defmodule Protean.Parser do
   end
 
   defp parse_node(:final, config, id) do
-    forbid!(config, [:states, :initial, :on, :always, :after, :invoke])
+    forbid!(config, [:states, :initial, :on, :always, :after, :spawn])
 
     parse_node_common(:final, config, id)
   end
@@ -86,91 +83,133 @@ defmodule Protean.Parser do
   end
 
   defp parse_node_common(type, config, id) do
-    {delay_entry, delay_exit, delay_transitions} = parse_delayed_transitions(config[:after], id)
-    {invoke_entry, invoke_exit, invoke_transitions} = parse_invokes(config[:invoke], id)
+    {initial, config} = Keyword.pop(config, :initial)
+    {states, config} = Keyword.pop(config, :states)
 
-    done_transitions =
-      case config[:done] do
-        nil ->
-          []
-
-        done ->
-          [{Events.platform(:done, id), done}]
-          |> parse_transitions(id)
-      end
-
-    transitions =
-      Enum.concat([
-        invoke_transitions,
-        done_transitions,
-        delay_transitions,
-        parse_transitions(config[:on], id)
-      ])
-
-    entry_actions =
-      Enum.concat([
-        invoke_entry,
-        delay_entry,
-        parse_actions(config[:entry])
-      ])
-
-    exit_actions =
-      Enum.concat([
-        invoke_exit,
-        delay_exit,
-        parse_actions(config[:exit])
-      ])
-
-    %Node{
-      type: type,
+    node = %Node{
       id: id,
-      states: parse_children(config[:states], id),
-      initial: parse_initial(config[:initial], id),
-      automatic_transitions: parse_automatic_transitions(config[:always], id),
-      transitions: transitions,
-      entry: entry_actions,
-      exit: exit_actions
+      type: type,
+      initial: parse_initial(initial, id),
+      states: parse_children(states, id)
     }
+
+    {node, config}
+    |> with_parsed(:entry)
+    |> with_parsed(:exit)
+    |> with_parsed(:always)
+    |> with_parsed(:on)
+    |> with_parsed(:done)
+    |> with_parsed(:after)
+    |> with_parsed(:spawn)
+    |> case do
+      {node, []} ->
+        node
+
+      {node, remaining} ->
+        require Logger
+
+        Logger.error("""
+        Received invalid config while parsing node:
+          remaining config: #{inspect(remaining)}
+          node: #{inspect(node)}
+        """)
+
+        node
+    end
   end
 
-  defp parse_invokes(nil, _id), do: {[], [], []}
+  defp with_parsed({node, config}, attr) do
+    {unparsed, config} = Keyword.pop(config, attr)
 
-  defp parse_invokes(invokes, id) do
-    if Keyword.keyword?(invokes) do
-      parse_invokes([invokes], id)
+    {with_parsed(attr, node, unparsed), config}
+  end
+
+  defp with_parsed(:entry, node, actions) do
+    Node.append(node, :entry, parse_actions(actions))
+  end
+
+  defp with_parsed(:exit, node, actions) do
+    Node.append(node, :exit, parse_actions(actions))
+  end
+
+  defp with_parsed(:always, node, transitions) do
+    Node.append(node, :automatic_transitions, parse_automatic_transitions(transitions, node.id))
+  end
+
+  defp with_parsed(:on, node, transitions) do
+    Node.append(node, :transitions, parse_transitions(transitions, node.id))
+  end
+
+  defp with_parsed(:done, node, nil), do: node
+
+  defp with_parsed(:done, node, transitions) do
+    if !is_list(transitions) || Keyword.keyword?(transitions) do
+      with_parsed(:done, node, [transitions])
+    else
+      done =
+        transitions
+        |> Enum.map(&{Events.platform(:done, node.id), &1})
+        |> parse_transitions(node.id)
+
+      Node.prepend(node, :transitions, done)
+    end
+  end
+
+  defp with_parsed(:after, node, transitions) do
+    {delay_entry, delay_exit, delay_transitions} = parse_delayed_transitions(transitions, node.id)
+
+    node
+    |> Node.prepend(:entry, delay_entry)
+    |> Node.prepend(:exit, delay_exit)
+    |> Node.prepend(:transitions, delay_transitions)
+  end
+
+  defp with_parsed(:spawn, node, spawns) do
+    {spawn_entry, spawn_exit, spawn_transitions} = parse_spawns(spawns, node.id)
+
+    node
+    |> Node.prepend(:entry, spawn_entry)
+    |> Node.prepend(:exit, spawn_exit)
+    |> Node.prepend(:transitions, spawn_transitions)
+  end
+
+  defp parse_spawns(nil, _id), do: {[], [], []}
+
+  defp parse_spawns(spawns, id) do
+    if Keyword.keyword?(spawns) do
+      parse_spawns([spawns], id)
     else
       {entry_actions, exit_actions, nested_transitions} =
-        invokes
-        |> Enum.map(&parse_invoke_config(Enum.into(&1, %{}), id))
+        spawns
+        |> Enum.map(&parse_spawn_config(Enum.into(&1, %{}), id))
         |> Utils.unzip3()
 
       {entry_actions, exit_actions, Enum.concat(nested_transitions)}
     end
   end
 
-  defp parse_invoke_config(config, node_id) do
+  defp parse_spawn_config(config, node_id) do
     id = config[:id] || Utils.uuid4()
-    on_done = Events.platform(:invoke, :done, id)
-    on_error = Events.platform(:invoke, :error, id)
+    on_done = Events.platform(:spawn, :done, id)
+    on_error = Events.platform(:spawn, :error, id)
 
     transitions =
       [
-        config[:done] && {fn e -> match?({^on_done, _}, e) end, config[:done]},
+        config[:done] && {on_done, config[:done]},
         config[:error] && {on_error, config[:error]}
       ]
       |> Enum.filter(&Function.identity/1)
       |> Enum.map(&parse_transition(&1, node_id))
 
-    [entry_action] = parse_actions(invoke_entry_action(config, id))
-    [exit_action] = parse_actions(Action.invoke(:cancel, id))
+    [entry_action] = parse_actions(spawn_entry_action(config, id))
+    [exit_action] = parse_actions(Action.spawn(:cancel, id))
 
     {entry_action, exit_action, transitions}
   end
 
-  defp invoke_entry_action(config_map, id) do
-    {type, to_invoke} =
+  defp spawn_entry_action(config_map, id) do
+    {type, to_spawn} =
       case config_map do
-        %{delegate: delegate} -> {:delegate, delegate}
         %{proc: proc} -> {:proc, proc}
         %{task: task} -> {:task, task}
         %{stream: stream} -> {:stream, stream}
@@ -180,7 +219,7 @@ defmodule Protean.Parser do
     user_opts = Map.take(config_map, Map.keys(opts_with_defaults))
     opts = Map.merge(opts_with_defaults, user_opts) |> Enum.into([])
 
-    Action.invoke(type, to_invoke, id, opts)
+    Action.spawn(type, to_spawn, id, opts)
   end
 
   defp parse_delayed_transitions(nil, _id), do: {[], [], []}
@@ -197,11 +236,11 @@ defmodule Protean.Parser do
 
   defp parse_delayed_transition(config, node_id) do
     {delay, config} = Keyword.pop!(config, :delay)
-    event = Events.platform(:after, {node_id, delay})
+    id = {node_id, delay}
 
-    [entry_action] = parse_actions(Action.invoke(:delayed_send, delay, event))
-    [exit_action] = parse_actions(Action.invoke(:cancel, event))
-    transition = parse_transition({event, config}, node_id)
+    [entry_action] = parse_actions(Action.spawn(:delayed_send, delay, id))
+    [exit_action] = parse_actions(Action.spawn(:cancel, id))
+    transition = parse_transition({Events.platform(:spawn, :done, id), config}, node_id)
 
     {entry_action, exit_action, transition}
   end

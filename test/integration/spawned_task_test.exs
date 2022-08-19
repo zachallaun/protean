@@ -1,7 +1,7 @@
-defmodule ProteanIntegration.InvokedTaskTest do
+defmodule ProteanIntegration.SpawnedTaskTest do
   use Protean.TestCase, async: true
 
-  @moduletag trigger: InvokedTaskTrigger
+  @moduletag trigger: SpawnedTaskTrigger
 
   defmodule OneOffTask do
     use Protean
@@ -10,10 +10,8 @@ defmodule ProteanIntegration.InvokedTaskTest do
       initial: :init,
       states: [
         atomic(:init,
-          invoke: [
-            invoked(:task, fn ->
-              Trigger.trigger(InvokedTaskTrigger, :ran_task)
-            end)
+          spawn: [
+            task(fn -> Trigger.trigger(SpawnedTaskTrigger, :ran_task) end)
           ]
         )
       ]
@@ -24,7 +22,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     @describetag machine: OneOffTask
 
     test "should run" do
-      assert Trigger.await(InvokedTaskTrigger, :ran_task)
+      assert Trigger.await(SpawnedTaskTrigger, :ran_task)
     end
   end
 
@@ -39,45 +37,37 @@ defmodule ProteanIntegration.InvokedTaskTest do
       initial: :a,
       states: [
         atomic(:a,
-          invoke: [
-            invoked(
-              :task,
-              fn ->
-                :task_result
-              end,
+          spawn: [
+            task(fn -> :task_result end,
               done: [
-                actions: ["save_result"],
-                target: "b"
+                actions: "save_result",
+                target: :b
               ]
             )
           ]
         ),
         atomic(:b,
-          entry: Trigger.action(InvokedTaskTrigger, :b),
+          entry: Trigger.action(SpawnedTaskTrigger, :b),
           on: [
             goto_c: "c"
           ]
         ),
         atomic(:c,
-          invoke: [
-            invoked(
-              :task,
-              fn ->
-                :second_task_result
-              end,
+          spawn: [
+            task(fn -> :second_task_result end,
               done: [
-                actions: ["save_result"],
-                target: "d"
+                actions: "save_result",
+                target: :d
               ]
             )
           ]
         ),
-        atomic(:d, entry: Trigger.action(InvokedTaskTrigger, :d))
+        atomic(:d, entry: Trigger.action(SpawnedTaskTrigger, :d))
       ]
     ]
 
     @impl true
-    def handle_action("save_result", context, {_, result}) do
+    def handle_action("save_result", context, result) do
       Action.assign(context, :result, result)
     end
   end
@@ -85,18 +75,18 @@ defmodule ProteanIntegration.InvokedTaskTest do
   describe "AnonymousFunctionTasks:" do
     @describetag machine: AnonymousFunctionTasks
 
-    test "anonymous function task invoked from initial state", %{machine: machine} do
-      assert Trigger.await(InvokedTaskTrigger, :b)
+    test "anonymous function task spawned from initial state", %{machine: machine} do
+      assert Trigger.await(SpawnedTaskTrigger, :b)
 
       assert_protean(machine,
         assigns: [result: :task_result]
       )
     end
 
-    test "anonymous function task invoked after transition", %{machine: machine} do
-      assert Trigger.await(InvokedTaskTrigger, :b)
+    test "anonymous function task spawned after transition", %{machine: machine} do
+      assert Trigger.await(SpawnedTaskTrigger, :b)
       Protean.send(machine, :goto_c)
-      assert Trigger.await(InvokedTaskTrigger, :d)
+      assert Trigger.await(SpawnedTaskTrigger, :d)
     end
   end
 
@@ -109,16 +99,17 @@ defmodule ProteanIntegration.InvokedTaskTest do
       initial: "a",
       states: [
         a: [
-          invoke: [
-            task: {__MODULE__, :my_task, [:arg]},
-            done: [
-              actions: ["save_result"],
-              target: "b"
-            ]
+          spawn: [
+            task({__MODULE__, :my_task, [:arg]},
+              done: [
+                actions: ["save_result"],
+                target: "b"
+              ]
+            )
           ]
         ],
         b: [
-          entry: Trigger.action(InvokedTaskTrigger, :b)
+          entry: Trigger.action(SpawnedTaskTrigger, :b)
         ]
       ]
     ]
@@ -128,7 +119,7 @@ defmodule ProteanIntegration.InvokedTaskTest do
     end
 
     @impl true
-    def handle_action("save_result", state, {_, result}) do
+    def handle_action("save_result", state, result) do
       Action.assign(state, :result, result)
     end
   end
@@ -136,8 +127,8 @@ defmodule ProteanIntegration.InvokedTaskTest do
   describe "MFATasks:" do
     @describetag machine: MFATasks
 
-    test "MFA task invoked in initial state", %{machine: machine} do
-      assert Trigger.await(InvokedTaskTrigger, :b)
+    test "MFA task spawned in initial state", %{machine: machine} do
+      assert Trigger.await(SpawnedTaskTrigger, :b)
       assert %{result: {:task_return, :arg}} = Protean.current(machine).assigns
     end
   end
@@ -149,17 +140,18 @@ defmodule ProteanIntegration.InvokedTaskTest do
       initial: "init",
       states: [
         init: [
-          invoke: [
-            task: {__MODULE__, :raise_error, []},
-            done: "success",
-            error: "failure"
+          spawn: [
+            task({__MODULE__, :raise_error, []},
+              done: "success",
+              error: "failure"
+            )
           ]
         ],
         success: [
-          entry: Trigger.action(InvokedTaskTrigger, :success)
+          entry: Trigger.action(SpawnedTaskTrigger, :success)
         ],
         failure: [
-          entry: Trigger.action(InvokedTaskTrigger, :failure)
+          entry: Trigger.action(SpawnedTaskTrigger, :failure)
         ]
       ]
     ]
@@ -176,40 +168,40 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     test "Error transition taken when task raises" do
       capture_log(fn ->
-        assert Trigger.await(InvokedTaskTrigger, :failure)
-        refute Trigger.triggered?(InvokedTaskTrigger, :success)
+        assert Trigger.await(SpawnedTaskTrigger, :failure, :infinity)
+        refute Trigger.triggered?(SpawnedTaskTrigger, :success)
       end)
     end
   end
 
-  defmodule ResolvedTaskInvoke do
+  defmodule ResolvedTaskSpawn do
     use Protean
 
     @machine [
       initial: "init",
       states: [
         init: [
-          invoke: [
-            invoked("my_task", done: "success")
+          spawn: [
+            task("my_task", done: :success)
           ]
         ],
         success: [
-          entry: Trigger.action(InvokedTaskTrigger, :success)
+          entry: Trigger.action(SpawnedTaskTrigger, :success)
         ]
       ]
     ]
 
     @impl true
-    def invoke("my_task", _state, _event) do
-      {:task, fn -> :result end}
+    def spawn(:task, "my_task", _state, _event) do
+      fn -> :result end
     end
   end
 
-  describe "ResolvedTaskInvoke:" do
-    @describetag machine: ResolvedTaskInvoke
+  describe "ResolvedTaskspawn:" do
+    @describetag machine: ResolvedTaskSpawn
 
     test "tasks can be resolved by callback module" do
-      assert Trigger.await(InvokedTaskTrigger, :success)
+      assert Trigger.await(SpawnedTaskTrigger, :success)
     end
   end
 
@@ -220,35 +212,34 @@ defmodule ProteanIntegration.InvokedTaskTest do
       initial: "init",
       states: [
         init: [
-          invoke: [
-            invoked("send_message_to_self", done: "sent")
+          spawn: [
+            task("send_message_to_self", done: "sent")
           ],
           on: [
             cancel: "canceled"
           ]
         ],
         canceled: [
-          entry: Trigger.action(InvokedTaskTrigger, :canceled),
+          entry: Trigger.action(SpawnedTaskTrigger, :canceled),
           on: [
             message: "sent"
           ]
         ],
         # shouldn't get here
         sent: [
-          entry: Trigger.action(InvokedTaskTrigger, :sent)
+          entry: Trigger.action(SpawnedTaskTrigger, :sent)
         ]
       ]
     ]
 
     @impl true
-    def invoke("send_message_to_self", _state, _event) do
+    def spawn(:task, "send_message_to_self", _state, _event) do
       me = self()
 
-      {:task,
-       fn ->
-         :timer.sleep(30)
-         Protean.call(me, "message")
-       end}
+      fn ->
+        :timer.sleep(30)
+        Protean.call(me, "message")
+      end
     end
   end
 
@@ -257,8 +248,8 @@ defmodule ProteanIntegration.InvokedTaskTest do
 
     test "transitioning out of invoking state should cancel task", %{machine: machine} do
       Protean.send(machine, :cancel)
-      assert Trigger.await(InvokedTaskTrigger, :canceled)
-      refute Trigger.triggered?(InvokedTaskTrigger, :sent)
+      assert Trigger.await(SpawnedTaskTrigger, :canceled)
+      refute Trigger.triggered?(SpawnedTaskTrigger, :sent)
     end
   end
 
@@ -270,54 +261,53 @@ defmodule ProteanIntegration.InvokedTaskTest do
       assigns: %{data: MapSet.new()},
       states: [
         atomic(:how_many,
-          invoke: [
-            invoked(:one),
-            invoked(:two, done: [actions: :save]),
-            invoked(
-              :task,
+          spawn: [
+            task(:one),
+            task(:two, done: [actions: :save]),
+            task(
               fn ->
-                Trigger.trigger(InvokedTaskTrigger, :three)
+                Trigger.trigger(SpawnedTaskTrigger, :three)
                 :value_three
               end,
               done: [actions: :save]
             )
           ],
           on: [
-            match({_, _}, actions: :save)
+            match(_, actions: :save)
           ]
         )
       ]
     ]
 
     @impl true
-    def invoke(:one, _, _) do
-      {:task,
-       fn ->
-         Trigger.trigger(InvokedTaskTrigger, :one)
-         :value_one
-       end}
+    def spawn(:task, :one, _, _) do
+      fn ->
+        Trigger.trigger(SpawnedTaskTrigger, :one)
+        :value_one
+      end
     end
 
-    def invoke(:two, _, _) do
-      {:task,
-       fn ->
-         Trigger.trigger(InvokedTaskTrigger, :two)
-         :value_two
-       end}
+    def spawn(:task, :two, _, _) do
+      fn ->
+        Trigger.trigger(SpawnedTaskTrigger, :two)
+        :value_two
+      end
     end
 
     @impl true
-    def handle_action(:save, state, {_, value}) do
+    def handle_action(:save, state, value) when not is_nil(value) and is_atom(value) do
       state
       |> Protean.Action.update_in([:data], &MapSet.put(&1, value))
     end
+
+    def handle_action(:save, state, _), do: state
   end
 
   @tag machine: ManyTasks
-  test "tasks can be invoked in many ways", %{machine: machine} do
-    Trigger.await(InvokedTaskTrigger, :one)
-    Trigger.await(InvokedTaskTrigger, :two)
-    Trigger.await(InvokedTaskTrigger, :three)
+  test "tasks can be spawned in many ways", %{machine: machine} do
+    Trigger.await(SpawnedTaskTrigger, :one)
+    Trigger.await(SpawnedTaskTrigger, :two)
+    Trigger.await(SpawnedTaskTrigger, :three)
     :timer.sleep(5)
 
     expected = MapSet.new([:value_one, :value_two, :value_three])

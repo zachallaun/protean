@@ -1,7 +1,7 @@
-defmodule ProteanIntegration.InvokedStreamTest do
+defmodule ProteanIntegration.SpawnedStreamTest do
   use Protean.TestCase, async: true
 
-  @moduletag trigger: InvokedStreamTrigger
+  @moduletag trigger: SpawnedStreamTrigger
 
   defmodule StreamMachine1 do
     use Protean
@@ -15,15 +15,15 @@ defmodule ProteanIntegration.InvokedStreamTest do
       assigns: [data: []],
       states: [
         atomic(:main,
-          invoke: [
-            invoked(:stream, @stream, done: :stream_consumed)
+          spawn: [
+            stream(@stream, done: :stream_consumed)
           ],
           on: [
             match({:stream_data, _}, actions: "write_data")
           ]
         ),
         atomic(:stream_consumed,
-          entry: Trigger.action(InvokedStreamTrigger, :stream_consumed)
+          entry: Trigger.action(SpawnedStreamTrigger, :stream_consumed)
         )
       ]
     ]
@@ -36,8 +36,8 @@ defmodule ProteanIntegration.InvokedStreamTest do
   end
 
   @tag machine: StreamMachine1
-  test "invoked streams emit events until consumed", %{machine: machine} do
-    Trigger.await(InvokedStreamTrigger, :stream_consumed)
+  test "spawned streams emit events until consumed", %{machine: machine} do
+    Trigger.await(SpawnedStreamTrigger, :stream_consumed)
     %{assigns: assigns} = Protean.current(machine)
     assert length(assigns[:data]) == 5
   end
@@ -56,11 +56,11 @@ defmodule ProteanIntegration.InvokedStreamTest do
           ]
         ),
         atomic(:consuming,
-          invoke: [
-            invoked(:stream_from_event,
+          spawn: [
+            stream(:stream_from_event,
               done: [
                 target: :waiting,
-                actions: Trigger.action(InvokedStreamTrigger, :stream_done)
+                actions: Trigger.action(SpawnedStreamTrigger, :stream_done)
               ]
             )
           ],
@@ -72,8 +72,8 @@ defmodule ProteanIntegration.InvokedStreamTest do
     ]
 
     @impl true
-    def invoke(:stream_from_event, _context, {_, stream}) do
-      {:stream, Stream.map(stream, &{:stream_data, &1})}
+    def spawn(:stream, :stream_from_event, _context, {_, stream}) do
+      Stream.map(stream, &{:stream_data, &1})
     end
 
     @impl true
@@ -84,9 +84,9 @@ defmodule ProteanIntegration.InvokedStreamTest do
   end
 
   @tag machine: StreamMachine2
-  test "invoked streams can be resolved by callback module", %{machine: machine} do
+  test "spawned streams can be resolved by callback module", %{machine: machine} do
     Protean.send(machine, {:stream, Stream.repeatedly(fn -> 1 end) |> Stream.take(5)})
-    assert Trigger.await(InvokedStreamTrigger, :stream_done)
+    assert Trigger.await(SpawnedStreamTrigger, :stream_done)
     assert Protean.matches?(machine, :waiting)
     assert %{data: [1, 1, 1, 1, 1]} = Protean.current(machine).assigns
   end

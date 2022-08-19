@@ -4,7 +4,7 @@ defmodule Protean.Events do
   defmodule Platform do
     @moduledoc false
 
-    defstruct [:type, :id]
+    defstruct [:type, :id, :payload]
   end
 
   @doc "Create a platform event."
@@ -16,11 +16,12 @@ defmodule Protean.Events do
     %Platform{type: :done, id: id}
   end
 
-  def platform(:after, id) do
-    %Platform{type: :after, id: id}
+  def platform(:spawn, subtype, id) when subtype in [:done, :error] do
+    %Platform{type: {:spawn, subtype}, id: id}
   end
 
-  def platform(:invoke, subtype, id) when subtype in [:done, :error] do
-    %Platform{type: {:invoke, subtype}, id: id}
+  @doc "Add a payload to a platform event."
+  def with_payload(%Platform{} = event, payload) do
+    %{event | payload: payload}
   end
 end

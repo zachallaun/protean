@@ -251,9 +251,7 @@ defmodule TestMachines do
                 goto_a2: :a2
               ]
             ],
-            a2: [
-              a2_goto_b: :"#b"
-            ]
+            a2: []
           ]
         ],
         b: []

@@ -40,42 +40,41 @@ defmodule Protean do
   @typedoc "Option values for `use Protean`."
   @type using_option :: {:callback_module, module()}
 
-  @type invoke_type :: :delegate | :proc | :task | :stream
+  @type spawn_type :: :proc | :task | :stream
 
   @protean_options [:machine, :callback_module]
   @protean_options_attr :"$protean.options"
   @protean_machine_attr :"$protean.machine"
 
   @doc """
-  Optional callback for invoked processes specified during machine execution.
+  Optional callback for spawned processes linked to a certain machine state.
 
-  Returns a tuple of `{invoke_type, child_spec}`.
+  Should return a `child_spec` appropriate for the type of process being spawned:
+
+    * `Protean.Builder.proc/2`
+    * `Protean.Builder.task/2`
+    * `Protean.Builder.stream/2`
 
   ## Example
 
       @machine [
-        # ...
         states: [
-          # ...
-          awaiting_task: [
-            invoke: [
-              delegate: "my_task",
-              done: "completed"
+          atomic(:awaiting_task,
+            spawn: [
+              task(:my_task, done: :completed)
             ]
-          ],
-          completed: [
-            # ...
-          ]
+          ),
+          atomic(:completed)
         ]
       ]
 
       @impl true
-      def invoke("my_task", _context, event_data) do
-        {:task, {__MODULE__, :run_my_task, [event_data]}}
+      def spawn(:task, :my_task, context, _event) do
+        {__MODULE__, :run_task, [context.assigns.task_data]}
       end
 
   """
-  @callback invoke(term(), Context.t(), event) :: {invoke_type, term()}
+  @callback spawn(spawn_type, term(), Context.t(), event) :: term()
 
   @doc """
   Optional callback for actions specified in response to a transition.
@@ -182,7 +181,7 @@ defmodule Protean do
   """
   @callback delay(term(), Context.t(), event) :: non_neg_integer()
 
-  @optional_callbacks handle_action: 3, invoke: 3, guard: 3, delay: 3
+  @optional_callbacks handle_action: 3, spawn: 4, guard: 3, delay: 3
 
   defmodule ConfigError do
     defexception [:message]
@@ -249,7 +248,7 @@ defmodule Protean do
 
     * `:assigns` - assigns map that will be merged into the default machine context.
     * `:machine` - defaults to the machine defined in `module` - machine configuration.
-    * `:module` - defaults to `module` - callback module used for actions, guards, invoke,
+    * `:module` - defaults to `module` - callback module used for actions, guards, spawns,
       etc. See "Callbacks".
     * `:parent` - defaults to `self()` - process id of the parent that will receive events from
       the machine if a `Protean.Action.send(..., to: :parent)` action is used or when the machine

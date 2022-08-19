@@ -17,8 +17,8 @@ defmodule ProteanIntegration.DependentProcessesTest do
       initial: "init",
       states: [
         atomic(:init,
-          invoke: [
-            invoked(:proc, Child, id: "child")
+          spawn: [
+            proc(Child, id: "child")
           ]
         )
       ]

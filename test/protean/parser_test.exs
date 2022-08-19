@@ -7,7 +7,7 @@ defmodule Protean.ParserTest do
 
   describe "delayed transition syntax:" do
     test "single transition" do
-      platform_event = Events.platform(:after, {["#"], 2000})
+      id = {["#"], 2000}
 
       [
         [
@@ -18,13 +18,13 @@ defmodule Protean.ParserTest do
         ],
         [
           entry: [
-            Action.invoke(:delayed_send, 2000, platform_event)
+            Action.spawn(:delayed_send, 2000, id)
           ],
           exit: [
-            Action.invoke(:cancel, platform_event)
+            Action.spawn(:cancel, id)
           ],
           on: [
-            {platform_event, target: "b"}
+            {Events.platform(:spawn, :done, id), target: "b"}
           ]
         ]
       ]
@@ -48,16 +48,16 @@ defmodule Protean.ParserTest do
         ],
         [
           entry: [
-            Action.invoke(:delayed_send, 1000, Events.platform(:after, {["#"], 1000})),
-            Action.invoke(:delayed_send, 2000, Events.platform(:after, {["#"], 2000}))
+            Action.spawn(:delayed_send, 1000, {["#"], 1000}),
+            Action.spawn(:delayed_send, 2000, {["#"], 2000})
           ],
           exit: [
-            Action.invoke(:cancel, Events.platform(:after, {["#"], 1000})),
-            Action.invoke(:cancel, Events.platform(:after, {["#"], 2000}))
+            Action.spawn(:cancel, {["#"], 1000}),
+            Action.spawn(:cancel, {["#"], 2000})
           ],
           on: [
-            {Events.platform(:after, {["#"], 1000}), target: "c", guard: "some_condition"},
-            {Events.platform(:after, {["#"], 2000}), target: "c"}
+            {Events.platform(:spawn, :done, {["#"], 1000}), target: "c", guard: "some_condition"},
+            {Events.platform(:spawn, :done, {["#"], 2000}), target: "c"}
           ]
         ]
       ]
@@ -65,13 +65,13 @@ defmodule Protean.ParserTest do
     end
   end
 
-  describe "invoke syntax:" do
+  describe "spawn syntax:" do
     test "tasks with anonymous functions" do
       task_fun = fn -> :result end
 
       [
         [
-          invoke: [
+          spawn: [
             id: "task_id",
             task: task_fun,
             done: "done_state",
@@ -81,14 +81,14 @@ defmodule Protean.ParserTest do
         ],
         [
           entry: [
-            Action.invoke(:task, task_fun, "task_id", autoforward: true)
+            Action.spawn(:task, task_fun, "task_id", autoforward: true)
           ],
           exit: [
-            Action.invoke(:cancel, "task_id")
+            Action.spawn(:cancel, "task_id")
           ],
           on: [
-            {fn -> :ok end, target: "done_state"},
-            {Events.platform(:invoke, :error, "task_id"), target: "error_state"}
+            {Events.platform(:spawn, :done, "task_id"), target: "done_state"},
+            {Events.platform(:spawn, :error, "task_id"), target: "error_state"}
           ]
         ]
       ]
@@ -98,7 +98,7 @@ defmodule Protean.ParserTest do
     test "procs" do
       [
         [
-          invoke: [
+          spawn: [
             id: "proc_id",
             proc: Anything,
             done: "done_state",
@@ -107,14 +107,14 @@ defmodule Protean.ParserTest do
         ],
         [
           entry: [
-            Action.invoke(:proc, Anything, "proc_id", autoforward: false)
+            Action.spawn(:proc, Anything, "proc_id", autoforward: false)
           ],
           exit: [
-            Action.invoke(:cancel, "proc_id")
+            Action.spawn(:cancel, "proc_id")
           ],
           on: [
-            {fn -> :ok end, target: "done_state"},
-            {Events.platform(:invoke, :error, "proc_id"), target: "error_state"}
+            {Events.platform(:spawn, :done, "proc_id"), target: "done_state"},
+            {Events.platform(:spawn, :error, "proc_id"), target: "error_state"}
           ]
         ]
       ]
@@ -146,7 +146,10 @@ defmodule Protean.ParserTest do
 
   defp assert_parsed_same(nodes) do
     [parsed1, parsed2] = Enum.map(nodes, &Parser.parse_node/1)
-    assert parsed_same?(parsed1, parsed2)
+
+    unless parsed_same?(parsed1, parsed2) do
+      assert parsed1 == parsed2
+    end
   end
 
   defp parsed_same?(f1, f2) when is_function(f1) and is_function(f2), do: true

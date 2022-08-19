@@ -88,15 +88,6 @@ defmodule Protean.Interpreter.Server do
   end
 
   @impl true
-  def handle_info({:DOWN, ref, :process, _pid, reason}, interpreter) do
-    interpreter = Interpreter.notify_process_down(interpreter, reason, ref: ref)
-    {:noreply, interpreter, {:continue, {@prefix, :check_running}}}
-  end
-
-  def handle_info({:EXIT, _pid, reason}, interpreter) do
-    {:stop, reason, interpreter}
-  end
-
   def handle_info(event, interpreter), do: handle_cast(event, interpreter)
 
   @impl true

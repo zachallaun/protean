@@ -12,7 +12,7 @@ Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standa
 
 **What are statecharts?**
 They are an extension to finite state machines that allow you to model complex behavior in a declarative, data-driven manner.
-They include nested and parallel states, enhanced/augmented state (through assigns), side-effects (through actions), process management (through invoke), and more.
+They include nested and parallel states, enhanced/augmented state (through assigns), side-effects (through actions), process management (through spawn), and more.
 To learn more about statecharts, I recommend [statecharts.dev](https://statecharts.dev/).
 
 ## Goals
@@ -143,7 +143,7 @@ end
 ## Starting supervised machines
 
 Since state machines typically model structured interactions with a defined beginning and end, they will generally be started under a `DynamicSupervisor`.
-Protean starts one (as well as a `Registry`) by default, in order to manage subprocesses that are started during machine execution through the use of `Protean.Builder.invoked/3`.
+Protean starts one (as well as a `Registry`) by default, in order to manage subprocesses that are started during machine execution through the use of `Protean.Builder.proc/2` et al.
 
 Machines can be started under this supervisor using `Protean.start_machine/2`.
 

@@ -29,8 +29,8 @@ defmodule ProteanIntegration.AutoforwardTest do
       initial: "forwarding",
       states: [
         atomic(:forwarding,
-          invoke: [
-            invoked(:proc, {Child, name: ChildMachine},
+          spawn: [
+            proc({Child, name: ChildMachine},
               id: "child",
               autoforward: true
             )
@@ -41,7 +41,7 @@ defmodule ProteanIntegration.AutoforwardTest do
   end
 
   @tag machine: Parent
-  test "events are forwarded to invoked children with autoforward: true", %{machine: machine} do
+  test "events are forwarded to spawned children with autoforward: true", %{machine: machine} do
     Protean.call(machine, {"event", "a"})
     Protean.call(machine, {"event", "b"})
     Protean.call(machine, {"event", "c"})

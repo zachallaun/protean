@@ -117,6 +117,16 @@ defmodule Protean.Node do
           order: non_neg_integer() | nil
         }
 
+  @doc false
+  def append(%Node{} = n, attr, list) when is_atom(attr) and is_list(list) do
+    Map.update(n, attr, list, &(&1 ++ list))
+  end
+
+  @doc false
+  def prepend(%Node{} = n, attr, list) when is_atom(attr) and is_list(list) do
+    Map.update(n, attr, list, &(list ++ &1))
+  end
+
   @doc "Return the entry actions associated with the node."
   @spec entry_actions(t) :: [Action.t()]
   def entry_actions(%Node{} = n), do: n.entry

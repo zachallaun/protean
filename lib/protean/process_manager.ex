@@ -3,9 +3,10 @@ defmodule Protean.ProcessManager do
 
   use Supervisor
 
-  @compile {:inline, supervisor: 0, registry: 0, subprocess_key: 1}
+  @compile {:inline, supervisor: 0, task_supervisor: 0, registry: 0, subprocess_key: 1}
 
   @supervisor Module.concat(__MODULE__, Supervisor)
+  @task_supervisor Module.concat(__MODULE__, TaskSupervisor)
   @registry Module.concat(__MODULE__, Registry)
 
   @type subprocess :: {id :: term(), pid(), reference(), meta :: term()}
@@ -27,7 +28,7 @@ defmodule Protean.ProcessManager do
         {:error, {:already_started, pid}}
 
       {:error, {:already_started, pid}} ->
-        terminate_child(pid)
+        supervisor().terminate_child(@supervisor, pid)
 
         require Logger
 
@@ -39,6 +40,19 @@ defmodule Protean.ProcessManager do
 
       other ->
         other
+    end
+  end
+
+  @doc """
+  Start a registered async task. See `Task.Supervisor.async_nolink/3`.
+
+
+  """
+  @spec start_task(term(), function() | mfa()) :: :ok
+  def start_task(id, task) do
+    with task <- async_nolink(task),
+         {:ok, _} <- register_subprocess({id, task.pid, task.ref, task: true}) do
+      :ok
     end
   end
 
@@ -58,13 +72,18 @@ defmodule Protean.ProcessManager do
   """
   @spec stop_all_subprocesses() :: :ok
   def stop_all_subprocesses do
-    stop_subprocesses(subprocesses())
+    stop_subprocesses(registered_subprocesses())
   end
 
   defp stop_subprocesses(subprocesses) do
-    for {id, pid, ref, _} <- subprocesses do
+    for {id, pid, ref, meta} <- subprocesses do
+      if Keyword.get(meta, :task, false) do
+        task_supervisor().terminate_child(@task_supervisor, pid)
+      else
+        supervisor().terminate_child(@supervisor, pid)
+      end
+
       Process.demonitor(ref, [:flush])
-      terminate_child(pid)
       unregister_subprocess(id)
     end
 
@@ -74,7 +93,7 @@ defmodule Protean.ProcessManager do
   @doc """
   Select all registered subprocesses of the calling process.
   """
-  def subprocesses do
+  def registered_subprocesses do
     registry().select(@registry, [
       {
         {subprocess_key(:_), self(), :"$1"},
@@ -98,7 +117,7 @@ defmodule Protean.ProcessManager do
   @doc """
   Look up the subprocess of the calling process by its monitor `ref`.
   """
-  @spec subprocess_by_ref(reference()) :: {:ok, subprocess} | nil
+  @spec subprocess_by_ref(reference()) :: subprocess | nil
   def subprocess_by_ref(ref) do
     registry().select(@registry, [
       {
@@ -108,7 +127,7 @@ defmodule Protean.ProcessManager do
       }
     ])
     |> case do
-      [{id, pid, meta}] -> {:ok, {id, pid, ref, meta}}
+      [{id, pid, meta}] -> {id, pid, ref, meta}
       _ -> nil
     end
   end
@@ -136,8 +155,12 @@ defmodule Protean.ProcessManager do
     supervisor().start_child(@supervisor, child_spec)
   end
 
-  def terminate_child(pid) do
-    supervisor().terminate_child(@supervisor, pid)
+  def async_nolink(fun) when is_function(fun) do
+    task_supervisor().async_nolink(@task_supervisor, fun)
+  end
+
+  def async_nolink({mod, fun, args}) when is_atom(mod) and is_atom(fun) and is_list(args) do
+    task_supervisor().async_nolink(@task_supervisor, mod, fun, args)
   end
 
   def which_children do
@@ -164,19 +187,16 @@ defmodule Protean.ProcessManager do
 
     children = [
       {supervisor(), name: @supervisor, strategy: :one_for_one},
+      {task_supervisor(), name: @task_supervisor},
       {registry(), name: @registry, keys: :unique}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
 
-  defp supervisor do
-    :persistent_term.get(@supervisor)
-  end
-
-  defp registry do
-    :persistent_term.get(@registry)
-  end
+  defp task_supervisor, do: Task.Supervisor
+  defp supervisor, do: :persistent_term.get(@supervisor)
+  defp registry, do: :persistent_term.get(@registry)
 
   defp configure! do
     :persistent_term.put(

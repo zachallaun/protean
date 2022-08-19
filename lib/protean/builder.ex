@@ -2,7 +2,7 @@ defmodule Protean.Builder do
   @moduledoc """
   API for defining Protean machines.
 
-  This module is imported by default when `use Protean` is invoked.
+  This module is imported by default when `use Protean` is spawned.
 
   ## Defining a machine
 
@@ -66,7 +66,7 @@ defmodule Protean.Builder do
 
   @type atomic_state_options :: [atomic_state_option]
   @type atomic_state_option ::
-          {:invoke, invokes}
+          {:spawn, spawns}
           | {:entry, actions}
           | {:exit, actions}
           | {:always, transitions}
@@ -90,10 +90,10 @@ defmodule Protean.Builder do
   @type states :: [state]
   @type state :: {state_name, keyword()}
 
-  @type invokes :: keyword() | [keyword()]
+  @type spawns :: keyword() | [keyword()]
 
-  @type invoke_options :: [invoke_option]
-  @type invoke_option ::
+  @type spawn_options :: [spawn_option]
+  @type spawn_option ::
           {:id, String.t()}
           | {:done, transitions}
           | {:error, transitions}
@@ -134,7 +134,7 @@ defmodule Protean.Builder do
 
   ## Options
 
-    * `:invoke` - list of processes to invoke, see `invoked/3`;
+    * `:spawn` - list of processes to spawn, see `proc/2`, `task/2`, `stream/2`;
     * `:entry` - actions to execute when entering this state;
     * `:exit` - actions to execute when exiting this state;
     * `:always` - transitions to immediately take when their guard is true, see `transition/1`;
@@ -332,81 +332,20 @@ defmodule Protean.Builder do
   end
 
   @doc """
-  Builds an invoked process.
-
-  Invoked processes are subprocesses supervised by Protean that are started when the machine
-  enters the state that defines them and exited when the machine exits that state.
-
-    * `type` (optional, defaults to `:delegate`)
-    * `spec` - if `type` is other than `:delegate` this must be a value that can be invoked
-      directly. Otherwise, `c:Protean.invoke/3` will be called to get the type and spec.
-
-  ## Invoke types
-
-  `invoke_type` determines how the process will be started and the kind of interaction it will
-  have with the machine. It can be one of:
-
-    * `:delegate` - delegate to `c:Protean.invoke/3`.
-    * `:task` - an asynchronous task that is expected to return a single value, after which any
-      specified `:done` transition for the invoke will run. The return value will be available
-      as the transition event. The `:error` transition will run if the task crashes.
-    * `:proc` - an arbitrary process (including other machines). The `:done` transition is run if
-      the process exits normally. The `:error` transition is run if the process crashes or exits
-      abnormally (with a reason other than `:normal`, `:shutdown`, or `{:shutdown, term()}`).
-    * `:stream` - an event stream that will be consumed with each element of the stream being
-      sent to the machine as an event. The `:done` transition is run after the stream is fully
-      consumed. The `:error` transition is run if the stream crashes.
-
-  ## Options
-
-    * `:id`
-    * `:done`
-    * `:error`
-    * `:autoforward`
-
-  ## Example
-
-  Start a task specified by a callback at runtime.
-
-      invoke: [
-        invoked(:some_long_running_task,
-          done: transition(target: :completed, actions: :save_result),
-          error: transition(target: :failed, actions: :log_error)
-        )
-      ]
-
-      # ...
-
-      @impl true
-      def invoke(:some_long_running_task, _, _) do
-        {:task, fn -> ... end}
-      end
-
-  Start a task specified directly.
-
-      invoke: [
-        invoked(:task, fn -> ... end,
-          done: transition(target: :completed, actions: :save_result),
-          error: transition(target: :failed, actions: :log_error)
-        )
-      ]
-
+  Specification for a spawned process linked to a parent state.
   """
-  @spec invoked(Protean.invoke_type(), term(), invoke_options) :: keyword()
-  def invoked(type, spec, opts)
+  @spec proc(term(), spawn_options) :: keyword()
+  def proc(spec, opts \\ []), do: Keyword.put(opts, :proc, spec)
 
-  def invoked(:proc, spec, opts), do: Keyword.put(opts, :proc, spec)
-  def invoked(:stream, spec, opts), do: Keyword.put(opts, :stream, spec)
-  def invoked(:task, spec, opts), do: Keyword.put(opts, :task, spec)
-  def invoked(:delegate, name, opts), do: Keyword.put(opts, :delegate, name)
+  @doc """
+  Specification for a spawned task linked to a parent state.
+  """
+  @spec task(term(), spawn_options) :: keyword()
+  def task(spec, opts \\ []), do: Keyword.put(opts, :task, spec)
 
-  @doc false
-  def invoked(:proc, spec), do: [proc: spec]
-  def invoked(:stream, spec), do: [stream: spec]
-  def invoked(:task, spec), do: [task: spec]
-  def invoked(:delegate, name), do: [delegate: name]
-  def invoked(name, opts), do: invoked(:delegate, name, opts)
-
-  @doc false
-  def invoked(spec), do: [delegate: spec]
+  @doc """
+  Specification for a spawned stream linked to a parent state.
+  """
+  @spec stream(term(), spawn_options) :: keyword()
+  def stream(spec, opts \\ []), do: Keyword.put(opts, :stream, spec)
 end
