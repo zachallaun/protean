@@ -96,13 +96,12 @@ defmodule Protean.Interpreter do
   Stop an interpreter, preventing further event processing and terminating any invoked processes.
   """
   @spec stop(t) :: t
-  def stop(%Interpreter{running: false} = interpreter), do: interpreter
-
-  def stop(interpreter) do
+  def stop(%Interpreter{running: true} = interpreter) do
     ProcessManager.stop_all_subprocesses()
-
     %{interpreter | running: false}
   end
+
+  def stop(interpreter), do: interpreter
 
   @doc """
   Handle an event, executing any transitions, actions, and side-effects associated with the
@@ -111,12 +110,6 @@ defmodule Protean.Interpreter do
   Returns a tuple of the interpreter and any replies resulting from actions that were run.
   """
   @spec handle_event(t, Protean.event()) :: {t, [term()]}
-  def handle_event(%Interpreter{running: true} = interpreter, %Events.Platform{} = event) do
-    interpreter
-    |> process_event(event, false)
-    |> pop_replies()
-  end
-
   def handle_event(%Interpreter{running: true} = interpreter, event) do
     interpreter
     |> autoforward_event(event)
@@ -191,19 +184,20 @@ defmodule Protean.Interpreter do
 
       {{:value, event}, queue} ->
         %{interpreter | internal_queue: queue}
-        |> process_event(event, false)
+        |> process_event(event)
     end
   end
 
-  defp process_event(interpreter, event, external? \\ true) do
-    interpreter_with_event = set_event(interpreter, event)
-    transitions = select_transitions(interpreter_with_event, event)
-
-    transitions
-    |> microstep(if external?, do: interpreter_with_event, else: interpreter)
+  defp process_event(interpreter, event) do
+    interpreter
+    |> select_transitions(event)
+    |> microstep(maybe_set_event(interpreter, event))
     |> run_interpreter()
     |> broadcast_transition()
   end
+
+  defp maybe_set_event(interpreter, %Events.Platform{}), do: interpreter
+  defp maybe_set_event(interpreter, event), do: set_event(interpreter, event)
 
   defp broadcast_transition(%Interpreter{id: nil} = interpreter) do
     interpreter
@@ -245,6 +239,8 @@ defmodule Protean.Interpreter do
   end
 
   @spec autoforward_event(t, Protean.event()) :: t
+  defp autoforward_event(interpreter, %Events.Platform{}), do: interpreter
+
   defp autoforward_event(interpreter, event) do
     for {_id, pid, _ref, opts} <- ProcessManager.subprocesses(),
         Keyword.get(opts, :autoforward, false) do

@@ -85,8 +85,11 @@ defmodule ProteanIntegration.InvokedMachineTest do
       Protean.send(m1, :grow_it)
       Trigger.await(InvokedMachineTrigger, {:relax, m1})
 
+      assert Protean.matches?(m1, :relax)
+      refute Protean.matches?(m2, :relax)
+
       Protean.call(m2, :grow_it)
-      Trigger.await(InvokedMachineTrigger, {:relax, m1})
+      Trigger.await(InvokedMachineTrigger, {:relax, m2})
 
       assert Protean.matches?(m2, :relax)
     end
