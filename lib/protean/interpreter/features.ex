@@ -9,6 +9,7 @@ defmodule Protean.Interpreter.Features do
   alias Protean.ProcessManager
   alias Protean.PubSub
 
+  @dialyzer {:nowarn_function, install_debug: 2}
   @debug false
 
   def install(interpreter) do
@@ -24,7 +25,7 @@ defmodule Protean.Interpreter.Features do
 
   defp install_debug(interpreter, false), do: interpreter
 
-  defp install_debug(interpreter, true) do
+  defp install_debug(interpreter, _) do
     interpreter
     |> Hooks.event_filter(&log/1)
     |> Hooks.after_event_filter(&log/2)
