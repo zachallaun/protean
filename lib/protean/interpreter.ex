@@ -125,6 +125,15 @@ defmodule Protean.Interpreter do
     update_in(interpreter.internal_queue, &:queue.in(event, &1))
   end
 
+  @spec add_many_internal(t, [term()]) :: t
+  def add_many_internal(interpreter, [event | rest]) do
+    interpreter
+    |> add_internal(event)
+    |> add_many_internal(rest)
+  end
+
+  def add_many_internal(interpreter, []), do: interpreter
+
   @doc false
   @spec with_context(t, map()) :: t
   def with_context(interpreter, context) do
@@ -237,17 +246,21 @@ defmodule Protean.Interpreter do
       |> Machinery.take_transitions(context, transitions)
       |> Context.pop_actions()
 
-    newly_final =
+    final_state_events =
       context.final
       |> MapSet.difference(interpreter.context.final)
+      |> Enum.map(&Events.platform(:done, &1))
 
-    newly_final
-    |> Enum.map(&Events.platform(:done, &1))
-    |> Enum.reduce(interpreter, &add_internal(&2, &1))
+    interpreter
+    |> add_many_internal(final_state_events)
     |> with_context(context)
     |> Action.exec_all(actions)
-    |> then(&if config.root.id in context.final, do: stop(&1), else: &1)
+    |> stop_if_final()
     |> Hooks.run(:after_microstep)
+  end
+
+  defp stop_if_final(%Interpreter{context: context, config: config} = interpreter) do
+    if config.root.id in context.final, do: stop(interpreter), else: interpreter
   end
 
   defp process_event(interpreter, event) do

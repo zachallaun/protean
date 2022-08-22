@@ -1,6 +1,6 @@
 defmodule Protean.Context do
   @moduledoc """
-  Snapshot of active states, assigns, and the latest event seen by the machine.
+  State available to observers of and callbacks in a machine.
 
   Functions in this module should rarely be used directly. Instead, rely on the API exposed by
   `Protean` and `Protean.Action` to query and modify machine context.
