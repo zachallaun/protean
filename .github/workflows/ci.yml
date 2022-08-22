@@ -3,8 +3,7 @@ on:
   pull_request:
   push:
     branches:
-      - main
-      - test-ci
+      - '**'
 jobs:
   lint:
     runs-on: ubuntu-20.04
