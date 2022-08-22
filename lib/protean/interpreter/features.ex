@@ -9,10 +9,11 @@ defmodule Protean.Interpreter.Features do
   alias Protean.ProcessManager
   alias Protean.PubSub
 
+  @debug false
+
   def install(interpreter) do
     interpreter
-    # |> Hooks.event_filter(&log/1)
-    # |> Hooks.after_event_filter(&log/2)
+    |> install_debug(@debug)
     |> Hooks.event_filter(&exit_message/1)
     |> Hooks.event_filter(&task_completed/1)
     |> Hooks.event_filter(&task_failed/1)
@@ -21,17 +22,25 @@ defmodule Protean.Interpreter.Features do
     |> Hooks.on_stop(&stop_all_subprocesses/1)
   end
 
-  # defp log({interpreter, event}) do
-  #   require Logger
-  #   Logger.info(inspect([:before, module: interpreter.config.callback_module, event: event]))
-  #   {:cont, {interpreter, event}}
-  # end
+  defp install_debug(interpreter, false), do: interpreter
 
-  # defp log(interpreter, event) do
-  #   require Logger
-  #   Logger.info(inspect([:after, module: interpreter.config.callback_module, event: event]))
-  #   {:cont, interpreter}
-  # end
+  defp install_debug(interpreter, true) do
+    interpreter
+    |> Hooks.event_filter(&log/1)
+    |> Hooks.after_event_filter(&log/2)
+  end
+
+  defp log({interpreter, event}) do
+    require Logger
+    Logger.info(inspect([:before, module: interpreter.config.callback_module, event: event]))
+    {:cont, {interpreter, event}}
+  end
+
+  defp log(interpreter, event) do
+    require Logger
+    Logger.info(inspect([:after, module: interpreter.config.callback_module, event: event]))
+    {:cont, interpreter}
+  end
 
   defp exit_message({interpreter, {:EXIT, _pid, _reason}}) do
     {:halt, Interpreter.stop(interpreter)}
