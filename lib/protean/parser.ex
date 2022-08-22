@@ -286,7 +286,7 @@ defmodule Protean.Parser do
     [
       source_id: id,
       target_ids: target_ids,
-      match?: matcher,
+      match: matcher,
       actions: parse_actions(transition[:actions]),
       guard: parse_guard(transition[:guard]),
       _meta: transition[:_meta]

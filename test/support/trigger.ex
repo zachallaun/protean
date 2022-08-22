@@ -42,8 +42,8 @@ defmodule Trigger do
   # Protean Action helpers
   @behaviour Protean.Action
 
-  def action(name, value) do
-    Protean.Action.new(__MODULE__, {:trigger, name, value})
+  def action(trigger, value) do
+    Protean.Action.new(__MODULE__, {:trigger, trigger, value})
   end
 
   @impl true

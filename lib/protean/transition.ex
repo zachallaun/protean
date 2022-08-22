@@ -12,14 +12,14 @@ defmodule Protean.Transition do
   alias __MODULE__
   alias Protean.Action
   alias Protean.Context
-  alias Protean.Events
+  alias Protean.Events.Platform
   alias Protean.Guard
   alias Protean.Node
 
   defstruct [
     :source_id,
     :target_ids,
-    :match?,
+    :match,
     :guard,
     :domain,
     internal: false,
@@ -30,7 +30,7 @@ defmodule Protean.Transition do
   @type t :: %Transition{
           source_id: Node.id(),
           target_ids: [Node.id()] | nil,
-          match?: (term() -> boolean()) | term() | nil,
+          match: (term() -> boolean()) | term() | nil,
           guard: Guard.t(),
           internal: boolean(),
           actions: [Action.t()],
@@ -40,7 +40,7 @@ defmodule Protean.Transition do
 
   def new(opts \\ []) do
     opts
-    |> Keyword.take([:source_id, :target_ids, :match?, :guard, :internal, :actions, :_meta])
+    |> Keyword.take([:source_id, :target_ids, :match, :guard, :internal, :actions, :_meta])
     |> then(&struct(Transition, &1))
     |> with_domain()
   end
@@ -65,17 +65,15 @@ defmodule Protean.Transition do
     Enum.all?(ids, &Node.descendant?(&1, id))
   end
 
-  defp matches?(%Transition{match?: nil}, _), do: true
-
-  defp matches?(
-         %Transition{match?: %Events.Platform{id: id, type: type}},
-         %Events.Platform{id: id, type: type}
-       ) do
-    true
+  defp matches?(%Transition{match: match}, event) do
+    case {match, event} do
+      {nil, _} -> true
+      {%Platform{id: id, type: type}, %Platform{id: id, type: type}} -> true
+      {_, %Platform{payload: nil}} -> false
+      {match?, event} when is_function(match?) -> match?.(event)
+      {match, event} -> match == event
+    end
   end
-
-  defp matches?(%Transition{match?: match?}, event) when is_function(match?), do: match?.(event)
-  defp matches?(%Transition{match?: match}, event), do: match == event
 
   defp guard_allows?(%Transition{guard: nil}, _, _, _), do: true
 
