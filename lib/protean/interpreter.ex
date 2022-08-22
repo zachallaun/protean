@@ -190,12 +190,6 @@ defmodule Protean.Interpreter do
     {with_context(interpreter, context), replies}
   end
 
-  @doc """
-  Return the current machine context.
-  """
-  @spec context(t) :: Context.t()
-  def context(%Interpreter{context: context}), do: context
-
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
   # internal events are processed before processing any external events.
   @spec run_interpreter(t) :: t

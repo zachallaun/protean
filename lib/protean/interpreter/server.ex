@@ -65,7 +65,7 @@ defmodule Protean.Interpreter.Server do
 
   @impl true
   def handle_call({@prefix, :current_context}, _from, interpreter) do
-    {:reply, Interpreter.context(interpreter), interpreter}
+    {:reply, interpreter.context, interpreter}
   end
 
   def handle_call({@prefix, :ping}, _from, interpreter) do
@@ -95,7 +95,7 @@ defmodule Protean.Interpreter.Server do
     if Interpreter.running?(interpreter) do
       {:noreply, interpreter}
     else
-      {:stop, {:shutdown, Interpreter.context(interpreter)}, interpreter}
+      {:stop, {:shutdown, interpreter.context}, interpreter}
     end
   end
 
@@ -110,6 +110,6 @@ defmodule Protean.Interpreter.Server do
 
   defp run_event(interpreter, event) do
     {interpreter, replies} = Interpreter.handle_event(interpreter, event)
-    {interpreter, {Interpreter.context(interpreter), replies}}
+    {interpreter, {interpreter.context, replies}}
   end
 end
