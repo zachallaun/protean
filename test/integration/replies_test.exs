@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.RepliesTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule Replying do
     use Protean

@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.InternalTransitionsTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule Siblings do
     use Protean

@@ -1,4 +1,6 @@
 defmodule ProteanIntegration.DependentProcessesTest do
+  # Cannot be async because test looks into internal Protean.ProcessManager.Supervisor that is
+  # shared with other tests.
   use Protean.TestCase
 
   defmodule Child do

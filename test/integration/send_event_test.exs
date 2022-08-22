@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.SendEventTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule SendParent do
     use Protean

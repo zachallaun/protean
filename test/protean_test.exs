@@ -1,5 +1,5 @@
 defmodule ProteanTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   import ExUnit.CaptureLog
 

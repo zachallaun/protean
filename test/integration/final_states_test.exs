@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.FinalStatesTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule TestMachine do
     use Protean

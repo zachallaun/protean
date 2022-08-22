@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.SimpleTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule SimpleMachine do
     use Protean

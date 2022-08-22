@@ -1,5 +1,5 @@
 defmodule ProteanIntegration.PingPongTest do
-  use Protean.TestCase
+  use Protean.TestCase, async: true
 
   defmodule PingPong do
     use Protean
