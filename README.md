@@ -193,7 +193,16 @@ defp deps do
 end
 ```
 
-For usage, see `subscribe/2`.
+If you are already starting a `Phoenix.PubSub` in your application (e.g. a Phoenix application), you need to configure the `:protean` application to use your process instead of starting its own.
+This can be done by adding the following to your `config.exs`:
+
+```elixir
+config :protean, :pubsub,
+  name: MyApp.PubSub,
+  start: false
+```
+
+For subscription usage, see `subscribe/2`.
 
 <!-- MDOC !-->
 
