@@ -7,8 +7,8 @@ _Caveat emptor: Protean started as a library for personal learning and explorati
 
 A library for managing state and side-effects with event-driven statecharts.
 
-Protean is heavily inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir idioms and OTP conventions.
-Protean also attempts to follow the [SCXML](https://www.w3.org/TR/scxml/) standard, though not completely.
+Protean was initially inspired by [XState](https://xstate.js.org/docs/), a robust JavaScript/TypeScript statechart implementation, but strays to adhere to Elixir and OTP conventions.
+We also follow much of the [SCXML W3C Standard](https://www.w3.org/TR/scxml/)'s recommendations, but compatibility is not a goal.
 
 **What are statecharts?**
 They are an extension to finite state machines that allow you to model complex behavior in a declarative, data-driven manner.
@@ -210,22 +210,6 @@ For subscription usage, see `subscribe/2`.
 
 Documentation can be found [on hexdocs](https://hexdocs.pm/protean/).
 Things are changing pretty regularly, however, and some documentation is certainly out-of-sync.
-
-## Todo
-
-- [ ] Actions
-  - [ ] Spawn in assigns
-  - [ ] Raise action (queues event in internal queue)
-  - [ ] Respond action
-  - [ ] Forward action
-  - [ ] Escalate action
-- [ ] Parallel states
-  - [ ] Correct transition conflict handling
-- [ ] History states
-- [ ] Fix all "FIXME"
-- [ ] Fix all "TODO"
-- [ ] Stricter machine config parsing with helpful error messages
-- [ ] Differentiate between internal and external events (internal events should not trigger catch-all)
 
 ## Installation
 
