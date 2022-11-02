@@ -62,9 +62,9 @@ defmodule Protean.MixProject do
 
       # dev/test
       {:credo, "~> 1.6", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.28.4", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.29", only: :dev, runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.15", only: :test}
     ]
   end
 
@@ -88,7 +88,6 @@ defmodule Protean.MixProject do
     [
       plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
       flags: [
-        "-Wunmatched_returns",
         :underspecs,
         :extra_return,
         :missing_return
