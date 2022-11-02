@@ -14,10 +14,10 @@ jobs:
       matrix:
         include:
           - pair:
-              elixir: '1.13'
+              elixir: '1.14'
               otp: 25
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Elixir
         id: beam
@@ -27,13 +27,13 @@ jobs:
           elixir-version: ${{matrix.pair.elixir}}
 
       - name: Deps Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: deps
           key: mix-deps-${{ hashFiles('**/mix.lock') }}
 
       - name: PLT Cache (Dialyzer)
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: plt_cache
         with:
           key: ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
@@ -64,25 +64,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - pair:
-              elixir: '1.13'
-              otp: 24.3
-          - pair:
-              elixir: '1.13'
-              otp: 25
+        elixir: [1.13, 1.14]
+        otp: [24.3, 25]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Elixir
         id: beam
         uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{matrix.pair.otp}}
-          elixir-version: ${{matrix.pair.elixir}}
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
 
       - name: Deps Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: deps
           key: mix-deps-${{ hashFiles('**/mix.lock') }}
