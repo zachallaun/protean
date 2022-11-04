@@ -1,3 +1,67 @@
+```elixir
+defmodule DrawingCheckoutMachine do
+  use Protean.Machine
+
+  defmachine :ticket, [
+    initial: :pending,
+    states: [
+      pending:
+        atomic(
+          always: [
+            to(:expired, after: :ms_until_expiration)
+          ],
+          on: [
+            match(:pass, target: :passed),
+            match({:checkout, _cart}, target: :checkout)
+          ]
+        ),
+      checkout:
+        compound(
+          initial: :reserving,
+          states: [
+            reserving:
+              atomic(
+                entry: :reserve_cart_items,
+                always: [
+                  to(:reserved, when: :reserved?),
+                  to(:pending)
+                ]
+              ),
+            reserved:
+              machine(
+                :checkout,
+                done: [
+                  to(:used, when: :checkout_completed?),
+                  to(:passed)
+                ]
+              )
+          ]
+      ),
+      used: final(),
+      passed: final(),
+      expired: final()
+    ]
+  ]
+end
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 [![Docs](https://img.shields.io/badge/hex.pm-docs-8e7ce6.svg)](https://hexdocs.pm/protean/0.1.0-alpha.3/Protean.html)
 [![CI](https://github.com/zachallaun/protean/actions/workflows/ci.yml/badge.svg)](https://github.com/zachallaun/protean/actions/workflows/ci.yml)
 
@@ -21,55 +85,163 @@ This project is currently an exploration of statecharts as they fit into the ass
 XState adopted the actor model in its implementation, so Elixir seemed like a natural fit.
 However, it may be that Elixir/OTP makes these abstractions unnecessary.
 
-## Example
+## Example: Eggs Three Ways
 
-This simple statechart has a single state that defines the behavior of a counter with an optional maximum and minimum.
+Let's model the behavior of an egg timer and let's do it three times.
+A mechanical egg timer is a simple device: you turn it clockwise and it begins winding down, dinging when it's done.
 
 ```elixir
-defmodule Counter do
-  use Protean
-  alias Protean.Action
+defmodule Timers do
+  use Protean.Machine
 
-  @machine [
-    initial: :active,
-    assigns: [
-      count: 0,
-      min: nil,
-      max: nil
-    ],
+  defmachine :egg_timer, [
+    initial: :stopped,
+    assigns: %{
+      ticks: 0
+    },
     states: [
-      atomic(:active,
+      stopped: atomic(
         on: [
-          match("Inc", actions: :increment, guard: [not: :at_max]),
-          match("Dec", actions: :decrement, guard: [not: :at_min]),
-          match({"Set", _}, actions: :set_min_or_max),
-          match({"Log", _}, actions: :log)
+          match({:wind_forward, _ticks}, target: :done?, action: :inc)
+        ]
+      ),
+      ticking: atomic(
+        on: [
+          match({:wind_forward, _ticks}, target: :done?, action: :inc),
+          match({:wind_backward, _ticks}, target: :done?, action: :dec),
+          match({:tick, _ticks}, target: :done?, action: :dec)
+        ]
+      ),
+      done?: atomic(
+        always: [
+          target(:ticking, when: :ticks_remaining?),
+          target(:stopped, when: [not: :ticks_remaining?], action: :ding!)
         ]
       )
     ]
   ]
 
   @impl true
-  def handle_action(:increment, context, _event) do
-    context
-    |> Action.assign_in([:count], & &1 + 1)
+  def handle_action(:inc, {_, ticks}, ctx) do
+    {:noreply, update(ctx, :ticks, & &1 + ticks)}
   end
 
-  def handle_action(:decrement, context, _event) do
-    context
-    |> Action.assign_in([:count], & &1 - 1)
+  def handle_action(:dec, {_, ticks}, ctx) do
+    {:noreply, update(ctx, :ticks, &max(&1 - ticks, 0))}
   end
 
-  def handle_action(:set_min_or_max, context, {"Set", {key, val}}) do
-    context
-    |> Action.assign(key, val)
+  def handle_action(:ding!, _event, ctx) do
+    Sounds.play_ding_noise()
+
+    {:noreply, ctx}
   end
 
-  def handle_action(:log, context, {"Log", attribute}) do
-    %{assigns: assigns} = context
-    IO.puts("#{attribute}: #{assigns[attribute]}")
+  @impl true
+  def handle_guard(:ticks_remaining?, _event, %{assigns: %{ticks: ticks}}), do: ticks > 0
+end
+```
 
-    context
+Low-level API:
+
+```elixir
+{:done, timer} = Protean.Machine.new(Timers, :egg_timer)
+
+{:cont, timer} = Protean.Machine.step(timer, {:wind_forward, 10})
+
+timer.event # {:wind_forward, 10}
+timer.state # %{stopped: nil}
+timer.actions # [:inc]
+timer.assigns # %{ticks: 0}
+
+timer = Protean.Machine.exec(timer)
+
+timer.state # %{ticking: nil}
+timer.actions # []
+timer.assigns # %{ticks: 10}
+
+{:cont, timer} = Protean.Machine.step(timer, {:tick, 5})
+
+timer = Protean.Machine.exec(timer)
+
+timer.assigns # %{ticks: 5}
+
+{:cont, timer} = Protean.Machine.step(timer, {:tick, 5})
+
+# issues ding
+timer = Protean.Machine.exec(timer)
+
+timer.state # %{stopped: nil}
+timer.assigns # %{ticks: 0}
+```
+
+High-level API:
+
+```elixir
+timer = Timers.machine(:egg_timer)
+
+timer = Protean.run(timer, {:wind_forward, 10})
+timer = Protean.run(timer, {:tick, 5})
+timer = Protean.run(timer, {:tick, 5})
+
+def run(machine, event) do
+  machine
+  |> exec_all()
+  |> Machine.step(event)
+  |> exec_all()
+end
+
+defp exec_all(%{settled?: false} = machine) do
+  case Machine.exec(machine) do
+    {:cont, machine} -> exec_all(machine)
+    {:done, machine} -> machine
+  end
+end
+
+defp exec_all(machine), do: machine
+```
+
+
+
+This simple statechart has a single state that defines the behavior of a counter with an optional maximum and minimum.
+
+```elixir
+defmodule Counter do
+  use Protean.Machine
+
+  defmachine :min_max, [
+    initial: :active,
+    assigns: %{
+      count: 0,
+      min: nil,
+      max: nil
+    },
+    states: [
+      active: atomic(
+        on: [
+          match(:inc, action: :increment, guard: [not: :at_max]),
+          match(:dec, action: :decrement, guard: [not: :at_min]),
+          match({:set, {_min_or_max, _val}}, action: :set),
+          match({:log, _key}, action: :log)
+        ]
+      )
+    ]
+  ]
+
+  @impl true
+  def handle_action(:inc, ctx, _event) do
+    {:noreply, ctx |> update(:count, & &1 + 1)}
+  end
+
+  def handle_action(:dec, ctx, _event) do
+    {:noreply, ctx |> update(:count, & &1 - 1)}
+  end
+
+  def handle_action(:set, %{assigns: %{count: count}} = ctx, {:set, {:min, min}}) do
+    {:noreply, ctx |> assign(min: min, count: max(min, count))}
+  end
+
+  def handle_action(:set, %{assigns: %{count: count}} = ctx, {:set, {:max, max}}) do
+    {:noreply, ctx |> assign(max: max, count: min(max, count))}
   end
 
   @impl true
@@ -82,6 +254,24 @@ defmodule Counter do
   end
 end
 ```
+
+This `Counter` module defines a single `:min_max` machine as well as the action handlers and guards required by it.
+
+```elixir
+ctx = Counter.machine(:min_max)
+# %{assigns: %{count: 0, ...}, ...}
+
+ctx = Protean.step(ctx, :inc)
+# %{assigns: %{count: 1, ...}, ...}
+
+ctx = Enum.reduce(1..4, ctx, &Protean.step(&1, :inc))
+# %{assigns: %{count: 5, ...}, ...}
+
+ctx = Protean.step(ctx, {:set, {:max, 3}})
+# %{assigns: %{count: 3, max: 3, ...}, ...}
+```
+
+
 
 It can be started under a supervisor, but we'll start it directly using Protean's built-in `DynamicSupervisor`.
 
