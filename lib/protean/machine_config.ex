@@ -9,13 +9,12 @@ defmodule Protean.MachineConfig do
   alias Protean.Parser
   alias Protean.Utils
 
-  @enforce_keys [:id, :root, :default_assigns]
+  @enforce_keys [:id, :root]
 
-  @derive {Inspect, only: [:id, :root, :default_assigns, :callback_module]}
+  @derive {Inspect, only: [:id, :root, :callback_module]}
   defstruct [
     :id,
     :root,
-    :default_assigns,
     :callback_module,
     idmap: %{}
   ]
@@ -25,7 +24,6 @@ defmodule Protean.MachineConfig do
           id: binary(),
           root: Node.t(),
           idmap: %{Node.id() => Node.t()},
-          default_assigns: Context.assigns(),
           callback_module: module()
         }
 
@@ -33,7 +31,7 @@ defmodule Protean.MachineConfig do
   @type config :: keyword()
 
   def new(config, opts \\ []) do
-    {root, assigns} = Parser.parse!(config)
+    root = Parser.parse!(config)
 
     idmap =
       Utils.Tree.reduce(root, %{}, fn node, idmap ->
@@ -43,7 +41,6 @@ defmodule Protean.MachineConfig do
     %MachineConfig{
       id: opts[:id] || Utils.uuid4(),
       root: root,
-      default_assigns: assigns,
       idmap: idmap,
       callback_module: opts[:callback_module]
     }
@@ -77,9 +74,9 @@ defmodule Protean.MachineConfig do
       |> Node.entry_order()
       |> Enum.flat_map(& &1.entry)
 
-    Context.new(active_ids)
-    |> Context.assign(config.default_assigns)
-    |> Context.assign_actions(entry_actions)
+    active_ids
+    |> Context.new()
+    |> Map.put(:actions, entry_actions)
   end
 
   @doc """

@@ -101,9 +101,9 @@ defmodule Protean.Action do
 
   alias __MODULE__
   alias Protean.Context
+  alias Protean.Context.Store
   alias Protean.Events
   alias Protean.Guard
-  alias Protean.Interpreter
   alias Protean.ProcessManager
 
   require Logger
@@ -119,20 +119,20 @@ defmodule Protean.Action do
 
   @typedoc "Allowed return value from `c:exec_action/2`."
   @type exec_action_return ::
-          {:cont, Interpreter.t()}
-          | {:cont, Interpreter.t(), [t]}
-          | {:halt, Interpreter.t()}
+          {:cont, Store.t()}
+          | {:cont, Store.t(), [t]}
+          | {:halt, Store.t()}
 
   @doc """
-  Accepts the `action_arg` passed with the action as well as the Protean interpreter. Returns
+  Accepts the `action_arg` passed with the action as well as the store. Returns
   one of three values:
 
-    * `{:cont, interpreter}` to continue running the action pipeline
-    * `{:cont, interpreter, [action]}` to inject actions that will be run immediately before
+    * `{:cont, store}` to continue running the action pipeline
+    * `{:cont, store, [action]}` to inject actions that will be run immediately before
       running the rest of the pipeline's actions
-    * `{:halt, interpreter}` to halt the action pipeline, canceling any further actions
+    * `{:halt, store}` to halt the action pipeline, canceling any further actions
   """
-  @callback exec_action(action_arg :: term(), Interpreter.t()) :: exec_action_return
+  @callback exec_action(action_arg :: term(), Store.t()) :: exec_action_return
 
   @doc false
   @spec new(module(), term()) :: t
@@ -141,34 +141,34 @@ defmodule Protean.Action do
   defp new(arg), do: new(__MODULE__, arg)
 
   @doc false
-  @spec exec(t | term(), Interpreter.t()) :: exec_action_return
-  def exec(%Action{module: module, arg: arg}, interpreter) do
-    case module.exec_action(arg, interpreter) do
-      {:cont, interpreter, []} -> {:cont, interpreter}
-      {:cont, interpreter, actions} when is_list(actions) -> {:cont, interpreter, actions}
-      {:cont, interpreter} -> {:cont, interpreter}
-      {:halt, interpreter} -> {:halt, interpreter}
+  @spec exec(t | term(), Store.t()) :: exec_action_return
+  def exec(%Action{module: module, arg: arg}, store) do
+    case module.exec_action(arg, store) do
+      {:cont, store, []} -> {:cont, store}
+      {:cont, store, actions} when is_list(actions) -> {:cont, store, actions}
+      {:cont, store} -> {:cont, store}
+      {:halt, store} -> {:halt, store}
       other -> raise "Unknown return from #{inspect(module)}.exec_action/2: #{inspect(other)}"
     end
   end
 
-  def exec(action, interpreter) do
+  def exec(action, store) do
     action
     |> delegate()
-    |> exec(interpreter)
+    |> exec(store)
   end
 
   @doc false
-  @spec exec_all(Interpreter.t(), [t | term()]) :: Interpreter.t()
-  def exec_all(interpreter, [action | rest]) do
-    case exec(action, interpreter) do
-      {:halt, interpreter} -> interpreter
-      {:cont, interpreter} -> exec_all(interpreter, rest)
-      {:cont, interpreter, actions} -> exec_all(interpreter, actions ++ rest)
+  @spec exec_all(Store.t(), [t | term()]) :: Store.t()
+  def exec_all(store, [action | rest]) do
+    case exec(action, store) do
+      {:halt, store} -> store
+      {:cont, store} -> exec_all(store, rest)
+      {:cont, store, actions} -> exec_all(store, actions ++ rest)
     end
   end
 
-  def exec_all(interpreter, []), do: interpreter
+  def exec_all(store, []), do: store
 
   @doc """
   Attach a custom action that implements the `Protean.Action` behaviour.
@@ -183,83 +183,6 @@ defmodule Protean.Action do
   @doc false
   def delegate(action) do
     new({:delegate, action})
-  end
-
-  @doc """
-  Attach an action that assigns a value to a key in a machine's context.
-  """
-  @doc type: :callback_action
-  @spec assign(Context.t(), key :: term(), value :: term()) :: Context.t()
-  def assign(%Context{} = context, key, value), do: assign([{key, value}]) |> put_action(context)
-
-  @doc """
-  Attach an action that merges the given assigns into a machine's context.
-  """
-  @doc type: :callback_action
-  @spec assign(Context.t(), assigns :: Enumerable.t()) :: Context.t()
-  def assign(%Context{} = context, assigns), do: assign(assigns) |> put_action(context)
-
-  @doc """
-  Same as `assign/2` but used inline in machine configuration.
-  """
-  @doc type: :inline_action
-  @spec assign(Enumerable.t()) :: t
-  def assign(assigns) do
-    new({:assign, :merge, Map.new(assigns)})
-  end
-
-  @doc """
-  Attach an action that assigns into a machine's context.
-
-  Similar to `Kernel.put_in/3`.
-  """
-  @doc type: :callback_action
-  @spec assign_in(Context.t(), [term(), ...], term()) :: Context.t()
-  def assign_in(%Context{} = context, path, value),
-    do: assign_in(path, value) |> put_action(context)
-
-  @doc """
-  Same as `assign_in/3` but used inline in machine configuration.
-  """
-  @doc type: :inline_action
-  @spec assign_in([term(), ...], term()) :: t
-  def assign_in(path, value) when is_list(path) do
-    update(fn assigns -> put_in(assigns, path, value) end)
-  end
-
-  @doc """
-  Attach an action that calls a function with a machine's context and merges the result into
-  assigns.
-  """
-  @doc type: :callback_action
-  def update(%Context{} = context, fun), do: update(fun) |> put_action(context)
-
-  @doc """
-  Same as `update/2`, but inserted inline in machine config.
-  """
-  @doc type: :inline_action
-  def update(fun) when is_function(fun) do
-    new({:assign, :update, fun})
-  end
-
-  @doc """
-  Attach an action that applies an update function into a machine's context.
-
-  Similar to `Kernel.update_in/3`.
-  """
-  @doc type: :callback_action
-  @spec update_in(Context.t(), [term(), ...], function()) :: Context.t()
-  def update_in(%Context{} = context, path, fun) do
-    update_in(path, fun) |> put_action(context)
-  end
-
-  @doc """
-  Same as `update_in/3` but used inline in machine configuration.
-  """
-  @doc type: :inline_action
-  @spec update_in([term(), ...], function()) :: t
-  def update_in(path, fun) when is_list(path) and is_function(fun) do
-    update(fn assigns -> Kernel.update_in(assigns, path, fun) end)
   end
 
   @doc """
@@ -325,18 +248,15 @@ defmodule Protean.Action do
   # Action callbacks
 
   @doc false
-  def exec_action({:delegate, action}, interpreter) do
-    %{context: context, config: config} = interpreter
+  def exec_action({:delegate, action}, store) do
+    ctx = Store.get_context(store)
 
-    case config.callback_module.handle_action(action, context, context.event) do
-      {:noreply, context} ->
-        {:cont, interpreter, Context.actions(context)}
+    case ctx.config.callback_module.handle_action(action, store, ctx.event) do
+      {:noreply, store} ->
+        {:cont, store, Context.get(store, :actions)}
 
-      {:reply, reply, context} ->
-        {:cont, Interpreter.put_reply(interpreter, reply), Context.actions(context)}
-
-      %Context{} = context ->
-        {:cont, interpreter, Context.actions(context)}
+      {:reply, reply, store} ->
+        {:cont, Context.add_reply(store, reply), Context.get(store, :actions)}
 
       other ->
         Logger.error("""
@@ -350,63 +270,53 @@ defmodule Protean.Action do
           #{inspect(other)}
         """)
 
-        {:cont, interpreter}
+        {:cont, store}
     end
   end
 
-  def exec_action({:assign, :merge, assigns}, interpreter) do
-    %{context: context} = interpreter
-    {:cont, %{interpreter | context: Context.assign(context, assigns)}}
-  end
-
-  def exec_action({:assign, :update, fun}, interpreter) do
-    assigns = interpreter.context.assigns
-    exec_action({:assign, :merge, fun.(assigns)}, interpreter)
-  end
-
-  def exec_action({:send, event, to}, interpreter) do
-    interpreter
+  def exec_action({:send, event, to}, store) do
+    store
     |> resolve_recipient(to)
     |> Protean.send(event)
 
-    {:cont, interpreter}
+    {:cont, store}
   end
 
-  def exec_action({:send_after, event, to, delay}, interpreter) do
-    interpreter
+  def exec_action({:send_after, event, to, delay}, store) do
+    store
     |> resolve_recipient(to)
     |> Protean.send_after(event, delay)
 
-    {:cont, interpreter}
+    {:cont, store}
   end
 
-  def exec_action({:choose, actions}, interpreter) do
-    choice = actions |> Enum.find(&guard_allows?(&1, interpreter)) |> normalize_choice()
-    {:cont, interpreter, List.wrap(choice)}
+  def exec_action({:choose, actions}, store) do
+    choice = actions |> Enum.find(&guard_allows?(&1, store)) |> normalize_choice()
+    {:cont, store, List.wrap(choice)}
   end
 
-  def exec_action({:spawn, :cancel, id}, interpreter) do
+  def exec_action({:spawn, :cancel, id}, store) do
     ProcessManager.stop_subprocess(id)
-    {:cont, interpreter}
+    {:cont, store}
   end
 
-  def exec_action({:spawn, :delayed_send, delay, id, _opts}, interpreter) do
+  def exec_action({:spawn, :delayed_send, delay, id, _opts}, store) do
     delay =
       case delay do
         delay when is_integer(delay) -> delay
-        other -> run_callback(:delay, [other], interpreter)
+        other -> run_callback(:delay, [other], store)
       end
 
     f = fn -> :timer.sleep(delay) end
 
-    spawn_task(interpreter, id, f)
+    spawn_task(store, id, f)
   end
 
-  def exec_action({:spawn, :stream, stream, id, _opts}, interpreter) do
+  def exec_action({:spawn, :stream, stream, id, _opts}, store) do
     stream =
       case stream do
         name when is_atom(name) or is_binary(name) ->
-          run_callback(:spawn, [:stream, name], interpreter)
+          run_callback(:spawn, [:stream, name], store)
 
         stream ->
           stream
@@ -419,21 +329,21 @@ defmodule Protean.Action do
       :ok
     end
 
-    spawn_task(interpreter, id, task)
+    spawn_task(store, id, task)
   end
 
-  def exec_action({:spawn, :task, task, id, _opts}, interpreter) do
+  def exec_action({:spawn, :task, task, id, _opts}, store) do
     task =
       case task do
         {_m, _f, _a} = mfa -> mfa
         f when is_function(f) -> f
-        other -> run_callback(:spawn, [:task, other], interpreter)
+        other -> run_callback(:spawn, [:task, other], store)
       end
 
-    spawn_task(interpreter, id, task)
+    spawn_task(store, id, task)
   end
 
-  def exec_action({:spawn, :proc, proc, id, opts}, interpreter) do
+  def exec_action({:spawn, :proc, proc, id, opts}, store) do
     proc =
       case proc do
         {mod, arg} -> {mod, Keyword.put_new(arg, :parent, self())}
@@ -441,33 +351,33 @@ defmodule Protean.Action do
       end
       |> Supervisor.child_spec(restart: :temporary)
 
-    spawn_proc(interpreter, id, proc, opts)
+    spawn_proc(store, id, proc, opts)
   end
 
-  defp spawn_proc(interpreter, id, proc, opts) do
+  defp spawn_proc(store, id, proc, opts) do
     with :ok <- ProcessManager.start_subprocess(id, proc, opts) do
-      {:cont, interpreter}
+      {:cont, store}
     else
-      error -> spawn_error(interpreter, id, proc, error)
+      error -> spawn_error(store, id, proc, error)
     end
   end
 
-  defp spawn_task(interpreter, id, task) do
+  defp spawn_task(store, id, task) do
     with :ok <- ProcessManager.start_task(id, task) do
-      {:cont, interpreter}
+      {:cont, store}
     else
-      error -> spawn_error(interpreter, id, task, error)
+      error -> spawn_error(store, id, task, error)
     end
   end
 
-  defp spawn_error(interpreter, id, spawned, error) do
+  defp spawn_error(store, id, spawned, error) do
     Logger.warn("spawn #{inspect(spawned)} failed to start with error #{inspect(error)}")
-    {:cont, Interpreter.add_internal(interpreter, Events.platform(:spawn, :error, id))}
+    {:cont, Context.add_internal(store, Events.platform(:spawn, :error, id))}
   end
 
-  defp guard_allows?({_, guard: guard}, interpreter) do
-    %{context: context, config: config} = interpreter
-    Guard.allows?(guard, context, context.event, config.callback_module)
+  defp guard_allows?({_, guard: guard}, store) do
+    ctx = Store.get_context(store)
+    Guard.allows?(guard, store, ctx.event, ctx.config.callback_module)
   end
 
   defp guard_allows?(_, _), do: true
@@ -475,24 +385,25 @@ defmodule Protean.Action do
   defp normalize_choice({action, _}), do: action
   defp normalize_choice(action), do: action
 
-  defp put_action(action, context) do
-    Context.put_actions(context, [action])
+  defp put_action(action, store) do
+    Context.append_actions(store, [action])
   end
 
-  defp resolve_recipient(_interpreter, nil), do: self()
-  defp resolve_recipient(_interpreter, :self), do: self()
-  defp resolve_recipient(%{parent: parent}, :parent), do: parent
+  defp resolve_recipient(_store, nil), do: self()
+  defp resolve_recipient(_store, :self), do: self()
 
-  defp resolve_recipient(_interpreter, maybe_id) do
+  defp resolve_recipient(store, :parent), do: Context.get(store, :parent)
+
+  defp resolve_recipient(_store, maybe_id) do
     case ProcessManager.fetch_subprocess(maybe_id) do
       {:ok, {_, pid, _, _}} -> pid
       :error -> maybe_id
     end
   end
 
-  defp run_callback(callback_name, args, interpreter) when is_list(args) do
-    %{context: context, config: config} = interpreter
+  defp run_callback(callback_name, args, store) when is_list(args) do
+    ctx = Store.get_context(store)
 
-    apply(config.callback_module, callback_name, args ++ [context, context.event])
+    apply(ctx.config.callback_module, callback_name, args ++ [store, ctx.event])
   end
 end

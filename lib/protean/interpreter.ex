@@ -66,90 +66,38 @@ defmodule Protean.Interpreter do
   receives an event, it transitions until it is stable.
   """
 
-  alias __MODULE__
   alias Protean.Action
   alias Protean.Context
+  alias Protean.Context.Store
   alias Protean.Events
   alias Protean.Interpreter.Features
   alias Protean.Interpreter.Hooks
   alias Protean.MachineConfig
   alias Protean.Machinery
-  alias Protean.Transition
-
-  defstruct [
-    :id,
-    :config,
-    :context,
-    :parent,
-    running: false,
-    internal_queue: :queue.new(),
-    hooks: %{}
-  ]
-
-  @type t :: %Interpreter{
-          id: Protean.id() | nil,
-          config: MachineConfig.t(),
-          context: Context.t(),
-          parent: pid(),
-          running: boolean(),
-          internal_queue: :queue.queue(),
-          hooks: map()
-        }
 
   @doc """
-  Create a new `Interpreter`. The returned interpreter will still need to be started, which could
-  result in additional side-effects. See `start/1`.
-  """
-  @spec new(keyword()) :: Interpreter.t()
-  def new(opts) do
-    config = Keyword.fetch!(opts, :machine)
-    initial_assigns = Keyword.get(opts, :assigns, %{})
+  Initialize an interpreter in the given store.
 
-    context =
+  The interpreter will still need to be started with `start/1`.
+  """
+  @spec initialize(keyword()) :: Store.t()
+  def initialize(opts) do
+    store = Keyword.fetch!(opts, :store)
+    config = Keyword.fetch!(opts, :machine)
+
+    ctx =
       config
       |> MachineConfig.initial_context()
-      |> Context.assign(initial_assigns)
+      |> Map.put(:id, Keyword.get(opts, :id))
+      |> Map.put(:parent, Keyword.get(opts, :parent))
+      |> Features.install()
 
-    %Interpreter{
-      id: Keyword.get(opts, :id),
-      config: config,
-      context: context,
-      parent: Keyword.get(opts, :parent)
-    }
-    |> Features.install()
-  end
-
-  @doc false
-  @spec add_internal(t, term()) :: t
-  def add_internal(interpreter, event) do
-    update_in(interpreter.internal_queue, &:queue.in(event, &1))
-  end
-
-  @spec add_many_internal(t, [term()]) :: t
-  def add_many_internal(interpreter, [event | rest]) do
-    interpreter
-    |> add_internal(event)
-    |> add_many_internal(rest)
-  end
-
-  def add_many_internal(interpreter, []), do: interpreter
-
-  @doc false
-  @spec with_context(t, map()) :: t
-  def with_context(interpreter, context) do
-    put_in(interpreter.context, context)
-  end
-
-  @doc false
-  @spec put_reply(t, term()) :: t
-  def put_reply(interpreter, reply) do
-    update_in(interpreter.context, &Context.put_reply(&1, reply))
+    Store.put_context(store, ctx)
   end
 
   @doc "Whether the interpreter has been started and can accept events."
-  @spec running?(t) :: boolean()
-  def running?(%Interpreter{running: true}), do: true
-  def running?(%Interpreter{running: false}), do: false
+  @spec running?(Store.t()) :: boolean()
+  def running?(store), do: Context.get(store, :running)
 
   @doc """
   Entrypoint for the interpreter that must be called before the interpreter will be in a state
@@ -158,25 +106,31 @@ defmodule Protean.Interpreter do
 
   Calling `start/1` on an already-running interpreter is a no-op.
   """
-  @spec start(t) :: t
-  def start(%Interpreter{running: false} = interpreter) do
-    %{interpreter | running: true}
-    |> add_internal(Events.platform(:init))
-    |> run_interpreter()
+  @spec start(Store.t()) :: Store.t()
+  def start(store) do
+    unless running?(store) do
+      store
+      |> Context.put(:running, true)
+      |> Context.add_internal(Events.platform(:init))
+      |> run_interpreter()
+    else
+      store
+    end
   end
-
-  def start(interpreter), do: interpreter
 
   @doc """
   Stop an interpreter, preventing further event processing.
   """
-  @spec stop(t) :: t
-  def stop(%Interpreter{running: true} = interpreter) do
-    %{interpreter | running: false}
-    |> Hooks.run(:on_stop)
+  @spec stop(Store.t()) :: Store.t()
+  def stop(store) do
+    if running?(store) do
+      store
+      |> Context.put(:running, false)
+      |> Hooks.run(:on_stop)
+    else
+      store
+    end
   end
-
-  def stop(interpreter), do: interpreter
 
   @doc """
   Handle an event, executing any transitions, actions, and side-effects associated with the
@@ -184,116 +138,126 @@ defmodule Protean.Interpreter do
 
   Returns a tuple of the interpreter and any replies resulting from actions that were run.
   """
-  @spec handle_event(t, Protean.event()) :: {t, [term()]}
-  def handle_event(%Interpreter{running: true} = interpreter, event) do
-    interpreter
-    |> macrostep(event)
-    |> pop_replies()
-  end
-
-  def handle_event(interpreter, _event), do: {interpreter, []}
-
-  @spec pop_replies(t) :: {t, [term()]}
-  defp pop_replies(%Interpreter{context: context} = interpreter) do
-    {replies, context} = Context.pop_replies(context)
-    {with_context(interpreter, context), replies}
+  @spec handle_event(Store.t(), Protean.event()) :: {Store.t(), [term()]}
+  def handle_event(store, event) do
+    if running?(store) do
+      store
+      |> macrostep(event)
+      |> Context.pop_replies()
+    else
+      {store, []}
+    end
   end
 
   # Entrypoint for the SCXML main event loop. Ensures that any automatic transitions are run and
   # internal events are processed before processing any external events.
-  @spec run_interpreter(t) :: t
-  defp run_interpreter(%Interpreter{running: true} = interpreter) do
-    interpreter
-    |> run_automatic_transitions()
-    |> process_internal_queue()
+  @spec run_interpreter(Store.t()) :: Store.t()
+  defp run_interpreter(store) do
+    if running?(store) do
+      store
+      |> run_automatic_transitions()
+      |> process_internal_queue()
+    else
+      store
+    end
   end
 
-  defp run_interpreter(%Interpreter{running: false} = interpreter),
-    do: interpreter
-
-  defp run_automatic_transitions(interpreter) do
-    case select_automatic_transitions(interpreter) do
+  defp run_automatic_transitions(store) do
+    case select_automatic_transitions(store) do
       [] ->
-        interpreter
+        store
 
       transitions ->
         transitions
-        |> microstep(interpreter)
+        |> microstep(store)
         |> run_automatic_transitions()
     end
   end
 
-  defp process_internal_queue(%Interpreter{internal_queue: queue} = interpreter) do
+  defp process_internal_queue(store) do
+    queue = Context.get(store, :internal_queue)
+
     case :queue.out(queue) do
       {:empty, _} ->
-        interpreter
+        store
 
       {{:value, event}, queue} ->
-        %{interpreter | internal_queue: queue}
+        store
+        |> Context.put(:internal_queue, queue)
         |> macrostep(event)
     end
   end
 
-  defp macrostep(interpreter, event) do
-    interpreter
+  defp macrostep(store, event) do
+    store
     |> process_event(event)
     |> Hooks.run(:after_macrostep)
   end
 
-  defp microstep(transitions, %Interpreter{context: context, config: config} = interpreter) do
-    {actions, context} =
-      config
-      |> Machinery.take_transitions(context, transitions)
+  defp microstep(transitions, store) do
+    ctx = Context.Store.get_context(store)
+
+    {actions, next_ctx} =
+      ctx
+      |> Machinery.take_transitions(transitions)
       |> Context.pop_actions()
 
     final_state_events =
-      context.final
-      |> MapSet.difference(interpreter.context.final)
+      next_ctx.final
+      |> MapSet.difference(ctx.final)
       |> Enum.map(&Events.platform(:done, &1))
 
-    interpreter
-    |> add_many_internal(final_state_events)
-    |> with_context(context)
+    store
+    |> Context.Store.put_context(next_ctx)
+    |> Context.add_many_internal(final_state_events)
     |> Action.exec_all(actions)
     |> stop_if_final()
     |> Hooks.run(:after_microstep)
   end
 
-  defp stop_if_final(%Interpreter{context: context, config: config} = interpreter) do
-    if config.root.id in context.final, do: stop(interpreter), else: interpreter
+  defp stop_if_final(store) do
+    config = Context.get(store, :config)
+
+    if config.root.id in Context.get(store, :final) do
+      stop(store)
+    else
+      store
+    end
   end
 
-  defp process_event(interpreter, event) do
-    with {interpreter, event} <- Hooks.run(interpreter, :event_filter, event),
-         interpreter <- Hooks.run(interpreter, :after_event_filter, event) do
-      interpreter
+  defp process_event(store, event) do
+    with {store, event} <- Hooks.run(store, :event_filter, event),
+         store <- Hooks.run(store, :after_event_filter, event) do
+      store
       |> select_transitions(event)
-      |> microstep(set_event(interpreter, event))
+      |> microstep(set_event(store, event))
       |> run_interpreter()
     else
-      interpreter ->
-        interpreter
+      store ->
+        store
         |> run_interpreter()
     end
   end
 
-  defp set_event(interpreter, %Events.Platform{payload: nil}), do: interpreter
+  defp set_event(store, %Events.Platform{payload: nil}), do: store
 
-  defp set_event(interpreter, %Events.Platform{payload: payload}) do
-    put_in(interpreter.context.event, payload)
+  defp set_event(store, %Events.Platform{payload: payload}) do
+    Context.put(store, :event, payload)
   end
 
-  defp set_event(interpreter, event) do
-    put_in(interpreter.context.event, event)
+  defp set_event(store, event) do
+    Context.put(store, :event, event)
   end
 
-  @spec select_automatic_transitions(t) :: [Transition.t()]
-  defp select_automatic_transitions(%{config: machine, context: context}) do
-    Machinery.select_transitions(machine, context, context.event, :automatic_transitions)
+  defp select_automatic_transitions(store) do
+    store
+    |> Context.Store.get_context()
+    |> Machinery.select_transitions(:automatic_transitions)
   end
 
-  @spec select_transitions(t, Protean.event()) :: [Transition.t()]
-  defp select_transitions(%{config: machine, context: context}, event) do
-    Machinery.select_transitions(machine, context, event)
+  defp select_transitions(store, event) do
+    store
+    |> Context.Store.get_context()
+    |> Machinery.select_transitions(event)
   end
 end

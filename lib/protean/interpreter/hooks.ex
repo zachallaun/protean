@@ -22,7 +22,7 @@ defmodule Protean.Interpreter.Hooks do
   See function documentation for the individual hooks below.
   """
 
-  alias Protean.Interpreter
+  alias Protean.Context
 
   @doc """
   Register an `event_filter` hook.
@@ -33,8 +33,8 @@ defmodule Protean.Interpreter.Hooks do
     * `{:halt, interpreter}` - halt with interpreter and ignore event
 
   """
-  def event_filter(%Interpreter{} = interpreter, hook) when is_function(hook, 1) do
-    append_hook(interpreter, :event_filter, hook)
+  def event_filter(store, hook) when is_function(hook, 1) do
+    append_hook(store, :event_filter, hook)
   end
 
   @doc """
@@ -43,8 +43,8 @@ defmodule Protean.Interpreter.Hooks do
   Function must accept two arguments, `interpreter` and `event`, and must return
   {:cont, `interpreter`}.
   """
-  def after_event_filter(%Interpreter{} = interpreter, hook) when is_function(hook, 2) do
-    append_hook(interpreter, :after_event_filter, hook)
+  def after_event_filter(store, hook) when is_function(hook, 2) do
+    append_hook(store, :after_event_filter, hook)
   end
 
   @doc """
@@ -52,8 +52,8 @@ defmodule Protean.Interpreter.Hooks do
 
   Function must accept `interpreter` and return {:cont, `interpreter`}.
   """
-  def after_microstep(%Interpreter{} = interpreter, hook) when is_function(hook, 1) do
-    append_hook(interpreter, :after_microstep, hook)
+  def after_microstep(store, hook) when is_function(hook, 1) do
+    append_hook(store, :after_microstep, hook)
   end
 
   @doc """
@@ -61,8 +61,8 @@ defmodule Protean.Interpreter.Hooks do
 
   Function must accept an `interpreter` and return {:cont, `interpreter`}.
   """
-  def after_macrostep(%Interpreter{} = interpreter, hook) when is_function(hook, 1) do
-    append_hook(interpreter, :after_macrostep, hook)
+  def after_macrostep(store, hook) when is_function(hook, 1) do
+    append_hook(store, :after_macrostep, hook)
   end
 
   @doc """
@@ -70,30 +70,30 @@ defmodule Protean.Interpreter.Hooks do
 
   Function must accept an `interpreter` and return {:cont, `interpreter`}.
   """
-  def on_stop(%Interpreter{} = interpreter, hook) when is_function(hook, 1) do
-    append_hook(interpreter, :on_stop, hook)
+  def on_stop(store, hook) when is_function(hook, 1) do
+    append_hook(store, :on_stop, hook)
   end
 
   ## Interpreter callbacks
 
   @doc false
-  def run(interpreter, :event_filter, event) do
-    interpreter
+  def run(store, :event_filter, event) do
+    store
     |> get_hooks(:event_filter)
-    |> run_hooks({interpreter, event})
+    |> run_hooks({store, event})
   end
 
-  def run(interpreter, :after_event_filter, event) do
-    interpreter
+  def run(store, :after_event_filter, event) do
+    store
     |> get_hooks(:after_event_filter)
-    |> run_hooks(interpreter, [event])
+    |> run_hooks(store, [event])
   end
 
   @doc false
-  def run(interpreter, hook) do
-    interpreter
+  def run(store, hook) do
+    store
     |> get_hooks(hook)
-    |> run_hooks(interpreter)
+    |> run_hooks(store)
   end
 
   ## Utilities
@@ -104,11 +104,15 @@ defmodule Protean.Interpreter.Hooks do
     end)
   end
 
-  defp get_hooks(interpreter, hook_type) do
-    Map.get(interpreter.hooks, hook_type, [])
+  defp get_hooks(store, hook_type) do
+    store
+    |> Context.get(:hooks)
+    |> Map.get(hook_type, [])
   end
 
-  defp append_hook(interpreter, hook_type, hook) do
-    %{interpreter | hooks: Map.update(interpreter.hooks, hook_type, [hook], &(&1 ++ [hook]))}
+  defp append_hook(store, hook_type, hook) do
+    Context.update(store, :hooks, fn hooks ->
+      Map.update(hooks, hook_type, [hook], &(&1 ++ [hook]))
+    end)
   end
 end

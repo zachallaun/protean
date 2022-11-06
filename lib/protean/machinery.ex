@@ -16,40 +16,40 @@ defmodule Protean.Machinery do
   alias Protean.Transition
 
   @doc "Transition in response to an event."
-  @spec transition(MachineConfig.t(), Context.t(), Protean.event()) :: Context.t()
-  def transition(config, context, event) do
-    with transitions <- select_transitions(config, context, event) do
-      take_transitions(config, context, transitions)
+  @spec transition(Context.t(), Protean.event()) :: Context.t()
+  def transition(ctx, event) do
+    with transitions <- select_transitions(ctx, event) do
+      take_transitions(ctx, transitions)
     end
   end
 
   @doc "Select any machine transitions that apply to the given event in the current context."
-  @spec select_transitions(MachineConfig.t(), Context.t(), Protean.event()) :: [Transition.t()]
-  def select_transitions(config, context, event, attribute \\ :transitions) do
+  @spec select_transitions(Context.t(), Protean.event()) :: [Transition.t()]
+  def select_transitions(ctx, attribute \\ :transitions) do
     # TODO: Handle conflicting transitions
     # TODO: order nodes correctly (specificity + document order)
-    config
-    |> MachineConfig.active(context.value)
-    |> first_enabled_transition(config, context, event, attribute)
+    ctx.config
+    |> MachineConfig.active(ctx.value)
+    |> first_enabled_transition(ctx, attribute)
     |> List.wrap()
   end
 
-  @spec take_transitions(MachineConfig.t(), Context.t(), [Transition.t()]) :: Context.t()
-  def take_transitions(config, context, transitions)
+  @spec take_transitions(Context.t(), [Transition.t()]) :: Context.t()
+  def take_transitions(ctx, transitions)
 
-  def take_transitions(_config, context, []), do: context
+  def take_transitions(ctx, []), do: ctx
 
-  def take_transitions(config, context, transitions) do
+  def take_transitions(ctx, transitions) do
     {exit_sets, entry_sets} =
       transitions
-      |> Enum.map(&transition_result(config, context, &1))
+      |> Enum.map(&transition_result(ctx, &1))
       |> Enum.unzip()
 
     to_exit = exit_sets |> Enum.reduce(&MapSet.union/2) |> Node.exit_order()
     to_enter = entry_sets |> Enum.reduce(&MapSet.union/2) |> Node.entry_order()
 
     value =
-      context.value
+      ctx.value
       |> MapSet.difference(leaf_ids(to_exit))
       |> MapSet.union(leaf_ids(to_enter))
 
@@ -60,24 +60,21 @@ defmodule Protean.Machinery do
         Enum.flat_map(to_enter, &Node.entry_actions/1)
       ])
 
-    final_states = final_ancestors(config, value)
+    final_states = final_ancestors(ctx.config, value)
 
-    context
-    |> Context.assign_active(value)
-    |> Context.assign_final(final_states)
-    |> Context.put_actions(actions)
+    %{ctx | active: value, final: final_states, actions: actions}
   end
 
-  defp transition_result(config, context, transition) do
+  defp transition_result(ctx, transition) do
     domain = Transition.domain(transition)
 
     active_in_scope =
-      config
-      |> MachineConfig.active(context.value)
+      ctx.config
+      |> MachineConfig.active(ctx.value)
       |> Enum.filter(&Node.descendant?(&1.id, domain))
       |> MapSet.new()
 
-    targets = effective_targets(config, transition)
+    targets = effective_targets(ctx.config, transition)
 
     to_exit =
       Enum.filter(active_in_scope, fn node ->
@@ -124,15 +121,15 @@ defmodule Protean.Machinery do
     id1 == id2 || Node.descendant?(id1, id2)
   end
 
-  defp first_enabled_transition(nodes, config, context, event, attribute) do
+  defp first_enabled_transition(nodes, ctx, attribute) do
     nodes
     |> Enum.flat_map(&Map.get(&1, attribute))
-    |> find_enabled_transition(config, context, event)
+    |> find_enabled_transition(ctx)
   end
 
-  defp find_enabled_transition(transitions, config, context, event) do
+  defp find_enabled_transition(transitions, ctx) do
     Enum.find(transitions, fn transition ->
-      Transition.enabled?(transition, event, context, config.callback_module)
+      Transition.enabled?(transition, ctx.event, ctx, ctx.config.callback_module)
     end)
   end
 

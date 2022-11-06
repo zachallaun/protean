@@ -274,6 +274,7 @@ defmodule Protean do
   @doc false
   def child_spec(module, opts) do
     defaults = [
+      store: opts[:store] || %{},
       machine: opts[:machine] || module.__protean_machine__(),
       module: module,
       parent: self()
