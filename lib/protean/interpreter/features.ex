@@ -1,5 +1,5 @@
 defmodule Protean.Interpreter.Features do
-  @moduledoc false
+  @moduledoc "TODO"
 
   alias Protean.Events
   alias Protean.Context

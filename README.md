@@ -3,7 +3,7 @@
 
 <!-- MDOC !-->
 
-_Caveat emptor: Protean started as a library for personal learning and exploration. It should not yet be relied upon._
+_Caveat emptor: Protean is likely to undergo significant changes and should not be considered stable._
 
 A library for managing state and side-effects with event-driven statecharts.
 
@@ -213,12 +213,10 @@ Things are changing pretty regularly, however, and some documentation is certain
 
 ## Installation
 
-This package is under active development and is pre-0.1. If you would like to experiment with it, install directly from the repository:
-
 ```elixir
 def deps do
   [
-    {:protean, github: "zachallaun/protean"}
+    {:protean, "~> 0.1.0"}
   ]
 end
 ```
